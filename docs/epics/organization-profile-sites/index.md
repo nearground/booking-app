@@ -47,6 +47,9 @@ No formal dependency. The Cloudflare side needs a wildcard DNS record `*.puertov
 Children are created only when expansion is explicitly requested.
 
 <!-- children:start -->
+- [STORY-001: Manage organization branding](stories/STORY-001-manage-branding/index.md)
+- [STORY-002: Present a public organization site](stories/STORY-002-publish-organization-site/index.md)
+- [STORY-003: Resolve organization sites across hosts](stories/STORY-003-resolve-organization-sites/index.md)
 <!-- children:end -->
 
 ## Risks, assumptions and open questions
