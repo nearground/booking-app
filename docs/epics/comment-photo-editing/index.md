@@ -3,7 +3,7 @@ title: "Comment privacy and photo editing"
 work_id: "EPIC-comment-photo-editing"
 work_type: epic
 template_version: 1
-status: draft
+status: in-progress
 parent: null
 branch: "epic/comment-photo-editing"
 depends_on: []
@@ -39,9 +39,11 @@ No formal dependency. Agree a narrow composer visibility/edit API boundary with 
 
 ## User Stories
 
-Children are created only when expansion is explicitly requested.
+The Epic is expanded into two Stories and four implementation Tasks; implementation is in progress.
 
 <!-- children:start -->
+- [STORY-001: Comment only after sign-in](stories/STORY-001-authenticated-commenting/index.md)
+- [STORY-002: Edit comments with photos](stories/STORY-002-edit-comment-photos/index.md)
 <!-- children:end -->
 
 ## Risks, assumptions and open questions
@@ -55,5 +57,5 @@ Run `AddCommentForm.test.jsx`, `CommentCard.test.jsx`, `backend/tests/unit/comme
 
 ## Progress and decisions
 
-- Draft created; not approved for implementation. No implementation evidence recorded.
+- Expanded into Stories 001–002 and Tasks 001–004; implementation started after selecting the in-progress status.
 - 2026-10-26: User decided logged-out UX: small unobtrusive "Log in to comment" text.
