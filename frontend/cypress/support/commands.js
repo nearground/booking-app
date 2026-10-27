@@ -71,6 +71,21 @@ Cypress.Commands.add('getByTestId', (testId) => {
 });
 
 /**
+ * Answer every questionnaire prompt in the booking modal so required
+ * questions (e.g. age confirmations) don't block add-to-cart.
+ */
+Cypress.Commands.add('answerBookingQuestionnaire', () => {
+  cy.getByTestId('booking-modal').then(($modal) => {
+    const sections = $modal.find('[data-testid="questionnaire-section"]');
+    if (sections.length === 0) return;
+    cy.wrap(sections).find('input[type="checkbox"]').check({ force: true });
+    cy.wrap(sections).find('input[type="text"]').each(($input) => {
+      if (!$input.val()) cy.wrap($input).type('Yes');
+    });
+  });
+});
+
+/**
  * Assert a toast notification appears containing the given text.
  */
 Cypress.Commands.add('assertToast', (text) => {

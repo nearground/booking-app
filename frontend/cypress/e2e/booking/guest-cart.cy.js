@@ -17,6 +17,7 @@ describe('Guest Cart', () => {
     cy.getByTestId('booking-modal').should('be.visible');
     cy.getByTestId('tier-selector').first().find('[aria-label*="Increase"]').click();
     cy.getByTestId('contact-form__phone').clear().type('5551234567');
+    cy.answerBookingQuestionnaire();
     cy.getByTestId('session-summary__add-to-cart').click();
     cy.wait('@addToCart').its('response.statusCode').should('eq', 201);
     cy.getByTestId('cart-modal').should('be.visible');
@@ -81,7 +82,7 @@ describe('Guest Cart', () => {
     cy.get('input[name="lastName"]').type('Account');
     cy.get('input[name="username"]').type('guest-account');
     cy.get('input[name="phoneNumber"]').type('5551234567');
-    cy.get('input[name="country"]').type('US');
+    cy.get('#country').type('Mexico{enter}');
     cy.get('input[name="password"]').type('GuestPass123!');
     cy.get('input[name="confirmPassword"]').type('GuestPass123!');
     cy.contains('button', 'Register').click();

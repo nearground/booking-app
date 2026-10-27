@@ -3,7 +3,7 @@ title: "Guest-first checkout and cart continuity"
 work_id: "EPIC-guest-checkout"
 work_type: epic
 template_version: 1
-status: in-progress
+status: done
 parent: null
 branch: "epic/guest-checkout"
 depends_on: []
@@ -62,8 +62,9 @@ The Epic was expanded into four stories covering cart continuity, guest purchase
 
 ## Verification and completion evidence
 
-Backend validation: 34 Jest suites / 330 tests passed. Frontend Vitest suite passed (255 tests). Cypress guest checkout/account-flow specs are written but not run because they require the shared Docker/database stack, which this Epic must not operate. No standalone migration was added: EmailVerificationTokens is included in the existing baseline schema; ephemeral verification tokens are not seeded.
+Backend validation: 34 Jest suites / 330 tests passed. Frontend Vitest suite passed (255 tests). Cypress booking E2E (all 7 specs in `frontend/cypress/e2e/booking/`, 34 tests, including `guest-cart.cy.js` and `cart-checkout.cy.js`) passed against the dev stack after merging to main. No standalone migration was added: EmailVerificationTokens is included in the existing baseline schema; ephemeral verification tokens are not seeded.
 
 ## Progress and decisions
 
-- Implementation is complete on `epic/guest-checkout`; all eight Tasks are marked done. Secure receipt claiming uses hashed, purpose-specific verification tokens. The existing baseline migration defines the token table for fresh databases; verification tokens are not demo-seeded. End-to-end tests remain unrun by design because they depend on the shared Docker/database stack.
+- Implementation is complete on `epic/guest-checkout`; all eight Tasks are marked done. Secure receipt claiming uses hashed, purpose-specific verification tokens. The existing baseline migration defines the token table for fresh databases; verification tokens are not demo-seeded.
+- Post-merge on main: E2E specs were run and pass. Seed tasks now generate sessions (`npm run schedule:sync`) and flush Redis after reseeding; specs answer required booking questionnaire prompts. The mock card-payment fields were removed from the cart modal (no card data is collected; payment-provider integration remains out of scope).

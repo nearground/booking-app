@@ -151,6 +151,7 @@ const Register = () => {
                   </div>
                   <div className="mb-6">
                     <Select
+                      inputId="country"
                       options={countryOptions}
                       placeholder="Country"
                       isSearchable

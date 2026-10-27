@@ -34,6 +34,7 @@ describe('Booking Confirmation', () => {
       .find('[aria-label*="Increase"]')
       .click();
     cy.getByTestId('contact-form__phone').clear().type('5551234567');
+    cy.answerBookingQuestionnaire();
     cy.getByTestId('session-summary__add-to-cart').click();
     cy.wait('@addToCart');
 
@@ -46,10 +47,6 @@ describe('Booking Confirmation', () => {
     cy.getByTestId('cart-modal__billing-city').clear().type('Testville');
     cy.getByTestId('cart-modal__billing-state').clear().type('CA');
     cy.getByTestId('cart-modal__billing-zip').clear().type('90210');
-    cy.getByTestId('cart-modal__payment-name').clear().type('Test User');
-    cy.getByTestId('cart-modal__payment-card').clear().type('4242424242424242');
-    cy.getByTestId('cart-modal__payment-expiry').clear().type('1228');
-    cy.getByTestId('cart-modal__payment-cvc').clear().type('123');
 
     cy.getByTestId('cart-modal__checkout-btn').click();
     cy.wait('@checkout');

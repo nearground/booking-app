@@ -4,7 +4,7 @@
  * E2E: Cart & Checkout — Core Template Spec
  *
  * This is the highest-value booking spec: an authenticated user adds an item,
- * reviews the cart, fills contact / billing / payment forms, submits checkout,
+ * reviews the cart, fills contact / billing forms, submits checkout,
  * and lands on the confirmation page.
  *
  * Pattern:
@@ -44,6 +44,7 @@ describe('Cart & Checkout', () => {
       .find('[aria-label*="Increase"]')
       .click();
     cy.getByTestId('contact-form__phone').clear().type('5551234567');
+    cy.answerBookingQuestionnaire();
     cy.getByTestId('session-summary__add-to-cart').click();
     cy.wait('@addToCart');
 
@@ -68,6 +69,7 @@ describe('Cart & Checkout', () => {
       .find('[aria-label*="Increase"]')
       .click();
     cy.getByTestId('contact-form__phone').clear().type('5551234567');
+    cy.answerBookingQuestionnaire();
     cy.getByTestId('session-summary__add-to-cart').click();
     cy.wait('@addToCart');
 
@@ -93,6 +95,7 @@ describe('Cart & Checkout', () => {
       .find('[aria-label*="Increase"]')
       .click();
     cy.getByTestId('contact-form__phone').clear().type('5551234567');
+    cy.answerBookingQuestionnaire();
     cy.getByTestId('session-summary__add-to-cart').click();
     cy.wait('@addToCart');
 
@@ -102,7 +105,7 @@ describe('Cart & Checkout', () => {
     cy.getByTestId('cart-modal__contact-phone').clear();
     cy.getByTestId('cart-modal__contact-email').clear();
 
-    // Leave payment fields empty and click checkout
+    // Leave required contact fields empty and click checkout
     cy.getByTestId('cart-modal__checkout-btn').click();
 
     // Validation errors should appear (Required texts next to fields)
@@ -126,6 +129,7 @@ describe('Cart & Checkout', () => {
       .find('[aria-label*="Increase"]')
       .click();
     cy.getByTestId('contact-form__phone').clear().type('5551234567');
+    cy.answerBookingQuestionnaire();
     cy.getByTestId('session-summary__add-to-cart').click();
     cy.wait('@addToCart');
 
@@ -142,12 +146,6 @@ describe('Cart & Checkout', () => {
     cy.getByTestId('cart-modal__billing-city').clear().type('Test City');
     cy.getByTestId('cart-modal__billing-state').clear().type('TS');
     cy.getByTestId('cart-modal__billing-zip').clear().type('12345');
-
-    // Payment
-    cy.getByTestId('cart-modal__payment-name').clear().type('Test User');
-    cy.getByTestId('cart-modal__payment-card').clear().type('4242424242424242');
-    cy.getByTestId('cart-modal__payment-expiry').clear().type('1228');
-    cy.getByTestId('cart-modal__payment-cvc').clear().type('123');
 
     // Step 3: Submit checkout
     cy.getByTestId('cart-modal__checkout-btn').click();

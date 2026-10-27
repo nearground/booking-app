@@ -36,6 +36,7 @@ describe('Add To Cart', () => {
     cy.getByTestId('contact-form__phone').clear().type('5551234567');
 
     // Click Add To Cart
+    cy.answerBookingQuestionnaire();
     cy.getByTestId('session-summary__add-to-cart').click();
 
     // Wait for the API call
@@ -63,12 +64,13 @@ describe('Add To Cart', () => {
       .click();
 
     cy.getByTestId('contact-form__phone').clear().type('5551234567');
+    cy.answerBookingQuestionnaire();
     cy.getByTestId('session-summary__add-to-cart').click();
     cy.wait('@addToCart');
 
     // Cart modal opens automatically — close it
     cy.getByTestId('cart-modal').should('be.visible');
-    cy.get('body').click(0, 0); // Click outside to close
+    cy.get('[aria-label="Close cart"]').click();
 
     // CartFAB should now be visible with a badge
     cy.getByTestId('cart-fab').should('be.visible');
@@ -99,6 +101,7 @@ describe('Add To Cart', () => {
       .click();
 
     cy.getByTestId('contact-form__phone').clear().type('5551234567');
+    cy.answerBookingQuestionnaire();
     cy.getByTestId('session-summary__add-to-cart').click();
 
     cy.wait('@addToCart').then(({ request }) => {

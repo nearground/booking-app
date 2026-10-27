@@ -13,6 +13,7 @@
         "lint:check": "eslint .",
         "lint:fix": "eslint --fix .",
         "code-fix": "lint-staged",
+        "schedule:sync": "node ./server/scripts/sync-schedules.js",
         "test": "jest",
         "test:watch": "jest --watch",
         "test:ci": "jest --ci --runInBand --coverage"

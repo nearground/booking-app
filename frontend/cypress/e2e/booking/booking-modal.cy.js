@@ -83,8 +83,8 @@ describe('Booking Modal', () => {
       .click();
 
     // Contact form should now be visible
-    cy.getByTestId('contact-form').should('be.visible');
-    cy.getByTestId('contact-form__phone').should('be.visible');
+    cy.getByTestId('contact-form').scrollIntoView().should('be.visible');
+    cy.getByTestId('contact-form__phone').scrollIntoView().should('be.visible');
   });
 
   it('disables Add To Cart button when no tickets are selected', () => {
@@ -100,6 +100,7 @@ describe('Booking Modal', () => {
 
     // Clear phone field and try to submit
     cy.getByTestId('contact-form__phone').clear();
+    cy.answerBookingQuestionnaire();
     cy.getByTestId('session-summary__add-to-cart').click();
 
     // Should show phone validation error
