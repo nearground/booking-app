@@ -92,6 +92,10 @@ describe('BookingConfirmation', () => {
     mockNavigate.mockClear();
   });
 
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
   test('navigates away when no confirmationData in location state', () => {
     render(
       <MemoryRouter initialEntries={[{ pathname: '/booking-confirmation', state: {} }]}>
@@ -128,6 +132,14 @@ describe('BookingConfirmation', () => {
     renderWithState(makeConfirmationData({ confirmationEmail: { status: 'sent' } }));
     expect(screen.getByText(/accepted by our email provider/i)).toBeInTheDocument();
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
+  test('hides email failure diagnostics in production without claiming email success', () => {
+    vi.stubEnv('DEV', false);
+    renderWithState(makeConfirmationData({ confirmationEmail: { status: 'failed' } }));
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(screen.queryByText(/email delivery status is unavailable|could not send|accepted by our email provider/i)).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /booking confirmed/i })).toBeInTheDocument();
   });
 
   test('does not claim older orders without email status were emailed', () => {

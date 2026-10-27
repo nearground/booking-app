@@ -1,4 +1,5 @@
 import React from 'react';
+import { vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import BookingPanel, { OrderItemCard, OrderCard } from './BookingPanel';
@@ -162,6 +163,18 @@ describe('OrderItemCard', () => {
 // ---------------------------------------------------------------------------
 
 describe('OrderCard', () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  test('hides confirmation email failure flags in production', () => {
+    vi.stubEnv('DEV', false);
+    const order = { ...makeOrder(), metadata: { confirmationEmail: { status: 'failed' } } };
+    render(<MemoryRouter><ul><OrderCard order={order} /></ul></MemoryRouter>);
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(screen.getByText('View Confirmation')).toBeInTheDocument();
+  });
+
   test('flags confirmation email failure on a saved order', () => {
     const order = { ...makeOrder(), metadata: { confirmationEmail: { status: 'failed' } } };
     render(<MemoryRouter><ul><OrderCard order={order} /></ul></MemoryRouter>);

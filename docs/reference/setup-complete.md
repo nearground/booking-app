@@ -145,9 +145,11 @@ capability metadata. `sent` means the email provider accepted the message,
 not that it reached the inbox. Transport connection, greeting and socket
 timeouts bound the SMTP wait.
 
-The confirmation page and account booking list warn when sending failed, without
-asking customers to book again. Orders created before this flag was added have
-unknown email status. No automatic retry or resend is performed.
+In development builds, the confirmation page and account booking list warn when
+sending failed, without asking customers to book again. Production builds hide
+email failure and unknown-status diagnostics; backend logging and persisted
+status remain enabled. Orders created before this flag was added have unknown
+email status. No automatic retry or resend is performed.
 
 ## 🐳 Services
 
