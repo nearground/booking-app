@@ -22,6 +22,7 @@ const getPublicOrganizationSite = async (req, res) => {
       attributes: PUBLIC_ORGANIZATION_FIELDS,
       include: [{
         model: Experience,
+        as: 'Experiences',
         attributes: ['id', 'title', 'subtitle', 'description', 'thumbnail', 'duration'],
         required: false,
         include: [{

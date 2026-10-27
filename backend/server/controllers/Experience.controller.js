@@ -639,6 +639,7 @@ const getCities = async (req, res) => {
             include: [
                 {
                     model: Experience,
+                    as: 'Experiences',
                     attributes: [],
                     required: true,
                 },
