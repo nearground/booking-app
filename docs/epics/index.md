@@ -10,7 +10,7 @@ MVP Epics are drafts; remaining open questions are recorded in each document. Al
 |---|---|---|---|---|
 | `EPIC-guest-checkout` | Guest-first checkout and cart continuity | [guest-checkout](./guest-checkout/index.md) | `epic/guest-checkout` | - |
 | `EPIC-comment-photo-editing` | Comment privacy and photo editing | [comment-photo-editing](./comment-photo-editing/index.md) | `epic/comment-photo-editing` | - |
-| `EPIC-correlated-seed-factory` | Correlated seed factory spike | [correlated-seed-factory](./correlated-seed-factory/index.md) | `epic/correlated-seed-factory` | - |
+| `EPIC-correlated-seed-factory` | Correlated seed factory spike and seeder rewrite plan | [correlated-seed-factory](./correlated-seed-factory/index.md) | `epic/correlated-seed-factory` | - |
 | `EPIC-single-date-experience` | Single-date experience presentation | [single-date-experience](./single-date-experience/index.md) | `epic/single-date-experience` | `EPIC-correlated-seed-factory`, `EPIC-hero-gallery-display-template` |
 | `EPIC-pinned-experience-comments` | Pinned comments on experience pages | [pinned-experience-comments](./pinned-experience-comments/index.md) | `epic/pinned-experience-comments` | `EPIC-correlated-seed-factory`, `EPIC-comment-photo-editing` |
 | `EPIC-hero-gallery-display-template` | Hero gallery display template | [hero-gallery-display-template](./hero-gallery-display-template/index.md) | `epic/hero-gallery-display-template` | `EPIC-correlated-seed-factory` |

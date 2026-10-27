@@ -1,5 +1,5 @@
 ---
-title: "Correlated seed factory spike"
+title: "Correlated seed factory spike and seeder rewrite plan"
 work_id: "EPIC-correlated-seed-factory"
 work_type: epic
 template_version: 1
@@ -9,33 +9,38 @@ branch: "epic/correlated-seed-factory"
 depends_on: []
 ---
 
-# Correlated seed factory spike
+# Correlated seed factory spike and seeder rewrite plan
 
 ## Outcome and MVP traceability
 
-An evidence-based decision describes a repeatable way to generate multiple correlated records from a schema and provides a bounded prototype scope.
+A concept spike proves a repeatable way to generate multiple correlated records from a schema, and its result is a full, staged plan to rewrite the project's seeders on that approach.
 
 ## Scope and non-goals
 
-Research/design Epic, not a full seeder rewrite. Current seeders: `backend/server/seeders/20260212222654-startup-org-and-admin.js` and `20260214193720-demo-experiences.js`; demo data uses inline random helpers. Compare schema-driven in-house factory with appropriate third-party JavaScript/Sequelize factory libraries. Document correlated associations, determinism, override/traits, idempotency, cleanup, migrations, tests, maintenance, dependencies and licensing. Prototype scope may cover an organization?experience?schedule/session?ticket tier graph and must remain isolated; no production DB schema changes or bulk seeder rewrite.
+Research/design Epic, forming a full seeder rewrite plan off a concept spike. Current seeders: `backend/server/seeders/20260212222654-startup-org-and-admin.js` and `20260214193720-demo-experiences.js`; demo data uses inline random helpers. Compare schema-driven in-house factory with appropriate third-party JavaScript/Sequelize factory libraries. Document correlated associations, determinism, override/traits, idempotency, cleanup, migrations, tests, maintenance, dependencies and licensing.
+
+The concept spike generates a correlated organization -> members -> experiences -> sessions -> ticket tiers -> orders -> comments graph, including media uploaded through the real media pipeline (needed by the hero Epic's `tacos-hero.mp4` seed). The rewrite plan covers replacing both existing seeders, the feature seed examples requested by other Epics, and Cypress/backend test fixtures.
+
+Non-goals in this Epic: executing the full rewrite (planned here, delivered as follow-up Stories), production schema changes.
 
 ## Acceptance criteria
 
-- [ ] Decision/design doc compares adopt/build/defer alternatives against repository constraints, maintenance and licensing.
-- [ ] Recommendation specifies schema/input format, correlated relationships, reproducibility, overrides and known limitations.
-- [ ] Bounded prototype plan names target models, outputs, entrypoint, test strategy and acceptance measures; any prototype is isolated and repeatably generates valid related records.
-- [ ] Documented contract enables feature examples without imposing unapproved library/format on other branches.
+- [ ] Decision/design doc compares adopt/build alternatives against repository constraints, maintenance and licensing, and recommends one.
+- [ ] Recommendation specifies schema/input format, correlated relationships, reproducibility (explicit seed), overrides/traits, idempotency and cleanup.
+- [ ] Concept spike, isolated from existing seeders, repeatably generates the correlated graph above with valid associations, verified by a test that runs it twice with the same seed and compares results.
+- [ ] Spike demonstrates seeding a media asset through the media pipeline so it exists as a DB media record.
+- [ ] Rewrite plan lists each existing seeder and fixture, its replacement, migration order, rollback and how other Epics add feature seeds (single-date, pinned comments, hero video).
 
 ## Branch independence and ownership
 
 - Baseline: `main`. All Epic branches are created from the same `main` commit.
-- Owned paths: `docs/reference/**` or a dedicated seed decision doc; optional isolated prototype under an agreed backend test/seeder subpath. No broad existing seeder edits without approval.
-- Shared files/contracts and owner: This Epic owns seed-factory decision and prototype contract. Epics 3/4/5 consume the approved approach only after publication. Do not mutate production schema.
-- Parallel-ready assessment: Parallel-ready research spike on baseline; shared seeders are integration-sensitive, so any code prototype must stay isolated.
+- Owned paths: `docs/reference/contracts/seed-factory.md` (decision + rewrite plan); spike under `backend/server/seed-factory/**` and its tests. Existing seeders are not edited in this Epic.
+- Shared files/contracts and owner: This Epic owns the seed-factory API and fixture format. Single-date, pinned-comments and hero Epics add their seeds using it after publication.
+- Parallel-ready assessment: Parallel-ready now; spike code is in a new directory.
 
 ## Dependencies and integration
 
-Requested prerequisite for Epics `EPIC-single-date-experience`, `EPIC-pinned-experience-comments`, and `EPIC-hero-gallery-display-template`; no dependency for unrelated Epics.
+Prerequisite for `EPIC-single-date-experience`, `EPIC-pinned-experience-comments` and `EPIC-hero-gallery-display-template` seeds. The full rewrite follows as Stories once the plan is approved.
 
 ## User Stories
 
@@ -46,15 +51,14 @@ Children are created only when expansion is explicitly requested.
 
 ## Risks, assumptions and open questions
 
-- Will factories serve Cypress only, backend tests, dev/demo seeds, or all?
-- Is a new package acceptable; which licensing/security constraints apply?
-- Should randomness be fixed per fixture or permitted with an explicit seed?
-- Assumption: current migration seeders remain supported and are not replaced wholesale.
+- Factories should serve dev/demo seeds, backend tests and Cypress; confirm whether Cypress resets the DB between specs.
+- Is a new package acceptable (e.g. `@faker-js/faker` MIT plus an in-house graph builder)? Recommendation: yes for faker; build the correlation layer in-house on Sequelize models.
+- Risk: seeding media through the pipeline needs the r2-local service running during seeding.
 
 ## Verification and completion evidence
 
-Review against seeders, model associations in `backend/server/models/index.js` and Cypress DB seeding. Prototype checks same-seed reproducibility and valid related records.
+Spike reproducibility test and association checks against `backend/server/models/index.js`; seeded media visible through the API; plan reviewed by the user.
 
 ## Progress and decisions
 
-- Draft created; not approved for implementation. Open decisions remain; no implementation evidence recorded.
+- 2026-10-26: User broadened scope to a full seeder rewrite plan based on a concept spike.
