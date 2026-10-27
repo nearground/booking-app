@@ -46,6 +46,8 @@ Non-goals for this phase: building the MCP server, changing REST contracts, issu
 
 No prerequisite for research. Receipt/checkout portions have been refreshed after the completed guest-checkout Epic. MCP server implementation remains a separate future scope decision; this Epic's completion does not imply a running MCP server.
 
+Follow-up: [Basic Discord booking API interface](../discord-booking-bot/index.md), a draft Epic for public REST discovery and browser booking handoff, with explicit approval questions before implementation.
+
 ## User Stories
 
 <!-- children:start -->
@@ -69,6 +71,8 @@ No prerequisite for research. Receipt/checkout portions have been refreshed afte
 ## Verification and completion evidence
 
 2026-10-27: Both Stories and all three Tasks were reviewed explicitly against the four acceptance criteria after refreshing current REST contracts. The 51-operation OpenAPI subset and DB-free registration test cover selected method/path pairs in their owning routers plus mount prefixes, not runtime response/schema/auth validation or automatic discovery of new routes. Full backend Jest passed (34 suites, 342 tests); scoped contract tests passed (3 tests); planning validation and all 7 planner tests passed. Changed-test ESLint passed with Jest globals enabled. No production source was changed.
+
+Publication/handoff verification: all 62 work documents validated, all 7 dashboard Git-attribution tests passed, and the documentation production build succeeded with the new follow-up Epic.
 
 No runtime smoke was performed or required. GET cart and schedule endpoints can mutate backend state, so GET-only is not equivalent to side-effect-free. The memo remains input to future MCP scope approval; this Epic does not implement a server. Task attribution uses exact `Work-Item:` trailers in Git, as required by the planning SOP; no manual commit registry is added.
 
