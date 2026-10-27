@@ -25,6 +25,7 @@ import {
     getOrganizerWorkspace,
     getOrganizerReceivedComments,
     getSessionReservations,
+    createManualBooking,
     cancelSession,
 } from '../controllers/Organizer.controller.js';
 
@@ -42,6 +43,7 @@ router.post('/invites/:id/resend', authUser, organizerInviteRateLimiter, resendI
 router.delete('/invites/:id', authUser, organizerInviteRateLimiter, cancelInvite);
 router.get('/workspace', authUser, getOrganizerWorkspace);
 router.get('/sessions/:sessionId/reservations', authUser, getSessionReservations);
+router.post('/sessions/:sessionId/reservations', authUser, createManualBooking);
 router.patch('/sessions/:sessionId/cancel', authUser, cancelSession);
 router.get('/comments/received', authUser, getOrganizerReceivedComments);
 router.patch('/profile', authUser, updateOrganizerProfile);

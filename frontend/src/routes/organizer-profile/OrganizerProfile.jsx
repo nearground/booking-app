@@ -10,6 +10,7 @@ import {
   faComments,
   faImages,
   faLocationDot,
+  faTicket,
   faXmark,
 } from '@fortawesome/free-solid-svg-icons';
 import { AuthContext } from 'contexts/AuthContext';
@@ -25,6 +26,7 @@ import OrganizerDetailsCard from './components/OrganizerDetailsCard';
 import LocationsPanel from './components/LocationsPanel';
 import OrgMembersPanel from './components/OrgMembersPanel';
 import OrgExperiencesPanel from './components/OrgExperiencesPanel';
+import ManualBookingPanel from './components/ManualBookingPanel';
 import {
   buildUpcomingSessionEntries,
   buildPastSessionEntries,
@@ -869,6 +871,10 @@ const OrganizerProfile = () => {
             isLoadingPast={isLoadingPastSessions}
             onRequestPastSessions={loadPastSessions}
           />
+        </TabPanel>
+
+        <TabPanel label="Register In Person" icon={faTicket}>
+          <ManualBookingPanel organization={selectedOrganization} />
         </TabPanel>
 
         <TabPanel label="Comments" icon={faComments}>

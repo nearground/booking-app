@@ -17,12 +17,12 @@ const ExperienceReservation = sequelize.define('ExperienceReservation', {
     },
     specialRequests: DataTypes.TEXT,
     dayOfPhone: { type: DataTypes.STRING, allowNull: true },
-    billingEmail: { type: DataTypes.STRING, allowNull: false, validate: { isEmail: true } },
+    billingEmail: { type: DataTypes.STRING, allowNull: true, validate: { isEmail: true } },
     billingName: { type: DataTypes.STRING, allowNull: false },
-    billingAddress: { type: DataTypes.STRING, allowNull: false },
-    billingCity: { type: DataTypes.STRING, allowNull: false },
-    billingState: { type: DataTypes.STRING, allowNull: false },
-    billingPostalCode: { type: DataTypes.STRING, allowNull: false },
+    billingAddress: { type: DataTypes.STRING, allowNull: true },
+    billingCity: { type: DataTypes.STRING, allowNull: true },
+    billingState: { type: DataTypes.STRING, allowNull: true },
+    billingPostalCode: { type: DataTypes.STRING, allowNull: true },
     hotelName: { type: DataTypes.STRING, allowNull: true },
     comments: { type: DataTypes.TEXT, allowNull: true },
 }, {
@@ -34,7 +34,10 @@ ExperienceReservation.addHook('beforeCreate', async (reservation, options) => {
             const ScheduledExperience = sequelize.models.ScheduledExperience;
             const scheduledExperience = await ScheduledExperience.findByPk(
                 reservation.ScheduledExperienceId,
-                { transaction: options.transaction }
+                {
+                    transaction: options.transaction,
+                    lock: options.transaction?.LOCK?.UPDATE,
+                }
             );
 
             if (!scheduledExperience) {

@@ -239,6 +239,103 @@
         }
       }
     },
+    "/api/organizers/sessions/{sessionId}/reservations": {
+      "post": {
+        "operationId": "createManualOrganizerBooking",
+        "summary": "Register an attendee for an organizer session",
+        "tags": [
+          "Organizations"
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "sessionId",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "fullName",
+                  "contactMethod",
+                  "paymentMethod",
+                  "ticketSelections"
+                ],
+                "properties": {
+                  "fullName": {
+                    "type": "string",
+                    "maxLength": 120
+                  },
+                  "email": {
+                    "type": "string",
+                    "format": "email"
+                  },
+                  "phone": {
+                    "type": "string"
+                  },
+                  "contactMethod": {
+                    "type": "string",
+                    "enum": [
+                      "email",
+                      "sms",
+                      "whatsapp"
+                    ]
+                  },
+                  "paymentMethod": {
+                    "type": "string",
+                    "enum": [
+                      "online",
+                      "in_person"
+                    ]
+                  },
+                  "ticketSelections": {
+                    "type": "array",
+                    "minItems": 1,
+                    "maxItems": 20,
+                    "items": {
+                      "type": "object",
+                      "required": [
+                        "quantity"
+                      ],
+                      "properties": {
+                        "ticketTierId": {
+                          "type": "integer",
+                          "nullable": true
+                        },
+                        "quantity": {
+                          "type": "integer",
+                          "minimum": 1
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "$ref": "#/components/responses/CreatedEnvelope"
+          },
+          "default": {
+            "$ref": "#/components/responses/ErrorEnvelope"
+          }
+        }
+      }
+    },
     "/api/experiences": {
       "get": {
         "operationId": "listExperiences",
