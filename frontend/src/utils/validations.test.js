@@ -9,6 +9,10 @@ describe('validations.validate', () => {
     expect(validations.validate('email', 'username@example.com')).toBe(true);
   });
 
+  test.each(['reset-e2e@example.invalid', 'first.last+booking@sub.example.travel', 'USER@EXAMPLE.COM'])('accepts reset email %s', (email) => {
+    expect(validations.validate('email', email)).toBe(true);
+  });
+
   test('returns false for a string with no @ character', () => {
     expect(validations.validate('email', 'invalid')).toBe(false);
   });

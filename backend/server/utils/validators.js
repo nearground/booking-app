@@ -2,6 +2,7 @@ import User from '../models/User.model.js';
 
 function validateEmail(email) {
     return String(email)
+        .trim()
         .toLowerCase()
         .match(
             /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|.(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/
@@ -10,12 +11,12 @@ function validateEmail(email) {
 
 async function UserExists(email) {
     try {
-        const user = await User.findOne({ where: { email } });
+        const user = await User.findOne({ where: { email: String(email || '').trim().toLowerCase() } });
         return user !== null;
     } catch (error) {
         // eslint-disable-next-line no-console
         console.error('Error checking if user exists:', error);
-        return false;
+        throw error;
     }
 }
 
@@ -75,6 +76,8 @@ const validateUserInputs = async ({
     if (!email) errorsList.push('Email address is required');
     else if (!validateEmail(email))
         errorsList.push('The email address format is invalid.');
+    else if (await UserExists(email))
+        errorsList.push('A user with this email already exists');
 
     // Validate password
     if (!password) errorsList.push('Password is required.');

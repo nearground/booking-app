@@ -36,6 +36,13 @@ module.exports = {
         updatedAt: new Date()
       });
     }
+    testUsers.push({
+      ...testUsers[0],
+      firstName: 'Password',
+      lastName: 'Reset',
+      username: 'reset-e2e',
+      email: 'reset-e2e@example.invalid',
+    });
     const [existingUsers] = await queryInterface.sequelize.query(
       'SELECT email FROM Users WHERE email IN (:emails)',
       { replacements: { emails: testUsers.map((user) => user.email) } }
@@ -989,6 +996,7 @@ module.exports = {
 
     try {
       const testUserEmails = Array.from({ length: 24 }, (_, index) => `user${index + 1}@test.com`);
+      testUserEmails.push('reset-e2e@example.invalid');
       const testLocationNames = Array.from({ length: 7 }, (_, index) => `Test Location ${index + 1}`);
       const seededExperienceTitles = [
         'Sierra Ridge Sunrise Hike',

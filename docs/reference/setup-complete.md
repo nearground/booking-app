@@ -164,6 +164,32 @@ email status. No automatic retry or resend is performed.
 
 ## 🐳 Services
 
+### Account email identity and password-reset testing
+
+Each user has one unique email address. Account writes normalize email casing and
+surrounding whitespace; registration and organizer onboarding reject duplicates,
+and the database unique index protects concurrent registrations. Usernames remain
+unique as well. The original username schema change preserves the baseline email
+index; no additional migration is needed for a freshly recreated database.
+
+Password reset uses the account stored with the reset token. The reset page
+submits `{ token, newPassword }`; email is optional for clients that also supply
+it. Used and expired tokens cannot reset passwords.
+
+With the development stack seeded, run from `frontend`:
+
+```text
+npx cypress run --spec "cypress/e2e/auth/password-reset.cy.js"
+```
+
+The tests cover duplicate registration, database-level email uniqueness, a UI
+reset request, mismatched passwords, successful reset and login, rejection of the
+old password, and expired, unknown and reused tokens. They use the dedicated
+`reset-e2e@example.invalid` fixture and restore its seeded password afterwards.
+Only the fixture's database token is read by the Cypress Node task; no production
+API exposes reset tokens. The auth API is not stubbed. These tests do not inspect
+an external inbox or prove email delivery; SMTP acceptance is checked separately.
+
 ### 1. Database (MySQL)
 - **Image**: mysql:8.0
 - **Port**: 3306

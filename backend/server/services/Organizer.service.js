@@ -350,7 +350,14 @@ const completeOnboardingService = async ({ body }) => {
         const token = generateNewToken(user);
         return { user, token, organizationId, isAdmin };
     } catch (error) {
-        await transaction.rollback();
+        if (!transaction.finished) await transaction.rollback();
+        if (error.name === 'SequelizeUniqueConstraintError' &&
+            (error.errors?.some((item) => item.path === 'email') || Object.hasOwn(error.fields || {}, 'email'))) {
+            throw {
+                status: 409,
+                errors: ['A user with this email already exists'],
+            };
+        }
         throw error;
     }
 };

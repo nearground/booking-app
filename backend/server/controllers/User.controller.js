@@ -70,6 +70,16 @@ const registerUser = async (req, res) => {
         } catch (err) {
             // eslint-disable-next-line no-console
             console.error('Error while creating user', err && err.message ? err.message : err);
+            if (err.name === 'SequelizeUniqueConstraintError') {
+                return sendError(res, {
+                    status: 409,
+                    message: err.errors?.some((item) => item.path === 'email') || Object.hasOwn(err.fields || {}, 'email')
+                        ? 'A user with this email already exists'
+                        : 'This username is taken',
+                    data: { status: USER_CREATION_MESSAGES.FAILED },
+                    requestId: req.requestId,
+                });
+            }
             return sendError(res, {
                 status: err.status || 500,
                 message: err.message || 'Error while creating user',
@@ -373,8 +383,8 @@ const updatePassword = async (req, res) => {
 const resetPassword = async (req, res) => {
     try {
         const { token, newPassword, email } = req.body || {};
-        if (!token || !newPassword || !email) {
-            return res.status(400).json({ errors: ['token, email and newPassword are required'], data: {} });
+        if (typeof token !== 'string' || !token || typeof newPassword !== 'string' || newPassword.length < 6) {
+            return res.status(400).json({ errors: ['A reset token and a password of at least 6 characters are required'], data: {} });
         }
 
         await UserService.completePasswordReset(token, email, newPassword);
