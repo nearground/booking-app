@@ -42,6 +42,7 @@ export default defineConfig({
     },
   },
   server: {
+    allowedHosts: ['puertovallarta.today', '.puertovallarta.today'],
     host: '0.0.0.0',
     port: 3000,
     strictPort: true,
@@ -68,6 +69,7 @@ export default defineConfig({
     },
   },
   preview: {
+    allowedHosts: ['puertovallarta.today', '.puertovallarta.today'],
     host: '0.0.0.0',
     port: 3000,
     strictPort: true,

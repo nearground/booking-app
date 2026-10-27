@@ -258,3 +258,8 @@ docker-compose up -d --build
 ```
 
 Warning: this removes persisted Docker volume data.
+
+
+## Organization site wildcard routing
+
+Organization sites use one-level hosts such as `sample.puertovallarta.today`. Before enabling this feature, add a Cloudflare DNS wildcard record `*.puertovallarta.today` pointing to the existing tunnel, then add a matching Cloudflare Tunnel ingress rule for `*.puertovallarta.today` to the production web service. Keep the existing apex `puertovallarta.today` ingress and origin rules. Confirm that the wildcard route reaches the same frontend/nginx service and that the API remains proxied to the existing backend. This is a manual Cloudflare dashboard step; no tunnel or DNS changes are made by this application. Do not widen `COOKIE_DOMAIN`; organization sites remain separate hosts and booking continues on the main site.

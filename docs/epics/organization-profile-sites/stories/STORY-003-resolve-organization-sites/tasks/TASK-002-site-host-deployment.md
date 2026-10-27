@@ -3,7 +3,7 @@ title: "Configure wildcard hosts and deployment guidance"
 work_id: "EPIC-organization-profile-sites/STORY-003/TASK-002"
 work_type: task
 template_version: 1
-status: in-progress
+status: done
 parent: "EPIC-organization-profile-sites/STORY-003"
 branch: "epic/organization-profile-sites"
 depends_on: []
@@ -44,9 +44,9 @@ Independent configuration/documentation task in this Story.
 
 ## Definition of Done
 
-- [ ] Story acceptance criteria covered with recorded results.
-- [ ] Targeted checks pass; existing intended behavior is preserved.
-- [ ] Documentation updated; no unresolved contract conflicts.
+- [x] Story acceptance criteria covered with recorded results.
+- [x] Targeted checks pass; existing intended behavior is preserved.
+- [x] Documentation updated; no unresolved contract conflicts.
 
 ## Documentation updates
 
@@ -54,7 +54,7 @@ Add explicit Cloudflare dashboard instructions to DEPLOYMENT.md.
 
 ## Progress and completion evidence
 
-In progress; record config and documentation evidence.
+Completed. Vite server/preview allow the apex and wildcard host; nginx accepts the apex and one-level wildcard. DEPLOYMENT.md documents manual wildcard DNS and tunnel ingress. Frontend production build passed; COOKIE_DOMAIN was not changed. Cloudflare dashboard configuration was not performed.
 
 ## Git history
 

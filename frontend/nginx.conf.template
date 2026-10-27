@@ -5,7 +5,7 @@ map $http_x_forwarded_proto $forwarded_proto {
 
 server {
     listen 80;
-    server_name localhost puertovallarta.today;
+    server_name localhost puertovallarta.today *.puertovallarta.today;
     root /usr/share/nginx/html;
     index index.html;
     client_max_body_size 10m;
