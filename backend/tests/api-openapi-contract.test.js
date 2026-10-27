@@ -1,5 +1,6 @@
 const fs = require('node:fs');
 const path = require('node:path');
+const { describe, expect, test } = require('@jest/globals');
 
 const backendRoot = path.resolve(__dirname, '..');
 const specPath = path.resolve(backendRoot, '..', 'docs', 'reference', 'contracts', 'api', 'openapi.yaml');
@@ -18,6 +19,7 @@ const expectedOperations = [
   ['organizers', 'post', '/onboarding/start'], ['organizers', 'post', '/onboarding/complete'],
   ['organizers', 'get', '/invites/resolve'], ['organizers', 'post', '/invites'],
   ['organizers', 'post', '/invites/:id/resend'], ['organizers', 'delete', '/invites/:id'],
+  ['organizers', 'post', '/sessions/:sessionId/reservations'],
   ['experiences', 'get', '/'], ['experiences', 'get', '/verticalFilters'],
   ['experiences', 'get', '/availableCities'], ['experiences', 'get', '/nearbyExperiences'],
   ['experiences', 'get', '/:experienceCode/schedule/calendar'], ['experiences', 'get', '/:experienceCode/schedule'],

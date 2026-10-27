@@ -116,6 +116,20 @@ Total: $${Number(payload.totalAmount || 0).toFixed(2)}
 If you have any questions, please contact us.
 
 Thank you for your booking!`;
+    } else if (template === 'manual-booking-details') {
+        subject = `Booking details — ${payload.orderNumber || 'Your Order'}`;
+        text = `Hi ${payload.mainContactName || 'there'},
+
+Your booking has been registered.
+
+Experience: ${payload.experienceTitle || 'Experience'}
+Session: ${payload.sessionDateTime ? new Date(payload.sessionDateTime).toLocaleString() : 'To be confirmed'}
+Booking reference: ${payload.confirmationCode || 'N/A'}
+Order: ${payload.orderNumber || 'N/A'}
+Payment method: ${payload.paymentMethod === 'in_person' ? 'In person' : 'Online'}
+Total: $${Number(payload.totalAmount || 0).toFixed(2)}
+
+Please contact the organizer if you have any questions.`;
     } else if (template === 'username-lookup') {
         subject = 'Your Username Lookup';
         const entries = Array.isArray(payload.usernames) ? payload.usernames : [];

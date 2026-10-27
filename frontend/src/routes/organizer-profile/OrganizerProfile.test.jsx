@@ -3,6 +3,7 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { AuthContext } from 'contexts/AuthContext';
 import OrganizerProfile from './OrganizerProfile';
+import { vi } from 'vitest';
 
 vi.mock('services/NetworkAdapter', () => ({
   networkAdapter: {
@@ -71,11 +72,15 @@ describe('OrganizerProfile', () => {
 
     expect(await screen.findByRole('button', { name: 'Organization' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Experiences' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Register In Person' })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Organization' }));
     expect(screen.getByText('Organization members panel')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Experiences' }));
     expect(screen.getByText('Organization experiences panel')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Register In Person' }));
+    expect(screen.getByText('Register someone in person')).toBeInTheDocument();
   });
 });

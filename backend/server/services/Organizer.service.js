@@ -13,10 +13,13 @@ import {
     Experience,
     ScheduledExperience,
     ExperienceReservation,
+    ExperienceReservationAttendee,
     ExperienceReservationAnswer,
     Service,
     ScheduledService,
     TicketTier,
+    Order,
+    OrderItem,
     Comment,
     sequelize,
 } from '../models/index.js';
@@ -849,6 +852,235 @@ const getSessionReservationsService = async ({ userId, sessionId }) => {
     };
 };
 
+const createManualBookingService = async ({ userId, sessionId, booking }) => {
+    const parsedSessionId = Number(sessionId);
+    if (!Number.isInteger(parsedSessionId) || parsedSessionId < 1) {
+        throw { status: 400, errors: ['Invalid session id'] };
+    }
+
+    const fullName = normalizeName(booking?.fullName);
+    const email = normalizeEmail(booking?.email);
+    const phone = String(booking?.phone || '').trim();
+    const contactMethod = String(booking?.contactMethod || '').trim().toLowerCase();
+    const paymentMethod = String(booking?.paymentMethod || '').trim().toLowerCase();
+    const ticketSelections = Array.isArray(booking?.ticketSelections) ? booking.ticketSelections : [];
+
+    if (!fullName || fullName.length > 120) {
+        throw { status: 400, errors: ['A valid attendee name is required'] };
+    }
+    if (email && !isValidEmail(email)) {
+        throw { status: 400, errors: ['A valid email address is required'] };
+    }
+    if (email && email.length > MAX_EMAIL_LENGTH) {
+        throw { status: 400, errors: ['A valid email address is required'] };
+    }
+    if (!['email', 'sms', 'whatsapp'].includes(contactMethod)) {
+        throw { status: 400, errors: ['contactMethod must be email, sms, or whatsapp'] };
+    }
+    if (contactMethod === 'email' && !email) {
+        throw { status: 400, errors: ['An email address is required for email delivery'] };
+    }
+    const phoneDigits = phone.replace(/\D/g, '');
+    if (contactMethod !== 'email' && (phoneDigits.length < 7 || phoneDigits.length > 15 || phone.length > 30)) {
+        throw { status: 400, errors: ['A phone number is required for phone delivery'] };
+    }
+    if (!['online', 'in_person'].includes(paymentMethod)) {
+        throw { status: 400, errors: ['paymentMethod must be online or in_person'] };
+    }
+    if (!ticketSelections.length || ticketSelections.length > 20) {
+        throw { status: 400, errors: ['At least one attendee is required'] };
+    }
+
+    const transaction = await sequelize.transaction();
+    try {
+        const scheduledExperience = await ScheduledExperience.findByPk(parsedSessionId, {
+            include: [
+                {
+                    model: Experience,
+                    include: [
+                        { model: Organization, attributes: ['id', 'name'] },
+                        { model: TicketTier },
+                    ],
+                },
+            ],
+            transaction,
+            lock: transaction.LOCK?.UPDATE,
+        });
+        if (!scheduledExperience) throw { status: 404, errors: ['Session not found'] };
+
+        const experience = scheduledExperience.Experience;
+        const organizationId = experience?.OrganizationId;
+        if (!organizationId) throw { status: 404, errors: ['Session not found'] };
+
+        const membership = await sequelize.models.OrganizationMembers.findOne({
+            where: { UserId: userId, OrganizationId: organizationId },
+            transaction,
+        });
+        if (!membership) throw { status: 403, errors: ['You do not have access to this session'] };
+
+        if (scheduledExperience.status === 'cancelled' || scheduledExperience.status === 'completed' ||
+            new Date(scheduledExperience.dateTime).getTime() <= Date.now()) {
+            throw { status: 400, errors: ['This session is not available for booking'] };
+        }
+
+        const availableTiers = experience.TicketTiers || [];
+        const tierMap = new Map(availableTiers.map((tier) => [Number(tier.id), tier]));
+        let attendeeCount = 0;
+        let totalCents = 0;
+        const normalizedSelections = ticketSelections.map((selection) => {
+            const quantity = Number(selection?.quantity);
+            if (!Number.isInteger(quantity) || quantity < 1) {
+                throw { status: 400, errors: ['Ticket quantities must be positive whole numbers'] };
+            }
+            attendeeCount += quantity;
+            if (attendeeCount > 20) {
+                throw { status: 400, errors: ['A manual booking can include at most 20 attendees'] };
+            }
+
+            if (selection.ticketTierId == null && availableTiers.length === 0) {
+                return { ticketTierId: null, quantity, unitPrice: 0 };
+            }
+
+            const ticketTierId = Number(selection.ticketTierId);
+            const ticketTier = tierMap.get(ticketTierId);
+            if (!Number.isInteger(ticketTierId) || !ticketTier) {
+                throw { status: 400, errors: ['A selected ticket type is not available for this experience'] };
+            }
+            const unitPrice = Number(ticketTier.price);
+            if (!Number.isFinite(unitPrice) || unitPrice < 0) {
+                throw { status: 400, errors: ['Ticket prices are invalid'] };
+            }
+            totalCents += Math.round(unitPrice * 100) * quantity;
+            return { ticketTierId, quantity, unitPrice };
+        });
+
+        if (attendeeCount > Number(scheduledExperience.availableSpots || 0)) {
+            throw { status: 409, errors: ['Not enough available spots'] };
+        }
+
+        if (!Number.isSafeInteger(totalCents) || totalCents > 9999999999) {
+            throw { status: 400, errors: ['The booking total is too high'] };
+        }
+
+        const totalAmount = totalCents / 100;
+        const confirmationCode = `MAN-${crypto.randomBytes(6).toString('hex').toUpperCase()}`;
+        const reservation = await ExperienceReservation.create({
+            confirmationCode,
+            numberOfAttendees: attendeeCount,
+            totalPrice: totalAmount,
+            status: 'pending',
+            billingName: fullName,
+            billingEmail: email || null,
+            billingAddress: null,
+            billingCity: null,
+            billingState: null,
+            billingPostalCode: null,
+            dayOfPhone: phone || null,
+            ScheduledExperienceId: parsedSessionId,
+            CustomerId: null,
+        }, { transaction });
+
+        await ExperienceReservationAttendee.bulkCreate(
+            normalizedSelections.flatMap((selection) =>
+                Array.from({ length: selection.quantity }, () => ({
+                    ExperienceReservationId: reservation.id,
+                    TicketTierId: selection.ticketTierId,
+                    status: 'active',
+                }))
+            ),
+            { transaction }
+        );
+
+        const order = await Order.create({
+            CustomerId: null,
+            CartId: null,
+            status: 'pending',
+            currency: 'USD',
+            subtotalAmount: totalAmount,
+            taxAmount: 0,
+            discountAmount: 0,
+            totalAmount,
+            paymentMethod,
+            mainContactName: fullName,
+            mainContactPhone: phone || null,
+            mainContactEmail: email || null,
+            metadata: { registrationType: 'manual', contactMethod },
+        }, { transaction });
+
+        const unitPrice = attendeeCount ? totalAmount / attendeeCount : 0;
+        await OrderItem.create({
+            OrderId: order.id,
+            ProductType: 'Experience',
+            ProductId: experience.id,
+            ExperienceReservationId: reservation.id,
+            description: experience.title,
+            unitPrice,
+            quantity: attendeeCount,
+            totalPrice: totalAmount,
+            metadata: {
+                confirmationCode,
+                ScheduledExperienceId: parsedSessionId,
+                ticketSelections: normalizedSelections.map(({ ticketTierId, quantity, unitPrice: price }) => ({
+                    ticketTierId,
+                    quantity,
+                    unitPrice: price,
+                })),
+            },
+        }, { transaction });
+
+        await transaction.commit();
+
+        let delivery = { status: 'manual', provider: null };
+        if (contactMethod === 'email') {
+            try {
+                const notification = await sendNotification({
+                    template: 'manual-booking-details',
+                    to: email,
+                    payload: {
+                        mainContactName: fullName,
+                        orderNumber: order.orderNumber,
+                        confirmationCode,
+                        experienceTitle: experience.title,
+                        sessionDateTime: scheduledExperience.dateTime,
+                        totalAmount,
+                        paymentMethod,
+                    },
+                });
+                delivery = {
+                    status: notification.sent && !['console', 'disabled'].includes(notification.provider) ? 'sent' : 'failed',
+                    provider: notification.provider,
+                };
+            } catch (_error) {
+                delivery = { status: 'failed', provider: null };
+            }
+        }
+
+        return {
+            orderNumber: order.orderNumber,
+            orderStatus: order.status,
+            confirmationCode,
+            experienceTitle: experience.title,
+            sessionDateTime: scheduledExperience.dateTime,
+            totalAmount,
+            attendeeCount,
+            paymentMethod,
+            contactMethod,
+            phone: phone || null,
+            email: email || null,
+            delivery,
+        };
+    } catch (error) {
+        if (!transaction.finished) await transaction.rollback();
+        if (error?.name === 'SequelizeUniqueConstraintError') {
+            throw { status: 409, errors: ['Could not create a unique booking code. Please try again.'] };
+        }
+        if (error?.message?.includes('Not enough available spots')) {
+            throw { status: 409, errors: ['Not enough available spots'] };
+        }
+        throw error;
+    }
+};
+
 const cancelSessionService = async ({ userId, sessionId }) => {
     const parsedSessionId = Number(sessionId);
     if (!Number.isInteger(parsedSessionId)) throw { status: 400, errors: ['Invalid session id'] };
@@ -916,5 +1148,6 @@ export {
     getOrganizerReceivedCommentsService,
     getOnboardingMetaService,
     getSessionReservationsService,
+    createManualBookingService,
     cancelSessionService,
 };
