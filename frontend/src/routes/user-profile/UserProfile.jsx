@@ -60,6 +60,7 @@ const UserProfile = () => {
   const buttonRef = useRef();
 
   const queryTab = new URLSearchParams(location.search).get('tab');
+  const showWelcome = new URLSearchParams(location.search).get('welcome') === '1';
   const [isTabsVisible, setIsTabsVisible] = useState(false);
   // Fetch user orders data
   const [userOrdersData, setUserOrdersData] = useState({
@@ -185,6 +186,17 @@ useEffect(() => {
             />
           </button>
         </div>
+        {showWelcome && (
+          <div role="status" className="mx-4 mb-4 rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-emerald-900">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h2 className="font-semibold">Welcome!</h2>
+                <p className="mt-1 text-sm">Your verified guest bookings are available in Bookings.</p>
+              </div>
+              <button type="button" className="text-sm underline" onClick={() => navigate('/user-profile', { replace: true })}>Dismiss</button>
+            </div>
+          </div>
+        )}
         <Tabs initialActiveTab={queryTab || 'Personal Details'} isTabsVisible={isTabsVisible} wrapperRef={wrapperRef}>
           <TabPanel label="Personal Details" icon={faAddressCard}>
             <ProfileDetailsPanel userDetails={userDetails} />

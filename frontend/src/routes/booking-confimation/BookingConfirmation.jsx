@@ -82,7 +82,7 @@ const BookingConfirmation = () => {
       {/* Top toolbar */}
       <div className="flex flex-col sm:flex-row gap-2 sm:items-center sm:justify-between mb-6 print:hidden">
         <Link
-          to="/user-profile?tab=Bookings"
+          to={confirmationData.guestReceiptToken ? '/experiences' : '/user-profile?tab=Bookings'}
           data-testid="confirmation__back-link"
           className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-slate-300 text-sm font-medium text-slate-700 hover:bg-slate-50 transition"
         >
@@ -128,6 +128,21 @@ const BookingConfirmation = () => {
             </span>
           </div>
         </Card>
+        {confirmationData.guestReceiptToken && (
+          <Card className="print:hidden">
+            <h2 className="text-base font-semibold text-slate-800">Keep your bookings together</h2>
+            <p className="mt-2 text-sm text-slate-600">
+              Your purchase is complete. Creating an account is optional; verify the receipt email to see this booking in your account.
+            </p>
+            <Link
+              to="/register"
+              state={{ email: confirmationData.mainContactEmail || '', source: 'guest-checkout' }}
+              className="mt-3 inline-flex rounded-md bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700"
+            >
+              Create an optional account
+            </Link>
+          </Card>
+        )}
 
         <div className="space-y-5">
           <Card title="Main Contact">

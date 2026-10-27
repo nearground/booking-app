@@ -24,6 +24,7 @@ import BaseLayout from './routes/layouts/base-layout/BaseLayout';
 import ForgotPassword from './routes/forgot-password/ForgotPassword';
 import ForgotUsername from './routes/forgot-username/ForgotUsername';
 import ResetPassword from './routes/reset-password/ResetPassword';
+import VerifyEmail from './routes/verify-email/VerifyEmail';
 import Checkout from 'routes/checkout/Checkout';
 import BookingConfirmation from 'routes/booking-confimation/BookingConfirmation';
 import RequireAuth from 'routes/guards/RequireAuth';
@@ -152,6 +153,10 @@ const router = createBrowserRouter([
       {
         path: '/reset-password',
         element: <ResetPassword />,
+      },
+      {
+        path: '/verify-email',
+        element: <VerifyEmail />,
       },
       {
         path: '/checkout',

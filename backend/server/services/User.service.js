@@ -1,5 +1,6 @@
 import { createRequire } from 'node:module';
 const require = createRequire(import.meta.url);
+const { Op, col, fn, where } = require('sequelize');
 
 import modelRegistry from '../models/index.js';
 import { generateNewToken, validateToken } from '../utils/auth-helpers.js';
@@ -9,7 +10,7 @@ import { sendNotification } from './Notification.service.js';
 const bcrypt = require('bcrypt');
 const crypto = require('crypto');
 
-const { User, PasswordReset } = modelRegistry;
+const { User, PasswordReset, EmailVerificationToken, Order } = modelRegistry;
 
 class UserService {
     async createUser(payload) {
@@ -129,6 +130,74 @@ class UserService {
         return { updatedUser, token };
     }
 
+    async startEmailVerification(email) {
+        const emailAddress = String(email || '').trim();
+        if (!emailAddress) return { sent: true };
+        const user = await User.findOne({ where: { email: emailAddress } });
+        if (!user || user.isEmailVerified) return { sent: true };
+
+        const token = crypto.randomBytes(32).toString('hex');
+        const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+        const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+        await EmailVerificationToken.create({ email: user.email, tokenHash, expiresAt });
+
+        const frontendUrl = String(process.env.FRONTEND_URL || 'http://localhost:5173').trim().replace(/\/$/, '');
+        const verifyUrl = `${frontendUrl}/verify-email?token=${encodeURIComponent(token)}`;
+        try {
+            await sendNotification({
+                template: 'email-verification',
+                to: user.email,
+                payload: { verifyUrl, expiresAt: expiresAt.toISOString() },
+            });
+        } catch (_error) {
+            // Keep registration successful if the mail provider is unavailable.
+        }
+        return { sent: true };
+    }
+
+    async confirmEmailVerification(token) {
+        if (typeof token !== 'string' || token.length < 32 || token.length > 256) return { valid: false };
+        const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+        const transaction = await modelRegistry.sequelize.transaction();
+        try {
+            const record = await EmailVerificationToken.findOne({
+                where: { tokenHash, usedAt: null },
+                transaction,
+                lock: true,
+            });
+            if (!record || new Date(record.expiresAt).getTime() <= Date.now()) {
+                await transaction.rollback();
+                return { valid: false };
+            }
+            const user = await User.findOne({ where: { email: record.email }, transaction, lock: true });
+            if (!user) {
+                await transaction.rollback();
+                return { valid: false };
+            }
+            await user.update({ isEmailVerified: true }, { transaction });
+            const normalizedEmail = String(user.email || '').trim().toLowerCase();
+            const guestOrders = await Order.findAll({
+                where: {
+                    CustomerId: null,
+                    [Op.and]: where(fn('LOWER', fn('TRIM', col('mainContactEmail'))), normalizedEmail),
+                },
+                transaction,
+            });
+            const claimableOrders = guestOrders;
+            for (const order of claimableOrders) {
+                await order.update({ CustomerId: user.id }, { transaction });
+            }
+            await EmailVerificationToken.update(
+                { usedAt: new Date() },
+                { where: { email: record.email, usedAt: null }, transaction }
+            );
+            await transaction.commit();
+            return { valid: true, claimedOrderCount: claimableOrders.length };
+        } catch (error) {
+            if (!transaction.finished) await transaction.rollback();
+            throw error;
+        }
+    }
     async forgotPassword(email) {
         // Anti-enumeration: always return success regardless of whether user exists
         const user = await User.findOne({ where: { email } });

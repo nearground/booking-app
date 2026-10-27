@@ -45,7 +45,7 @@ const Register = () => {
     const response = await networkAdapter.put('/api/users/register', values);
     console.log('response', response);
     if (response && response.errors && response.errors.length < 1) {
-      setToastMessage(REGISTRATION_MESSAGES.SUCCESS);
+      setToastMessage('Account created. Verify your email to securely claim guest bookings, then log in to view them.');
       setShowToast(true);
       setTimeout(() => navigate('/login'), 2000);
     } else {
@@ -64,7 +64,7 @@ const Register = () => {
               firstName: '',
               lastName: '',
               username: '',
-              email: '',
+              email: location.state?.email || new URLSearchParams(location.search).get('email') || '',
               phoneNumber: '',
               country: '',
               password: '',

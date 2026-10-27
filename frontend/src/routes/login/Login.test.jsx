@@ -127,7 +127,12 @@ describe('Login', () => {
   });
 
   test('displays test user hint with username', () => {
-    renderLogin();
-    expect(screen.getByText('Username: user1')).toBeInTheDocument();
+    vi.stubEnv('NODE_ENV', 'development');
+    try {
+      renderLogin();
+      expect(screen.getByText('Username: user1')).toBeInTheDocument();
+    } finally {
+      vi.unstubAllEnvs();
+    }
   });
 });

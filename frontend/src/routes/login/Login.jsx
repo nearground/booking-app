@@ -51,7 +51,7 @@ const Login = () => {
     if (response && response.data && response.data.token) {
       const authenticated = await context.triggerAuthCheck();
       if (authenticated) {
-        const redirectPath = location.state?.from?.pathname || '/user-profile';
+        const redirectPath = location.state?.from?.pathname || (location.state?.firstLogin ? '/user-profile?welcome=1' : '/user-profile');
         navigate(redirectPath, { replace: true });
       } else {
         setErrorMessage(LOGIN_MESSAGES.FAILED);

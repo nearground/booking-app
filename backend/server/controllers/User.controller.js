@@ -13,6 +13,7 @@ import {
 } from '../utils/constants.js';
 
 import UserService from '../services/User.service.js';
+import { mergeGuestCart } from '../services/Cart.service.js';
 import {
     normalizeStoredMediaValue,
     resolveMediaUrl,
@@ -59,6 +60,9 @@ const registerUser = async (req, res) => {
 
         try {
             await UserService.createUser(req.body);
+            if (typeof UserService.startEmailVerification === 'function') {
+                try { await UserService.startEmailVerification(req.body.email); } catch (_error) { /* allow registration retry via resend */ }
+            }
             return res.status(201).json({
                 errors: [],
                 data: { status: USER_CREATION_MESSAGES.SUCCESS },
@@ -113,12 +117,13 @@ const loginUser = async (req, res) => {
             });
         }
         const existingToken = req.cookies._token ?? '';
-        const { token } = await UserService.authenticateUser({
+        const { token, user } = await UserService.authenticateUser({
             username,
             password,
             organizationUsername: organizationUsername || undefined,
             existingToken,
         });
+        await mergeGuestCart({ sessionToken: req.cookies?._cart_session, customerId: user.id });
 
         res.cookie('_token', token, cookieOptions);
         res.cookie(
@@ -444,6 +449,24 @@ const getUserPaymentMethods = async (_req, res) => {
     });
 };
 
+const requestEmailVerification = async (req, res) => {
+    try {
+        await UserService.startEmailVerification(req.body?.email);
+        return res.status(200).json({ errors: [], data: { message: 'If an unverified account exists for that email, a verification link has been sent.' } });
+    } catch (error) {
+        return sendError(res, { status: 500, message: 'Unable to send verification email' });
+    }
+};
+
+const confirmEmailVerification = async (req, res) => {
+    try {
+        const result = await UserService.confirmEmailVerification(req.body?.token);
+        if (!result.valid) return sendError(res, { status: 400, message: 'Verification link is invalid or expired' });
+        return res.status(200).json({ errors: [], data: { emailVerified: true, claimedOrderCount: result.claimedOrderCount } });
+    } catch (error) {
+        return sendError(res, { status: 500, message: 'Unable to verify email' });
+    }
+};
 const forgotPassword = async (req, res) => {
     try {
         const { email } = req.body || {};
@@ -502,7 +525,7 @@ const validateResetToken = async (req, res) => {
     }
 };
 
-const defaultExport = { registerUser, loginUser, logoutUser, getUser, updateUser, updatePassword, resetPassword, forgotPassword, validateResetToken, getUserBookings, getUserPaymentMethods, lookupUsername };
+const defaultExport = { registerUser, loginUser, logoutUser, getUser, updateUser, updatePassword, resetPassword, forgotPassword, requestEmailVerification, confirmEmailVerification, validateResetToken, getUserBookings, getUserPaymentMethods, lookupUsername };
 
-export { registerUser, loginUser, logoutUser, getUser, updateUser, updatePassword, resetPassword, forgotPassword, validateResetToken, getUserBookings, getUserPaymentMethods, lookupUsername };
+export { registerUser, loginUser, logoutUser, getUser, updateUser, updatePassword, resetPassword, forgotPassword, requestEmailVerification, confirmEmailVerification, validateResetToken, getUserBookings, getUserPaymentMethods, lookupUsername };
 export default defaultExport;

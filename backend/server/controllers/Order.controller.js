@@ -1,5 +1,6 @@
 import { createRequire } from 'node:module';
 const require = createRequire(import.meta.url);
+const crypto = require('crypto');
 
 import Order from '../models/Order.model.js';
 import OrderItem from '../models/OrderItem.model.js';
@@ -63,7 +64,17 @@ const initiateCheckout = async (req, res) => {
             return sendError(res, { status: 400, message: 'Complete billing information is required (email, name, address, city, state, postalCode)' });
         }
 
-        const order = await checkoutCart(cartId, req.user.id, billingInfo, contact || {});
+        const isGuest = !req.user?.id;
+        const sessionToken = isGuest ? req.cookies?._cart_session : null;
+        if (isGuest && !sessionToken) {
+            return sendError(res, { status: 401, message: 'Cart session not found' });
+        }
+        const guestReceiptToken = isGuest ? crypto.randomBytes(32).toString('base64url') : null;
+        const guestReceipt = guestReceiptToken ? {
+            tokenHash: crypto.createHash('sha256').update(guestReceiptToken).digest('hex'),
+            expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+        } : null;
+        const order = await checkoutCart(cartId, req.user?.id || null, billingInfo, contact || {}, sessionToken, guestReceipt);
 
         return res.status(201).json({
             errors: [],
@@ -76,10 +87,11 @@ const initiateCheckout = async (req, res) => {
                 mainContactPhone: order.mainContactPhone,
                 mainContactEmail: order.mainContactEmail,
                 items: order.Items,
+                ...(guestReceiptToken ? { guestReceiptToken } : {}),
             },
         });
     } catch (error) {
-        if (error.message.includes('Cart not found') || error.message.includes('Cart is empty')) {
+        if (error.message.includes('Cart not found') || error.message.includes('Cart is empty') || error.message.includes('Only Experience items') || error.message.includes('Invalid Experience ticket selections')) {
             return sendError(res, { status: 400, message: error.message });
         }
         if (error.message.includes('Not enough available spots')) {
@@ -96,6 +108,30 @@ const initiateCheckout = async (req, res) => {
     }
 };
 
+const getGuestOrder = async (req, res) => {
+    try {
+        const { orderNumber, receiptToken } = req.body || {};
+        if (!orderNumber || !receiptToken || typeof receiptToken !== 'string') {
+            return sendError(res, { status: 400, message: 'orderNumber and receiptToken are required' });
+        }
+        const order = await Order.findOne({
+            where: { orderNumber, CustomerId: null },
+            include: [{ model: OrderItem, as: 'Items', include: RESERVATION_INCLUDES }],
+        });
+        const tokenHash = crypto.createHash('sha256').update(receiptToken).digest('hex');
+        const storedHash = order?.metadata?.guestReceiptTokenHash;
+        const tokenMatches = typeof storedHash === 'string' && /^[a-f0-9]{64}$/i.test(storedHash) &&
+            crypto.timingSafeEqual(Buffer.from(tokenHash, 'hex'), Buffer.from(storedHash, 'hex'));
+        if (!order || !tokenMatches || !order.metadata?.guestReceiptExpiresAt ||
+            new Date(order.metadata.guestReceiptExpiresAt).getTime() <= Date.now()) {
+            return sendError(res, { status: 404, message: 'Receipt not found' });
+        }
+        order.setDataValue('metadata', null);
+        return res.status(200).json({ errors: [], data: { order } });
+    } catch (error) {
+        return sendError(res, { status: 500, message: 'Failed to retrieve receipt' });
+    }
+};
 const getOrder = async (req, res) => {
     try {
         const { orderNumber } = req.params;
@@ -218,7 +254,7 @@ const handlePaymentWebhook = async (req, res) => {
     }
 };
 
-const defaultExport = { initiateCheckout, getOrder, getOrderConfirmation, listOrders, handlePaymentWebhook };
+const defaultExport = { initiateCheckout, getGuestOrder, getOrder, getOrderConfirmation, listOrders, handlePaymentWebhook };
 
-export { initiateCheckout, getOrder, getOrderConfirmation, listOrders, handlePaymentWebhook };
+export { initiateCheckout, getGuestOrder, getOrder, getOrderConfirmation, listOrders, handlePaymentWebhook };
 export default defaultExport;

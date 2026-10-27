@@ -265,4 +265,10 @@ describe('BookingConfirmation', () => {
     const printButtons = screen.getAllByRole('button', { name: /print/i });
     expect(printButtons.length).toBeGreaterThanOrEqual(1);
   });
-});
+
+  test('offers optional registration to guest purchasers with receipt email prefilled', () => {
+    renderWithState(makeConfirmationData({ guestReceiptToken: 'guest-capability' }));
+    const link = screen.getByRole('link', { name: /create an optional account/i });
+    expect(link).toHaveAttribute('href', '/register');
+    expect(screen.getByText(/verify the receipt email/i)).toBeInTheDocument();
+  });});

@@ -1,4 +1,4 @@
-import React, { createContext, useState, useCallback, useEffect, useContext } from 'react';
+import React, { createContext, useState, useCallback, useEffect, useContext, useRef } from 'react';
 import { networkAdapter } from 'services/NetworkAdapter';
 import { AuthContext } from 'contexts/AuthContext';
 
@@ -6,6 +6,7 @@ export const CartContext = createContext({
   cart: null,
   cartItems: [],
   cartCount: 0,
+  cartNotice: '',
   isCartOpen: false,
   isLoading: false,
   addToCart: async () => {},
@@ -14,31 +15,39 @@ export const CartContext = createContext({
   clearCart: async () => {},
   openCart: () => {},
   closeCart: () => {},
+  dismissCartNotice: () => {},
   refreshCart: async () => {},
 });
 
 export const CartProvider = ({ children }) => {
   const [cart, setCart] = useState(null);
+  const [cartNotice, setCartNotice] = useState('');
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const refreshRequestRef = useRef(0);
   const { isAuthenticated } = useContext(AuthContext);
 
   const cartItems = cart?.Items || [];
   const cartCount = cartItems.length;
 
   const refreshCart = useCallback(async () => {
+    const requestId = refreshRequestRef.current + 1;
+    refreshRequestRef.current = requestId;
     setIsLoading(true);
     try {
       const response = await networkAdapter.get('/api/cart/');
+      if (requestId !== refreshRequestRef.current) return;
       if (response?.data?.cart) {
         setCart(response.data.cart);
       } else {
         setCart(null);
       }
+      if (response?.data?.notice) setCartNotice(response.data.notice);
     } catch {
-      // Silently fail — cart may not exist yet
+      // Keep the last known cart when a refresh fails.
+    } finally {
+      if (requestId === refreshRequestRef.current) setIsLoading(false);
     }
-    setIsLoading(false);
   }, []);
 
   useEffect(() => {
@@ -92,6 +101,7 @@ export const CartProvider = ({ children }) => {
 
   const openCart = useCallback(() => setIsCartOpen(true), []);
   const closeCart = useCallback(() => setIsCartOpen(false), []);
+  const dismissCartNotice = useCallback(() => setCartNotice(''), []);
 
   return (
     <CartContext.Provider
@@ -99,6 +109,7 @@ export const CartProvider = ({ children }) => {
         cart,
         cartItems,
         cartCount,
+        cartNotice,
         isCartOpen,
         isLoading,
         addToCart,
@@ -107,6 +118,7 @@ export const CartProvider = ({ children }) => {
         clearCart: clearCartItems,
         openCart,
         closeCart,
+        dismissCartNotice,
         refreshCart,
       }}
     >

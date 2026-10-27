@@ -23,6 +23,7 @@ import TicketTier from './TicketTier.model.js';
 import Organizer from './Organizer.model.js';
 import OrganizationInvite from './OrganizationInvite.model.js';
 import PasswordReset from './PasswordReset.model.js';
+import EmailVerificationToken from './EmailVerificationToken.model.js';
 import ScheduleTemplate from './ScheduleTemplate.model.js';
 import PickedOccurrence from './PickedOccurrence.model.js';
 import Cart from './Cart.model.js';
@@ -256,6 +257,7 @@ db.TicketTier = TicketTier;
 db.Organizer = Organizer;
 db.OrganizationInvite = OrganizationInvite;
 db.PasswordReset = PasswordReset;
+db.EmailVerificationToken = EmailVerificationToken;
 db.OrganizationMembers = OrganizationMembers;
 db.Cart = Cart;
 db.CartItem = CartItem;
@@ -286,6 +288,7 @@ export {
   Organizer,
   OrganizationInvite,
   PasswordReset,
+  EmailVerificationToken,
   OrganizationMembers,
   Cart,
   CartItem,

@@ -3,12 +3,13 @@ const require = createRequire(import.meta.url);
 
 const express = require('express');
 
-import { getOrder, getOrderConfirmation, listOrders, handlePaymentWebhook } from '../controllers/Order.controller.js';
+import { getGuestOrder, getOrder, getOrderConfirmation, listOrders, handlePaymentWebhook } from '../controllers/Order.controller.js';
 import { authUser } from '../middlewares/auth.js';
 
 const router = express.Router();
 
 router.get('/', authUser, listOrders);
+router.post('/guest-receipt', getGuestOrder);
 router.get('/:orderNumber/confirmation', authUser, getOrderConfirmation);
 router.get('/:orderNumber', authUser, getOrder);
 router.post('/webhook', handlePaymentWebhook);

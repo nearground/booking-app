@@ -22,7 +22,7 @@ const consoleProvider = async ({ template, to, payload }) => {
     console.log('[notifications][console]', {
         template,
         to: maskEmail(to),
-        payload,
+        payload: template === 'email-verification' ? { expiresAt: payload?.expiresAt } : payload,
     });
 
     return {
@@ -80,6 +80,11 @@ Invite code: ${payload.inviteCode}
 Invite link: ${payload.inviteUrl}
 Expires: ${payload.expiresAt}
 `;
+    } else if (template === 'email-verification') {
+        subject = 'Verify your email address';
+        text = `Please verify your email address to access guest booking receipts.
+Verification link: ${payload.verifyUrl}
+This link expires at: ${payload.expiresAt}`;
     } else if (template === 'forgot-password') {
         subject = 'Password recovery instructions';
         text = `We received a request to reset your password.
