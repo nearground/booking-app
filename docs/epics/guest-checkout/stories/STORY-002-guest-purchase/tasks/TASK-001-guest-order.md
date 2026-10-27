@@ -54,7 +54,7 @@ Document migration rollout and guest receipt access contract in Epic scope/progr
 
 ## Progress and completion evidence
 
-Done. Guest checkout, hashed receipt capability issuance, expiry and retrieval are covered by backend tests. Full backend validation: 30 suites and 280 tests passed. Cypress E2E coverage is written but was not run because it would require the prohibited shared Docker/database stack.
+Done. Guest checkout, hashed receipt capability issuance, expiry and retrieval are covered by backend tests. Full backend validation: 34 suites and 330 tests passed. Cypress E2E coverage is written but was not run because it would require the prohibited shared Docker/database stack.
 
 <!-- children:start -->
 <!-- children:end -->

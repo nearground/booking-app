@@ -54,7 +54,7 @@ No standalone docs; reflect completion evidence in this Task.
 
 ## Progress and completion evidence
 
-Done. CartContext uses request sequencing to prevent stale authentication refreshes from overwriting the current cart and always clears loading state. All 3 CartContext Vitest tests pass; full frontend suite passed (31 files, 234 tests). Cypress login/cart flow is written but unrun against the shared stack.
+Done. CartContext uses request sequencing to prevent stale authentication refreshes from overwriting the current cart and always clears loading state. All 3 CartContext Vitest tests pass; full frontend suite passed (255 tests). Cypress login/cart flow is written but unrun against the shared stack.
 
 <!-- children:start -->
 <!-- children:end -->

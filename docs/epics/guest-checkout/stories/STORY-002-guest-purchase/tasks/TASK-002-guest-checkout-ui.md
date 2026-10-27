@@ -54,7 +54,7 @@ Update app-facing booking guidance only if current docs describe login as mandat
 
 ## Progress and completion evidence
 
-Done. Guest checkout UI and optional post-purchase registration are implemented. Targeted frontend tests pass; the full frontend suite passed (31 files, 234 tests). Cypress E2E coverage is written but was not run because it requires the prohibited shared Docker/database stack.
+Done. Guest checkout UI and optional post-purchase registration are implemented. Targeted frontend tests pass; the full frontend suite passed (255 tests). Cypress E2E coverage is written but was not run because it requires the prohibited shared Docker/database stack.
 
 <!-- children:start -->
 <!-- children:end -->

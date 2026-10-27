@@ -62,7 +62,7 @@ The Epic was expanded into four stories covering cart continuity, guest purchase
 
 ## Verification and completion evidence
 
-Backend validation: 30 Jest suites / 280 tests passed. Frontend full Vitest suite passed (31 files, 234 tests). Cypress guest checkout/account-flow specs are written but not run because they require the shared Docker/database stack, which this Epic must not operate. No standalone migration was added: EmailVerificationTokens is included in the existing baseline schema; ephemeral verification tokens are not seeded.
+Backend validation: 34 Jest suites / 330 tests passed. Frontend Vitest suite passed (255 tests). Cypress guest checkout/account-flow specs are written but not run because they require the shared Docker/database stack, which this Epic must not operate. No standalone migration was added: EmailVerificationTokens is included in the existing baseline schema; ephemeral verification tokens are not seeded.
 
 ## Progress and decisions
 

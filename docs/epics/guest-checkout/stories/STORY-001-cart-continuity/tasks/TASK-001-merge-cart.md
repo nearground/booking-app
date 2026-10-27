@@ -54,7 +54,7 @@ Document merge behavior and any migration/API contract in the owning Epic notes 
 
 ## Progress and completion evidence
 
-Done. The login handoff transfers guest ownership transactionally, coalesces identical experience lines and keeps distinct ticket metadata. The guest cart is invalidated on success, so repeat login cannot re-merge it. Cart merge tests pass, including duplicate consolidation; full backend validation: 30 suites, 280 tests. Cypress integration remains written but unrun against the shared stack.
+Done. The login handoff transfers guest ownership transactionally, coalesces identical experience lines and keeps distinct ticket metadata. The guest cart is invalidated on success, so repeat login cannot re-merge it. Cart merge tests pass, including duplicate consolidation; full backend validation: 34 suites, 330 tests. Cypress integration remains written but unrun against the shared stack.
 
 <!-- children:start -->
 <!-- children:end -->

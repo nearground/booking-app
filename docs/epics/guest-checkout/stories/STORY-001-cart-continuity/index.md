@@ -43,4 +43,4 @@ Backend tests cover no guest cart, no existing account cart, both carts, repeate
 
 ## Progress and decisions
 
-- Done. Login now transactionally transfers guest cart ownership, merges exact duplicate experience selections once, preserves distinct choices, recalculates totals and consumes the guest session. CartContext ignores stale auth-refresh responses. Backend and frontend full suites passed (280 Jest tests; 31 Vitest files and 234 tests passed). Cypress login/cart E2E was written but not run against the shared stack.
+- Done. Login now transactionally transfers guest cart ownership, merges exact duplicate experience selections once, preserves distinct choices, recalculates totals and consumes the guest session. CartContext ignores stale auth-refresh responses. Backend and frontend full suites passed (330 Jest tests; 255 Vitest tests passed). Cypress login/cart E2E was written but not run against the shared stack.

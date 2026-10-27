@@ -54,7 +54,7 @@ Document the 24-hour verification flow and baseline-schema table; do not seed ep
 
 ## Progress and completion evidence
 
-Done. Verification token expiry/replay, normalized-email claim behavior, transactional ownership and anti-enumeration are covered by Jest. Full backend validation: 30 suites and 280 tests passed.
+Done. Verification token expiry/replay, normalized-email claim behavior, transactional ownership and anti-enumeration are covered by Jest. Full backend validation: 34 suites and 330 tests passed.
 
 <!-- children:start -->
 <!-- children:end -->

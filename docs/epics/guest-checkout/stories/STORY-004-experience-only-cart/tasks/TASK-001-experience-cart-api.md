@@ -54,7 +54,7 @@ Update Epic acceptance/progress with exact deprecated API behavior.
 
 ## Progress and completion evidence
 
-Done. Experience-only API validation, legacy cleanup/notice, quantity-matched selections and checkout availability quantity are implemented. Backend cart-controller/checkout-service tests and the full suite pass (30 suites, 280 tests). Historical order readers remain unchanged.
+Done. Experience-only API validation, legacy cleanup/notice, quantity-matched selections and checkout availability quantity are implemented. Backend cart-controller/checkout-service tests and the full suite pass (34 suites, 330 tests). Historical order readers remain unchanged.
 
 <!-- children:start -->
 <!-- children:end -->
