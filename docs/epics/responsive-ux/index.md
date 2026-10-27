@@ -3,7 +3,7 @@ title: "Responsive UX across device shapes"
 work_id: "EPIC-responsive-ux"
 work_type: epic
 template_version: 1
-status: draft
+status: in-progress
 parent: null
 branch: "epic/responsive-ux"
 depends_on: []
@@ -13,7 +13,7 @@ depends_on: []
 
 ## Outcome and MVP traceability
 
-Every customer-facing screen renders cleanly and is easy to use on phones, tablets, laptops and wide desktops, in portrait and landscape, including notched devices and foldables. Comments get a clearer, more comfortable UX on all sizes.
+Every customer-facing screen renders cleanly and is easy to use on phones, tablets, laptops and wide desktops, in portrait and landscape, including notched devices and foldables. Comment presentation is part of this Epic but deliberately deferred until the comment-photo-editing branch merges; its Stories and Tasks remain not started.
 
 ## Scope and non-goals
 
@@ -35,7 +35,7 @@ Non-goals: redesigning branding or information architecture; new features (handl
 - [ ] Supported device matrix documented in `docs/reference/` and encoded in a Cypress viewport spec.
 - [ ] Home, experience browse, experience details (default layout), cart, checkout, receipt, login/register and organizer profile have no horizontal overflow, clipped controls or obscured content at every matrix viewport in portrait and landscape.
 - [ ] Modals/drawers fit the dynamic viewport, are scrollable, trap focus and close reliably on touch.
-- [ ] Comment list, threads, photo grid/viewer and composer are comfortable at 360px wide and at desktop widths; touch targets >= 44px.
+- [ ] Comment list, threads, photo grid/viewer and composer are comfortable at 360px wide and at desktop widths; touch targets >= 44px (deferred until comment-photo-editing merges).
 - [ ] Images reserve space (no notable layout shift) and use responsive sources where the media pipeline supports it.
 - [ ] Viewport Cypress spec and existing Cypress/Vitest suites pass.
 
@@ -44,7 +44,7 @@ Non-goals: redesigning branding or information architecture; new features (handl
 - Baseline: `main`. All Epic branches are created from the same `main` commit.
 - Owned paths: `frontend/tailwind.config.js`, global styles, layout shell/navbar/footer, shared modal/drawer components, `frontend/src/components/comments/**` styling and layout, new `frontend/cypress/e2e/responsive/**`.
 - Shared files/contracts and owner: This Epic owns breakpoints, layout primitives and the device matrix. Feature Epics consume these primitives for new UI. Comment logic (auth gating, image editing, pins) stays with the comment Epics; this Epic changes comment presentation only.
-- Parallel-ready assessment: Global shell and shared primitives are parallel-ready now. Comment presentation overlaps the comment-photo-editing and pinned-comments Epics; land this Epic's comment styling after comment-photo-editing, before pinned comments, or coordinate per file.
+- Parallel-ready assessment: Global shell and shared primitives are parallel-ready now. Comment presentation overlaps comment-photo-editing and pinned-comments work; keep its Tasks pending until comment-photo-editing merges, then land before pinned comments or coordinate per file.
 
 ## Dependencies and integration
 
@@ -55,6 +55,10 @@ No formal prerequisite. Recommend landing the layout primitives early so the her
 Children are created only when expansion is explicitly requested.
 
 <!-- children:start -->
+- [STORY-001: Navigate and browse comfortably at every viewport](stories/STORY-001-responsive-shell/index.md)
+- [STORY-002: Use booking and cart overlays on touch and desktop](stories/STORY-002-responsive-overlays/index.md)
+- [STORY-003: Verify responsive layouts across the supported device matrix](stories/STORY-003-viewport-regression/index.md)
+- [STORY-004: Read and write comments comfortably across devices](stories/STORY-004-comments-presentation/index.md)
 <!-- children:end -->
 
 ## Risks, assumptions and open questions
@@ -70,4 +74,4 @@ Run the responsive Cypress spec across the matrix, existing Cypress and Vitest s
 
 ## Progress and decisions
 
-- 2026-10-26: Created from the user's request to improve comments UX and screen rendering across all device shapes.
+- 2026-10-26: Expanded into four Stories and eight Tasks. Comment presentation is intentionally deferred until comment-photo-editing merges.
