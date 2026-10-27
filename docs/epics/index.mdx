@@ -1,0 +1,19 @@
+---
+title: Epics
+sidebar_label: Overview
+---
+
+import EpicIndex from '@site/src/components/EpicIndex';
+
+# Epics
+
+All Epics planned for the project, generated from each Epic's front matter
+(`docs/epics/<epic-slug>/index.md`). Epics are ordered by **delivery wave**:
+wave 1 has no dependencies, and each later wave depends only on earlier ones.
+All Epic branches start from `main`.
+
+<EpicIndex />
+
+See the [planning workflow](../planning/workflow.md) for branch independence,
+templates and progress tracking. New Epics appear here automatically once
+scaffolded with `node scripts/planning.mjs create epic`.

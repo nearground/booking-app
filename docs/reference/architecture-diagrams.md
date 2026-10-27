@@ -1,3 +1,8 @@
+---
+sidebar_label: Architecture diagrams
+sidebar_position: 1
+---
+
 # Architecture Diagrams
 
 All diagrams use [Mermaid](https://mermaid.js.org/) syntax.

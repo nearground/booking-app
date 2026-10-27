@@ -1,3 +1,8 @@
+---
+sidebar_label: Docker setup
+sidebar_position: 3
+---
+
 # PUERTO VALLARTA TODAY - Docker Setup Summary
 
 ## ✅ What Has Been Completed

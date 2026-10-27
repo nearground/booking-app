@@ -3,29 +3,46 @@ import Link from '@docusaurus/Link';
 import React from 'react';
 import styles from './work.module.css';
 
+const sections = [
+  {
+    to: '/work/',
+    title: 'Dashboard',
+    description: 'Current Epics, Stories and Tasks with linked Git commits and recent repository history.',
+  },
+  {
+    to: '/epics/',
+    title: 'Epics',
+    description: 'Every planned Epic with status, delivery wave, branch and dependencies.',
+  },
+  {
+    to: '/planning/workflow/',
+    title: 'Planning workflow',
+    description: 'How MVP requests become branch-ready Epics, Stories and Tasks, and how work is tracked.',
+  },
+  {
+    to: '/reference/',
+    title: 'Reference',
+    description: 'Architecture diagrams, storage contracts and testing notes.',
+  },
+];
+
 export default function InternalDocsHome() {
   return (
-    <Layout title="Project docs" description="Project work, task documents and Git history">
+    <Layout title="Internal docs" description="Project planning, work tracking and technical reference">
       <main className={styles.page}>
         <header className={styles.header}>
           <div>
-            <h1>Project docs</h1>
-            <p>Browse the project’s committed work documents, implementation history and references.</p>
+            <h1>PV Today internal docs</h1>
+            <p>Project planning, work tracking and technical reference for the booking app.</p>
           </div>
         </header>
         <div className={styles.workGrid}>
-          <article className={styles.card}>
-            <h2><Link to="/work/">Work dashboard</Link></h2>
-            <p>View current Epics, Stories, Tasks, linked Git commits and recent repository history.</p>
-          </article>
-          <article className={styles.card}>
-            <h2><Link to="/guides/docs/planning/workflow/">MVP planning</Link></h2>
-            <p>Turn plain-language MVP requests into branch-ready Epics, then expand selected work.</p>
-          </article>
-          <article className={styles.card}>
-            <h2><Link to="/guides/docs/reference/">Reference docs</Link></h2>
-            <p>Browse project architecture, setup guides and historical task records.</p>
-          </article>
+          {sections.map(({ to, title, description }) => (
+            <article className={styles.card} key={to}>
+              <h2><Link to={to}>{title}</Link></h2>
+              <p>{description}</p>
+            </article>
+          ))}
         </div>
       </main>
     </Layout>

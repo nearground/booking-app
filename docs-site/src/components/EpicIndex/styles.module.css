@@ -1,0 +1,84 @@
+.stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 0.75rem;
+  margin: 1.5rem 0 1rem;
+}
+
+.stat {
+  display: flex;
+  flex-direction: column;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--ifm-color-emphasis-300);
+  border-radius: var(--ifm-card-border-radius);
+}
+
+.stat strong {
+  font-size: 1.6rem;
+  line-height: 1.2;
+}
+
+.stat span,
+.meta {
+  color: var(--ifm-color-emphasis-700);
+  font-size: 0.85rem;
+}
+
+.statusSummary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.table {
+  display: table;
+  width: 100%;
+}
+
+.table td {
+  vertical-align: top;
+}
+
+.meta {
+  margin-top: 0.25rem;
+}
+
+.deps {
+  margin: 0;
+  padding-left: 1rem;
+}
+
+.badge {
+  display: inline-block;
+  border-radius: 999px;
+  background: var(--ifm-color-emphasis-200);
+  padding: 0.1rem 0.6rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: capitalize;
+  white-space: nowrap;
+}
+
+.ready {
+  background: var(--ifm-color-info-contrast-background);
+  color: var(--ifm-color-info-contrast-foreground);
+}
+
+.in-progress {
+  background: var(--ifm-color-primary-contrast-background);
+  color: var(--ifm-color-primary-contrast-foreground);
+}
+
+.blocked {
+  background: var(--ifm-color-danger-contrast-background);
+  color: var(--ifm-color-danger-contrast-foreground);
+}
+
+.done {
+  background: var(--ifm-color-success-contrast-background);
+  color: var(--ifm-color-success-contrast-foreground);
+}
+
+.cancelled {
+  text-decoration: line-through;
+}
