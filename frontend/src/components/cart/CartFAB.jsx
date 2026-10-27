@@ -10,7 +10,7 @@ const CartFAB = () => {
   return (
     <>
       {cartNotice && !isCartOpen && (
-        <div role="status" className="fixed bottom-6 left-6 z-[9999] max-w-sm rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 shadow-lg">
+        <div role="status" className={`fixed bottom-[max(1.5rem,env(safe-area-inset-bottom))] left-[max(1rem,env(safe-area-inset-left))] right-[max(1rem,env(safe-area-inset-right))] z-[9999] max-w-sm sm:right-auto ${showCartButton ? 'mb-20 sm:mb-0' : ''} rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 shadow-lg`}>
           <div className="flex items-start justify-between gap-3">
             <p>{cartNotice}</p>
             <button type="button" onClick={dismissCartNotice} className="font-medium underline" aria-label="Dismiss cart notice">Dismiss</button>
@@ -22,7 +22,7 @@ const CartFAB = () => {
           type="button"
           onClick={openCart}
           data-testid="cart-fab"
-          className="fixed bottom-6 right-6 z-[9999] pointer-events-auto flex items-center gap-4 rounded-full bg-emerald-600 px-4 py-3 shadow-lg transition hover:bg-emerald-700"
+          className="fixed bottom-[max(1.5rem,env(safe-area-inset-bottom))] right-[max(1.5rem,env(safe-area-inset-right))] z-[9999] pointer-events-auto flex items-center gap-4 rounded-full bg-emerald-600 min-h-11 max-w-[calc(100vw-2rem)] px-4 py-3 shadow-lg transition hover:bg-emerald-700"
           aria-label={`Open cart with ${cartCount} item${cartCount !== 1 ? 's' : ''}`}
         >
           <span className="relative inline-flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full bg-emerald-800 text-white">

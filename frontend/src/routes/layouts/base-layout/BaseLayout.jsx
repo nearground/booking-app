@@ -5,23 +5,17 @@ import ScrollToTop from 'components/scroll-to-top/ScrollToTop';
 import CartFAB from 'components/cart/CartFAB';
 import CartModal from 'components/cart/CartModal';
 
-/**
- * BaseLayout Component
- * Renders the base layout for the application.
- * It includes the global navbar, the main content, and the global footer.
- * @returns {JSX.Element} - The BaseLayout component.
- */
-const BaseLayout = () => {
-  return (
-    <>
-      <GlobalNavbar />
-      <ScrollToTop />
+const BaseLayout = () => (
+  <div className="flex min-h-dvh min-w-0 flex-col">
+    <GlobalNavbar />
+    <ScrollToTop />
+    <main className="w-full min-w-0 flex-1">
       <Outlet />
-      <GlobalFooter />
-      <CartFAB />
-      <CartModal />
-    </>
-  );
-};
+    </main>
+    <GlobalFooter />
+    <CartFAB />
+    <CartModal />
+  </div>
+);
 
 export default BaseLayout;

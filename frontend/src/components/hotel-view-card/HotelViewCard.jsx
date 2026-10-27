@@ -45,7 +45,7 @@ const HotelViewCard = (props) => {
           <img
             src={image.imageUrl}
             alt={image.accessibleText}
-            className="md:w-[220px] md:h-[140px]"
+            className="aspect-[11/7] w-full rounded-md object-cover md:w-[220px]" loading="lazy" decoding="async"
           />
         </Link>
       </div>

@@ -11,3 +11,175 @@
 @import './components/global-navbar/global-navbar.scss';
 @import './components/ux/input/input.scss';
 @import './components/ux/data-range-picker/date-range-picker.scss';
+
+:root {
+  color-scheme: light;
+  --safe-area-top: env(safe-area-inset-top, 0px);
+  --safe-area-right: env(safe-area-inset-right, 0px);
+  --safe-area-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-area-left: env(safe-area-inset-left, 0px);
+}
+
+html,
+body,
+#root {
+  width: 100%;
+  min-width: 0;
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  font-size: clamp(1rem, 0.96rem + 0.16vw, 1.125rem);
+}
+
+#root,
+#root > * {
+  min-width: 0;
+}
+
+img,
+video,
+svg {
+  max-width: 100%;
+}
+
+:where(button, input, select, textarea) {
+  max-width: 100%;
+}
+
+:where(input, select, textarea) {
+  min-height: 44px;
+}
+
+:where(button, a, input, select, textarea, [tabindex]:not([tabindex='-1'])):focus-visible {
+  outline: 3px solid #f2c94c;
+  outline-offset: 3px;
+  box-shadow: 0 0 0 2px #1f2937;
+}
+
+:where(button, [role='button'], .touch-target) {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+.global-navbar__container {
+  min-height: 4.5rem;
+  padding-left: max(1rem, var(--safe-area-left));
+  padding-right: max(1rem, var(--safe-area-right));
+}
+
+.global-footer {
+  padding-bottom: max(1.5rem, var(--safe-area-bottom));
+}
+
+.global-footer a {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+}
+
+.global-footer input[type='email'] {
+  min-height: 44px;
+  max-width: 100%;
+}
+
+.global-footer button {
+  min-height: 44px;
+  padding-inline: 1rem;
+}
+
+.responsive-overlay {
+  padding: max(1rem, var(--safe-area-top)) max(1rem, var(--safe-area-right)) max(1rem, var(--safe-area-bottom)) max(1rem, var(--safe-area-left));
+}
+
+.responsive-dialog {
+  width: min(100%, 56rem);
+  max-height: calc(100dvh - var(--safe-area-top) - var(--safe-area-bottom) - 2rem);
+  min-height: 0;
+  overflow: hidden;
+}
+
+.responsive-dialog__body {
+  min-height: 0;
+  overscroll-behavior: contain;
+  padding-bottom: max(1.25rem, var(--safe-area-bottom));
+}
+
+@media (max-width: 639px) {
+  .responsive-overlay {
+    align-items: stretch;
+    padding: var(--safe-area-top) var(--safe-area-right) var(--safe-area-bottom) var(--safe-area-left);
+  }
+
+  .responsive-dialog {
+    width: 100%;
+    height: calc(100dvh - var(--safe-area-top) - var(--safe-area-bottom));
+    max-height: calc(100dvh - var(--safe-area-top) - var(--safe-area-bottom));
+    border-radius: 0;
+  }
+}
+
+@supports not (height: 100dvh) {
+  .responsive-dialog {
+    max-height: calc(100vh - var(--safe-area-top) - var(--safe-area-bottom) - 2rem);
+  }
+
+  @media (max-width: 639px) {
+    .responsive-dialog {
+      height: calc(100vh - var(--safe-area-top) - var(--safe-area-bottom));
+      max-height: calc(100vh - var(--safe-area-top) - var(--safe-area-bottom));
+    }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+.responsive-dialog.responsive-dialog--scroll {
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+.site-logo__img {
+  width: auto;
+  height: 54px;
+  max-width: 8rem;
+  object-fit: contain;
+}
+
+
+@media (max-height: 480px) and (orientation: landscape) {
+  .login__form > .container,
+  .register__form > .container {
+    min-height: auto;
+    align-items: flex-start;
+  }
+}
+
+
+@media (max-height: 480px) and (orientation: landscape) {
+  .login__form .mb-10,
+  .register__form .mb-10 {
+    margin-bottom: 1.5rem;
+  }
+}
+
+
+.global-navbar__container a {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+}
+
+:where([role='combobox']) {
+  min-height: 44px;
+}
