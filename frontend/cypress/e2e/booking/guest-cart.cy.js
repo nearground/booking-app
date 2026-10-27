@@ -50,6 +50,56 @@ describe('Guest Cart', () => {
     cy.contains('Create an optional account').should('be.visible');
   });
 
+  it('supports optional account registration, verified login, and claimed-booking visibility', () => {
+    cy.intercept('POST', '**/api/cart/checkout').as('checkout');
+    cy.intercept('PUT', '**/api/users/register', {
+      statusCode: 201,
+      body: { errors: [], data: { status: 'User created successfully' } },
+    }).as('register');
+    cy.intercept('POST', '**/api/users/email-verification/confirm', {
+      body: { errors: [], data: { valid: true, claimedOrderCount: 1 } },
+    }).as('verifyEmail');
+    cy.intercept('POST', '**/api/users/login', {
+      body: { errors: [], data: { token: 'e2e-token' } },
+    }).as('login');
+    cy.intercept('GET', '**/api/users/auth-user', {
+      body: { errors: [], data: { isAuthenticated: true, userDetails: { id: 9001, username: 'guest-account' } } },
+    });
+    cy.intercept('GET', '**/api/users/payment-methods', { body: { errors: [], data: { elements: [] } } });
+    cy.intercept('GET', '**/api/orders', {
+      body: { errors: [], data: { orders: [{ id: 1, orderNumber: 'ORD-CLAIMED-E2E', status: 'confirmed', totalAmount: 25, createdAt: '2026-01-01', Items: [] }] } },
+    });
+    cy.intercept('GET', '**/api/comments/sent/9001*', { body: { errors: [], data: { elements: [] }, metadata: {} } });
+
+    addExperienceToCart();
+    fillCheckout('Guest User', 'guest-account@example.com');
+    cy.getByTestId('cart-modal__checkout-btn').click();
+    cy.wait('@checkout').its('response.statusCode').should('eq', 201);
+    cy.contains('Create an optional account').click();
+    cy.get('input[name="email"]').should('have.value', 'guest-account@example.com');
+    cy.get('input[name="firstName"]').type('Guest');
+    cy.get('input[name="lastName"]').type('Account');
+    cy.get('input[name="username"]').type('guest-account');
+    cy.get('input[name="phoneNumber"]').type('5551234567');
+    cy.get('input[name="country"]').type('US');
+    cy.get('input[name="password"]').type('GuestPass123!');
+    cy.get('input[name="confirmPassword"]').type('GuestPass123!');
+    cy.contains('button', 'Register').click();
+    cy.wait('@register').its('response.statusCode').should('eq', 201);
+
+    cy.visit('/verify-email?token=single-use-e2e-token');
+    cy.wait('@verifyEmail');
+    cy.contains('Email verified').should('be.visible');
+    cy.contains('Log in to view bookings').click();
+    cy.get('input[name="username"]').clear().type('guest-account');
+    cy.get('input[name="password"]').clear().type('GuestPass123!');
+    cy.contains('button', 'Log In').click();
+    cy.wait('@login');
+    cy.location('pathname').should('eq', '/user-profile');
+    cy.contains('Welcome!').should('be.visible');
+    cy.contains('button', 'Bookings').click();
+    cy.contains('ORD-CLAIMED-E2E').should('be.visible');
+  });
   it('preserves the guest cart after login and allows checkout', () => {
     cy.intercept('POST', '**/api/cart/checkout').as('checkout');
     addExperienceToCart();
