@@ -1,0 +1,66 @@
+---
+title: "Create and retrieve guest experience orders securely"
+work_id: "EPIC-guest-checkout/STORY-002/TASK-001"
+work_type: task
+template_version: 1
+status: in-progress
+parent: "EPIC-guest-checkout/STORY-002"
+branch: "epic/guest-checkout"
+depends_on: [EPIC-guest-checkout/STORY-004/TASK-001]
+---
+
+# Create and retrieve guest experience orders securely
+
+Parent User Story: [EPIC-guest-checkout/STORY-002](../index.md)
+
+## Overview and acceptance coverage
+
+Implements the backend contract required for STORY-002 guest purchase and secure receipt retrieval.
+
+## Requirements and current state
+
+Cart checkout currently requires authUser, Order.controller reads req.user.id, and Checkout.service.checkoutCart scopes Cart by CustomerId; Orders currently require an authenticated CustomerId. Guest access must be bound to the existing HTTP-only _cart_session cookie and use unguessable receipt capabilities stored as hashes, not order numbers or email. Only experience carts are eligible; authenticated order endpoints remain scoped to user.
+
+## Implementation steps
+
+1. Change checkout ownership to authenticated user or cookie session; allow nullable CustomerId for guest orders; create random hashed guest receipt capability with expiry; add capability-based retrieval and schema migration; preserve CSRF middleware and secure cookie configuration.
+
+## Files to create or modify
+
+| Path | Change | Ownership/contract constraints |
+|------|--------|--------------------------------|
+| backend/server/services/Checkout.service.js | Support cookie-owned guest cart checkout, nullable guest order/reservation customer association and hashed receipt capability. | Store only token hashes; use constant-time-safe digest matching where applicable; do not expose guest receipts via email/order number; order confirmation remains authorized for authenticated owners. |
+
+## Dependencies
+
+Depends on EPIC-guest-checkout/STORY-004/TASK-001 so checkout only processes supported experience lines.
+
+## Testing
+
+- Unit: Jest tests for guest cart ownership, capability generation/hash, expiry, authorization failure and order creation.
+- Integration: API tests for guest POST /api/cart/checkout and receipt retrieval; authenticated order listing and owner access remain functional.
+- Manual/UX: Inspect that response token is returned once and database stores only its hash; confirm token cannot retrieve a different order.
+- Regression coverage: Existing backend checkout-service.test.js, auth order routes, reservation/confirmation flow and schema migration tests.
+
+## Definition of Done
+
+- [ ] Story acceptance criteria covered with recorded results.
+- [ ] Targeted checks pass; existing intended behavior is preserved.
+- [ ] Documentation updated; no unresolved contract conflicts.
+
+## Documentation updates
+
+Document migration rollout and guest receipt access contract in Epic scope/progress.
+
+## Progress and completion evidence
+
+In progress. Implementation and test evidence will be added before this Task is marked done.
+
+<!-- children:start -->
+<!-- children:end -->
+
+## Git history
+
+Link implementation commits only when their commit message contains an exact
+`Work-Item: EPIC-guest-checkout/STORY-002/TASK-001` trailer. The dashboard derives this section from Git history;
+do not hand-maintain or infer commit links.

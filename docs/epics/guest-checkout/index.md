@@ -3,7 +3,7 @@ title: "Guest-first checkout and cart continuity"
 work_id: "EPIC-guest-checkout"
 work_type: epic
 template_version: 1
-status: draft
+status: in-progress
 parent: null
 branch: "epic/guest-checkout"
 depends_on: []
@@ -43,9 +43,13 @@ No prerequisite. The MCP API research Epic documents this Epic's receipt claim/l
 
 ## User Stories
 
-Children are created only when expansion is explicitly requested.
+The Epic was expanded into four stories covering cart continuity, guest purchase, verified receipt claiming, and experience-only cart policy.
 
 <!-- children:start -->
+- [STORY-001: Keep guest experience carts through login](stories/STORY-001-cart-continuity/index.md)
+- [STORY-002: Complete experience checkout as a guest](stories/STORY-002-guest-purchase/index.md)
+- [STORY-003: Claim guest receipts through verified accounts](stories/STORY-003-verified-receipt-claim/index.md)
+- [STORY-004: Limit carts to experience tickets](stories/STORY-004-experience-only-cart/index.md)
 <!-- children:end -->
 
 ## Risks, assumptions and open questions
@@ -62,4 +66,4 @@ Run existing booking Cypress specs and backend checkout tests; add automated gue
 
 ## Progress and decisions
 
-- Draft created; not approved for implementation. Open decisions remain; no implementation evidence recorded.
+- In progress on `epic/guest-checkout`; implementation is proceeding in the ordered Tasks. Secure receipt-claim verification requires a new token-backed workflow because registration currently sets `isEmailVerified` false and no verification endpoint exists.
