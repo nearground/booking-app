@@ -12,6 +12,7 @@ import mediaRouter from './routes/media.js';
 import commentsRouter from './routes/comments.js';
 import cartRouter from './routes/cart.js';
 import ordersRouter from './routes/orders.js';
+import organizationSitesRouter from './routes/organization-sites.js';
 import db from './models/index.js';
 import {
     syncExperienceSchedule,
@@ -197,6 +198,7 @@ app.use('/api/hotel', hotelRouter);
 app.use('/api/experiences', experiencesRouter);
 app.use('/api/services', servicesRouter);
 app.use('/api/organizers', organizersRouter);
+app.use('/api/organization-sites', organizationSitesRouter);
 app.use('/api/media', mediaRouter);
 app.use('/api', miscRouter);
 app.use('/api/comments', commentsRouter);

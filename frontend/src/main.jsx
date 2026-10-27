@@ -3,7 +3,10 @@ import ReactDOM from 'react-dom/client';
 import './index.scss';
 import HotelsSearch from './routes/listings/HotelsSearch';
 import UserProfile from './routes/user-profile/UserProfile';
-import { Navigate, createBrowserRouter, RouterProvider } from 'react-router-dom';
+import { Navigate, createBrowserRouter, RouterProvider, useParams } from 'react-router-dom';
+import OrganizationSite from 'routes/organization-site/OrganizationSite';
+import { resolveOrganizationSlugFromHost } from 'routes/organization-site/organizationSiteResolver';
+import OrganizationBrandingEditor from 'routes/organizer-profile/OrganizationBrandingEditor';
 import reportWebVitals from './reportWebVitals';
 import Home from './routes/home/Home';
 import { AuthProvider } from './contexts/AuthContext';
@@ -32,10 +35,17 @@ import CreateService from 'routes/create-service/CreateService';
 import OrganizerProfile from 'routes/organizer-profile/OrganizerProfile';
 import SessionDetails from 'routes/session-details/SessionDetails';
 
+const OrganizationSiteByPath = () => <OrganizationSite slug={useParams().slug} />;
+const HostAwareRoot = () => {
+  const slug = resolveOrganizationSlugFromHost(window.location.hostname);
+  return slug ? <OrganizationSite slug={slug} /> : <BaseLayout />;
+};
+
 const router = createBrowserRouter([
+  { path: '/o/:slug', element: <OrganizationSiteByPath /> },
   {
     path: '/',
-    element: <BaseLayout />,
+    element: <HostAwareRoot />,
     children: [
       {
         path: '/',
@@ -83,6 +93,10 @@ const router = createBrowserRouter([
           {
             path: '/organizer-profile',
             element: <OrganizerProfile />,
+          },
+          {
+            path: '/organizer-profile/branding/:organizationId',
+            element: <OrganizationBrandingEditor />,
           },
           {
             path: '/session-details/:sessionId',

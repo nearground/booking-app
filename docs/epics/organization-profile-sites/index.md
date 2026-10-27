@@ -3,7 +3,7 @@ title: "Branded organization profile sites"
 work_id: "EPIC-organization-profile-sites"
 work_type: epic
 template_version: 1
-status: draft
+status: in-progress
 parent: null
 branch: "epic/organization-profile-sites"
 depends_on: []
@@ -21,15 +21,15 @@ Organization currently has `name`, `organizationUsername`, `email` in `backend/s
 
 Decisions (user, 2026-10-26): subdomain URLs `{slug}.puertovallarta.today`; initial branding fields: logo, cover image/video, primary and accent colors, font choice (from a fixed list), tagline/about text, social and contact links, layout template choice.
 
-In scope: Organization branding fields + migration with safe defaults; admin editor (org admins only); public read API returning branding and visible experiences; host-based routing so `{slug}.puertovallarta.today` renders the org landing page (with a `/o/{slug}` path fallback for local dev and LAN); 2-3 hardcoded layout templates. No arbitrary HTML/CSS/script.
+In scope: Organization branding fields in existing initial migrations with safe defaults (no new migration files); admin editor (org admins only); public read API returning branding and visible experiences; host-based routing so `{slug}.puertovallarta.today` renders the org landing page (with a `/o/{slug}` path fallback for local dev and LAN); 2-3 hardcoded layout templates. No arbitrary HTML/CSS/script.
 
 ## Acceptance criteria
 
 - [ ] `{slug}.puertovallarta.today` (and `/o/{slug}` in dev) resolves an organization and renders its chosen template with its branding and visible experiences linking to the main site's experience details/booking.
-- [ ] Org admins can edit all branding fields and choose a template; non-admins cannot; colors, fonts and links are validated, media goes through the existing upload pipeline.
-- [ ] Missing/invalid branding renders safe defaults; no executable markup can be injected.
-- [ ] Unknown or reserved subdomains (`www`, `api`, `admin`, `internal`, etc.) do not resolve to organizations; slugs are unique and validated.
-- [ ] Tests cover host/slug resolution, public read privacy, admin-only writes, validation, templates and empty states.
+- [x] Org admins can edit all branding fields and choose a template; non-admins cannot; colors, fonts and links are validated, media goes through the existing upload pipeline.
+- [x] Missing/invalid branding renders safe defaults; no executable markup can be injected.
+- [x] Unknown or reserved subdomains (`www`, `api`, `admin`, `internal`, etc.) do not resolve to organizations; slugs are unique and validated.
+- [x] Tests cover host/slug resolution, public read privacy, admin-only writes, validation, templates and empty states.
 
 ## Branch independence and ownership
 
@@ -47,6 +47,9 @@ No formal dependency. The Cloudflare side needs a wildcard DNS record `*.puertov
 Children are created only when expansion is explicitly requested.
 
 <!-- children:start -->
+- [STORY-001: Manage organization branding](stories/STORY-001-manage-branding/index.md)
+- [STORY-002: Present a public organization site](stories/STORY-002-publish-organization-site/index.md)
+- [STORY-003: Resolve organization sites across hosts](stories/STORY-003-resolve-organization-sites/index.md)
 <!-- children:end -->
 
 ## Risks, assumptions and open questions
@@ -59,8 +62,12 @@ Children are created only when expansion is explicitly requested.
 
 ## Verification and completion evidence
 
-Backend tests for slug/host resolution, privacy and admin-only writes; UI tests for templates and states; manual check via `/o/{slug}` in dev and a wildcard subdomain through the tunnel.
+Backend full suite passed (28 suites, 303 tests), including mocked schema/rollback and branding seed validation. Focused organization-site frontend suite passed (14 tests); production build passed. Full frontend unit suite had 237 passing tests and one unrelated pre-existing failure in `Login.test.jsx` (`Username: user1` hint is not rendered); no changed login files. A simultaneous build/test attempt hit memory pressure; the build passed when rerun alone. No migrations or seeders were executed against the shared dev database. Cloudflare wildcard DNS/tunnel ingress and live-host checks are deferred to production launch.
 
 ## Progress and decisions
 
 - 2026-10-26: User chose subdomain URLs and the initial branding field set.
+- 2026-10-26: Expanded into three stories and six tasks; implementation underway.
+- 2026-10-27: Implemented branding persistence, public API, editor, templates, hostname routing and wildcard configuration. `COOKIE_DOMAIN` remains unchanged. Manual Cloudflare setup and live-host verification are pending.
+
+- 2026-10-27 follow-up: With no live data, removed the separate branding migration and folded its columns/index into existing `20260417130000-add-organization-username.js`. Startup/demo seeders now brand `/o/martinllc` and `/o/testcompany1` through `/o/testcompany3`. The public API permits branded empty sites. No shared DB or Cloudflare changes were made.

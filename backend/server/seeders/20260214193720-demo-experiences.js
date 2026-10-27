@@ -99,11 +99,23 @@ module.exports = {
     const [locations] = await queryInterface.sequelize.query(
       "SELECT id, name FROM Locations WHERE name LIKE 'Test Location %' ORDER BY id ASC"
     );
+    const organizationBrands = [
+      { primaryColor: '#0f766e', accentColor: '#f59e0b', font: 'inter', layoutTemplate: 'classic', tagline: 'Explore the coast, one adventure at a time', about: 'Join our local guides for relaxed coastal adventures and unforgettable days on the bay.' },
+      { primaryColor: '#7c3aed', accentColor: '#f97316', font: 'lato', layoutTemplate: 'editorial', tagline: 'Local stories and new discoveries', about: 'Discover the culture, flavors and hidden corners of Puerto Vallarta with our welcoming local team.' },
+      { primaryColor: '#1d4ed8', accentColor: '#eab308', font: 'montserrat', layoutTemplate: 'immersive', tagline: 'Make your next great memory here', about: 'Experience the energy of the Pacific with outdoor escapes and shared adventures for curious travelers.' },
+    ];
     var testOrganizations = [];
     for (let i = 1; i <= 3; i++) {
       testOrganizations.push({
         name: `Test Company ${i}`,
         organizationUsername: `testcompany${i}`,
+        slug: `testcompany${i}`,
+        ...organizationBrands[i - 1],
+        logoMediaKey: null,
+        coverMediaKey: null,
+        coverMediaType: 'image',
+        socialLinks: JSON.stringify({ website: `https://example.com/testcompany${i}` }),
+        contactLinks: JSON.stringify({ email: `contact@testcompany${i}.com`, website: `https://example.com/testcompany${i}` }),
         email: `contact@testcompany${i}.com`,
         LocationId: locations[i-1].id,
         createdAt: new Date(),
