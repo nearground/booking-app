@@ -3,7 +3,7 @@ title: "MCP booking assistant: API research"
 work_id: "EPIC-mcp-booking-assistant"
 work_type: epic
 template_version: 1
-status: in-progress
+status: done
 parent: null
 branch: "epic/mcp-booking-assistant"
 depends_on: []
@@ -23,28 +23,28 @@ In scope:
 
 - API inventory: for each target capability, verified routes in `backend/server/routes/` (`users.js`, `organizers.js`, `experiences.js`, `cart.js`, `orders.js`), controller/service, auth middleware (`auth.js`, `organization-auth.js`, `experience-auth.js`, CSRF), request/response shapes, error format, rate limits and cookie/JWT behavior.
 - Machine-readable OpenAPI spec for these routes, with a Jest check against actual Express route definitions that needs no database.
-- Gap analysis: what a non-browser client cannot do today (cookie-only auth, CSRF assumptions, missing idempotency keys, guest checkout and receipt lookup contracts pending in the guest-checkout Epic, no confirmation-code lookup endpoint, etc.).
+- Gap analysis: cookie-only account auth, CSRF assumptions, missing idempotency keys, implemented guest checkout/receipt/email-verification contracts, and the still-missing reservation-confirmation-code lookup endpoint.
 - Recommendation memo: candidate MCP tool list per capability, suggested auth model for agent clients and which actions need explicit user confirmation, as input for later Stories.
 
 Non-goals for this phase: building the MCP server, changing REST contracts, issuing agent credentials, or changing production behavior.
 
 ## Acceptance criteria
 
-- [ ] API inventory covers every target capability with verified route, auth requirement, inputs, outputs and errors; unknowns are listed, not guessed.
-- [ ] OpenAPI spec for those routes exists and an automated database-free test detects route/method drift against Express router definitions.
-- [ ] Gap analysis and MCP recommendation memo are published and linked from this Epic.
-- [ ] No production code behavior changes in this phase.
+- [x] API inventory covers every target capability with verified route, auth requirement, inputs, outputs and errors; unknowns are listed, not guessed.
+- [x] OpenAPI spec for those routes exists and an automated database-free test detects selected route/method drift against Express router definitions.
+- [x] Gap analysis and MCP recommendation memo are published and linked from this Epic.
+- [x] No production code behavior changes in this phase.
 
 ## Branch independence and ownership
 
 - Baseline: `main`. All Epic branches are created from the same `main` commit.
 - Owned paths: `docs/reference/contracts/api/**` (inventory, OpenAPI, memo); a read-only API contract test under `backend/tests/`.
-- Shared files/contracts and owner: REST owners remain authoritative; this Epic documents them. Guest-checkout Epic owns receipt claim/lookup; the spec is updated when that contract lands.
+- Shared files/contracts and owner: REST owners remain authoritative; this Epic documents them. Guest-checkout Epic owns receipt claim/lookup; its landed contracts are now included in the inventory, spec and memo.
 - Parallel-ready assessment: Parallel-ready now; read-only with respect to application code.
 
 ## Dependencies and integration
 
-No prerequisite for research. Receipt/checkout portions are refreshed after the guest-checkout Epic publishes its contract. MCP server implementation Epics/Stories are added later from the memo.
+No prerequisite for research. Receipt/checkout portions have been refreshed after the completed guest-checkout Epic. MCP server implementation remains a separate future scope decision; this Epic's completion does not imply a running MCP server.
 
 ## User Stories
 
@@ -57,7 +57,7 @@ No prerequisite for research. Receipt/checkout portions are refreshed after the 
 
 - Assumption: future MCP tools call the REST API, never the database directly, and never expose passwords or reusable JWTs to the model.
 - Risk: spec drift as other Epics change routes; mitigated by the automated contract check.
-- Deferred until implementation: transport (stdio vs. Streamable HTTP), agent identity/consent model, confirmation policy, receipt-code proof.
+- Deferred until implementation: transport (stdio vs. Streamable HTTP), agent identity/consent model, implementation of the recommended confirmation policy, and any new confirmation-code-only lookup contract.
 
 ## Deliverables
 
@@ -68,9 +68,12 @@ No prerequisite for research. Receipt/checkout portions are refreshed after the 
 
 ## Verification and completion evidence
 
-The static Jest route contract test must pass without a database. An optional GET-only smoke against `http://localhost:4000` may be skipped if unreachable. The memo is input to future MCP scope approval; this Epic does not implement a server.
+2026-10-27: Both Stories and all three Tasks were reviewed explicitly against the four acceptance criteria after refreshing current REST contracts. The 51-operation OpenAPI subset and DB-free registration test cover selected method/path pairs in their owning routers plus mount prefixes, not runtime response/schema/auth validation or automatic discovery of new routes. Full backend Jest passed (34 suites, 342 tests); scoped contract tests passed (3 tests); planning validation and all 7 planner tests passed. Changed-test ESLint passed with Jest globals enabled. No production source was changed.
+
+No runtime smoke was performed or required. GET cart and schedule endpoints can mutate backend state, so GET-only is not equivalent to side-effect-free. The memo remains input to future MCP scope approval; this Epic does not implement a server. Task attribution uses exact `Work-Item:` trailers in Git, as required by the planning SOP; no manual commit registry is added.
 
 ## Progress and decisions
 
+- 2026-10-27: Completed research closure: consumed guest-checkout contracts, corrected stale auth/cart/receipt findings, refreshed safety recommendations, and verified parent acceptance independently of child statuses. Follow-up direction: a basic Discord REST discovery interface with browser booking handoff; bot implementation and private account operations are not part of this Epic.
 - 2026-10-26: Expanded Epic into two Stories and three Tasks; the API inventory, OpenAPI route contract/test, and MCP gap/tool recommendation are complete; planning validation and all 265 backend Jest tests pass. No production behavior was changed.
 - 2026-10-26: Scope narrowed by user to API research first; MCP scope decided incrementally.
