@@ -3,7 +3,7 @@ title: "Resolve organization sites across hosts"
 work_id: "EPIC-organization-profile-sites/STORY-003"
 work_type: story
 template_version: 1
-status: in-progress
+status: done
 parent: "EPIC-organization-profile-sites"
 branch: "epic/organization-profile-sites"
 depends_on: []
@@ -23,7 +23,7 @@ Resolve one-level *.puertovallarta.today hosts and /o/:slug fallback without int
 
 ## Acceptance criteria
 
-- [ ] Given I visit {slug}.puertovallarta.today or localhost/o/{slug}, when the frontend resolves the request, then the organization site loads, while unknown/reserved slugs show not-found and unrelated app routes retain existing behavior..
+- [x] Given I visit {slug}.puertovallarta.today or localhost/o/{slug}, when the frontend resolves the request, then the organization site loads, while unknown/reserved slugs show not-found and unrelated app routes retain existing behavior..
 - Epic acceptance coverage: Covers host/path resolution, reserved/unknown host rejection, fallback route, wildcard development/production config and Cloudflare instructions.
 
 ## Ownership and dependencies

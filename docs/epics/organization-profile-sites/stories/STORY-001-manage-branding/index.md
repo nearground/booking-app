@@ -3,7 +3,7 @@ title: "Manage organization branding"
 work_id: "EPIC-organization-profile-sites/STORY-001"
 work_type: story
 template_version: 1
-status: in-progress
+status: done
 parent: "EPIC-organization-profile-sites"
 branch: "epic/organization-profile-sites"
 depends_on: []
@@ -23,7 +23,7 @@ Grounded scope: Organization.model.js plus organization-auth.js admin path.
 
 ## Acceptance criteria
 
-- [ ] Given I am an authenticated organization member without admin rights, when I attempt to save branding, then the API returns 403 and leaves settings unchanged; an admin can save validated settings and see them in the editor..
+- [x] Given I am an authenticated organization member without admin rights, when I attempt to save branding, then the API returns 403 and leaves settings unchanged; an admin can save validated settings and see them in the editor..
 - Epic acceptance coverage: Covers validated branding fields, admin-only editing, safe defaults and the existing media upload pipeline.
 
 ## Ownership and dependencies

@@ -3,7 +3,7 @@ title: "Build the organizer branding editor"
 work_id: "EPIC-organization-profile-sites/STORY-001/TASK-002"
 work_type: task
 template_version: 1
-status: in-progress
+status: done
 parent: "EPIC-organization-profile-sites/STORY-001"
 branch: "epic/organization-profile-sites"
 depends_on: []
@@ -44,9 +44,9 @@ Depends on STORY-001/TASK-001 API/schema contract.
 
 ## Definition of Done
 
-- [ ] Story acceptance criteria covered with recorded results.
-- [ ] Targeted checks pass; existing intended behavior is preserved.
-- [ ] Documentation updated; no unresolved contract conflicts.
+- [x] Story acceptance criteria covered with recorded results.
+- [x] Targeted checks pass; existing intended behavior is preserved.
+- [x] Documentation updated; no unresolved contract conflicts.
 
 ## Documentation updates
 
@@ -54,7 +54,7 @@ Update story evidence after implementation.
 
 ## Progress and completion evidence
 
-In progress; record component/build evidence.
+Completed. The organizer-area editor is mounted under the authenticated organizer route, exposes fixed brand/template controls, reuses the authenticated media upload flow for images and MP4 cover video, and saves through the admin-only API. Vitest editor component test passed (1); frontend production build passed. Backend admin authorization and branding validation tests passed.
 
 ## Git history
 

@@ -3,7 +3,7 @@ title: "Resolve hostnames and local slug routes"
 work_id: "EPIC-organization-profile-sites/STORY-003/TASK-001"
 work_type: task
 template_version: 1
-status: in-progress
+status: done
 parent: "EPIC-organization-profile-sites/STORY-003"
 branch: "epic/organization-profile-sites"
 depends_on: []
@@ -44,9 +44,9 @@ Depends on STORY-002 public site components/API.
 
 ## Definition of Done
 
-- [ ] Story acceptance criteria covered with recorded results.
-- [ ] Targeted checks pass; existing intended behavior is preserved.
-- [ ] Documentation updated; no unresolved contract conflicts.
+- [x] Story acceptance criteria covered with recorded results.
+- [x] Targeted checks pass; existing intended behavior is preserved.
+- [x] Documentation updated; no unresolved contract conflicts.
 
 ## Documentation updates
 
@@ -54,7 +54,7 @@ Document local resolution in Epic subtree.
 
 ## Progress and completion evidence
 
-In progress; record routing test results.
+Completed. The frontend routes /o/:slug and resolves one-level *.puertovallarta.today hosts; reserved/malformed names fail closed. Vitest resolver suite passed (9 tests), organization templates passed, and production build passed. Full browser/manual deployment verification remains an operator step.
 
 ## Git history
 

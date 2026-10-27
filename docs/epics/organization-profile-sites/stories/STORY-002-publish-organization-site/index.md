@@ -3,7 +3,7 @@ title: "Present a public organization site"
 work_id: "EPIC-organization-profile-sites/STORY-002"
 work_type: story
 template_version: 1
-status: in-progress
+status: done
 parent: "EPIC-organization-profile-sites"
 branch: "epic/organization-profile-sites"
 depends_on: []
@@ -23,7 +23,7 @@ Expose an unauthenticated slug-keyed read endpoint with public branding and publ
 
 ## Acceptance criteria
 
-- [ ] Given an organization has published upcoming experiences, when I open its public site, then I see approved branding and only visible experiences; sold-out items are labeled and actions link to puertovallarta.today..
+- [x] Given an organization has published upcoming experiences, when I open its public site, then I see approved branding and only visible experiences; sold-out items are labeled and actions link to puertovallarta.today..
 - Epic acceptance coverage: Covers privacy-safe public reads, visible experience filtering, sold-out state, fixed templates, safe defaults and no executable markup.
 
 ## Ownership and dependencies

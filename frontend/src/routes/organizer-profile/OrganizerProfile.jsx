@@ -917,6 +917,9 @@ const OrganizerProfile = () => {
             onCancelInvite={cancelOrganizationInvite}
             onCopyInviteValue={copyText}
           />
+          {selectedOrganizationIsAdmin && selectedOrganization ? (
+            <Link to={`/organizer-profile/branding/${selectedOrganization.id}`} className="mt-4 inline-flex rounded-lg bg-brand px-4 py-2 font-semibold text-white">Edit public site branding</Link>
+          ) : null}
         </TabPanel>
 
         <TabPanel label="Experiences" icon={faImages}>

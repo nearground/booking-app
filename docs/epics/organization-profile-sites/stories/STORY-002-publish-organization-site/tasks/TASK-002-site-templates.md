@@ -3,7 +3,7 @@ title: "Render branded sites and experience cards"
 work_id: "EPIC-organization-profile-sites/STORY-002/TASK-002"
 work_type: task
 template_version: 1
-status: in-progress
+status: done
 parent: "EPIC-organization-profile-sites/STORY-002"
 branch: "epic/organization-profile-sites"
 depends_on: []
@@ -44,9 +44,9 @@ Depends on STORY-002/TASK-001 public API contract.
 
 ## Definition of Done
 
-- [ ] Story acceptance criteria covered with recorded results.
-- [ ] Targeted checks pass; existing intended behavior is preserved.
-- [ ] Documentation updated; no unresolved contract conflicts.
+- [x] Story acceptance criteria covered with recorded results.
+- [x] Targeted checks pass; existing intended behavior is preserved.
+- [x] Documentation updated; no unresolved contract conflicts.
 
 ## Documentation updates
 
@@ -54,7 +54,7 @@ Capture templates in story progress/evidence.
 
 ## Progress and completion evidence
 
-In progress; record template and empty-state evidence.
+Completed. Three hardcoded layouts render validated branding and privacy-safe experience cards with sold-out labels, safe text and an empty state; experience actions point to puertovallarta.today. Vitest component suite passed: 13 tests across templates, cards and empty states. Frontend production build passed.
 
 ## Git history
 
