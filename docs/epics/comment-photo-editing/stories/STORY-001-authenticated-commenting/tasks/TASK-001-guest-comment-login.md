@@ -29,7 +29,7 @@ ExperienceDetails obtains userDetails from AuthContext and currently always rend
 
 | Path | Change | Ownership/contract constraints |
 |------|--------|--------------------------------|
-| frontend/src/routes/experience-details/ExperienceDetails.jsx | Select guest message/link versus authenticated composer. | Do not hide public comment reading or change authorization/backend behavior. |
+| frontend/src/routes/experience-details/ExperienceDetails.jsx, CommentsModal.jsx, and CommentsSection.jsx | Show guest-only prompt at each review entry point. | Do not hide public comment reading or change authorization/backend behavior. |
 | frontend/src/components/comments/GuestCommentPrompt.jsx and test | Provide and test the login link with current route state. | Keep route state compatible with Login.jsx location.state.from.pathname. |
 
 ## Dependencies
@@ -55,7 +55,7 @@ Update this Task with completion status and test evidence; no separate user-faci
 
 ## Progress and completion evidence
 
-Implemented a small “Log in to comment” link in place of ExperienceDetails review composition for logged-out visitors. It passes the current React Router location as Login route state; Login.jsx returns to `from.pathname`. CommentsModal remains public/read-only. `npx vitest --run src/components/comments/GuestCommentPrompt.test.jsx`: 1 test passed; the test verifies the login link retains the experience pathname, query, and hash in route state.
+Implemented a small “Log in to comment” link in place of ExperienceDetails review composition for logged-out visitors. It passes the current React Router location as Login route state; Login.jsx returns to `from.pathname`. CommentsSection and CommentsModal also show the guest-only login link while preserving public comment reading; modal comment cards remain read-only. Focused Vitest for GuestCommentPrompt, CommentsSection, and CommentsModal passed 3/3 tests; GuestCommentPrompt verifies pathname, query, and hash route state. Authenticated composer behavior remains selected by userDetails in ExperienceDetails, and the modal link is controlled by isLoggedIn.
 
 ## Git history
 

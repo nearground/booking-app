@@ -650,6 +650,7 @@ const ExperienceDetails = ({ previewData = null, isPreview = false }) => {
             isOpen={isCommentsModalOpen}
             onClose={() => setIsCommentsModalOpen(false)}
             comments={comments}
+            isLoggedIn={Boolean(userDetails)}
           />
         </Suspense>
       )}
