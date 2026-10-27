@@ -18,6 +18,7 @@ const CONTENT_TYPE_TO_EXTENSION = {
     'image/webp': 'webp',
     'image/gif': 'gif',
     'image/avif': 'avif',
+    'video/mp4': 'mp4',
 };
 
 const ALLOWED_KEY_PREFIXES = ['users/', 'orgs/', 'experiences/', 'hotels/'];
@@ -27,6 +28,8 @@ const ALLOWED_UPLOAD_KINDS = new Set([
     'profile',
     'experience-thumbnail',
     'experience-gallery',
+    'organization-logo',
+    'organization-cover',
     'review-image',
 ]);
 const MEDIA_KIND_REGEX = /^[a-z0-9-]{1,40}$/;

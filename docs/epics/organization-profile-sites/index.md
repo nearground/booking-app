@@ -3,7 +3,7 @@ title: "Branded organization profile sites"
 work_id: "EPIC-organization-profile-sites"
 work_type: epic
 template_version: 1
-status: draft
+status: in-progress
 parent: null
 branch: "epic/organization-profile-sites"
 depends_on: []
@@ -67,3 +67,4 @@ Backend tests for slug/host resolution, privacy and admin-only writes; UI tests 
 ## Progress and decisions
 
 - 2026-10-26: User chose subdomain URLs and the initial branding field set.
+- 2026-10-26: Expanded into three stories and six tasks; implementation underway.

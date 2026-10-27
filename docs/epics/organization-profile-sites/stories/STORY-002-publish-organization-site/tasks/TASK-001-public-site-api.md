@@ -3,7 +3,7 @@ title: "Expose privacy-safe organization site data"
 work_id: "EPIC-organization-profile-sites/STORY-002/TASK-001"
 work_type: task
 template_version: 1
-status: in-progress
+status: done
 parent: "EPIC-organization-profile-sites/STORY-002"
 branch: "epic/organization-profile-sites"
 depends_on: []
@@ -44,17 +44,17 @@ Depends on STORY-001/TASK-001 branding schema.
 
 ## Definition of Done
 
-- [ ] Story acceptance criteria covered with recorded results.
-- [ ] Targeted checks pass; existing intended behavior is preserved.
-- [ ] Documentation updated; no unresolved contract conflicts.
+- [x] Story acceptance criteria covered with recorded results.
+- [x] Targeted checks pass; existing intended behavior is preserved.
+- [x] Documentation updated; no unresolved contract conflicts.
 
 ## Documentation updates
 
-Document response shape in Epic subtree.
+Documented the public response projection in `backend/server/utils/organization-site-response.js`; it contains organization branding and visible experience cards only.
 
 ## Progress and completion evidence
 
-In progress; record API privacy evidence.
+Completed. Jest verified the read query selects only public organization/experience fields and includes scheduled future sessions only; response projection excludes membership, reservation, email and username data. 36 targeted backend tests passed.
 
 ## Git history
 

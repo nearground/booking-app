@@ -3,7 +3,7 @@ title: "Add validated branding fields and admin API"
 work_id: "EPIC-organization-profile-sites/STORY-001/TASK-001"
 work_type: task
 template_version: 1
-status: in-progress
+status: done
 parent: "EPIC-organization-profile-sites/STORY-001"
 branch: "epic/organization-profile-sites"
 depends_on: []
@@ -44,17 +44,17 @@ Foundation for editor and public site; no external dependency.
 
 ## Definition of Done
 
-- [ ] Story acceptance criteria covered with recorded results.
-- [ ] Targeted checks pass; existing intended behavior is preserved.
-- [ ] Documentation updated; no unresolved contract conflicts.
+- [x] Story acceptance criteria covered with recorded results.
+- [x] Targeted checks pass; existing intended behavior is preserved.
+- [x] Documentation updated; no unresolved contract conflicts.
 
 ## Documentation updates
 
-Record contract and migration name in Epic subtree.
+Record contract and migration name in Epic subtree. Migration: `20261027013100-add-organization-branding.js`.
 
 ## Progress and completion evidence
 
-In progress; attach implementation and test evidence before completion.
+Completed. `npm --prefix backend test -- --runInBand tests/unit/organization-sites.test.js`: 36 tests passed, including slug/defaults, reserved names, branding validation, admin middleware and private-data projection. `npm ci --prefix backend` completed. Migration was not run against any database per the shared-DB restriction.
 
 ## Git history
 

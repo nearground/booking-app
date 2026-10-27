@@ -18,6 +18,7 @@ router.put(
             'image/webp',
             'image/gif',
             'image/avif',
+            'video/mp4',
         ],
         limit: '6mb',
     }),
