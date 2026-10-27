@@ -8,6 +8,7 @@ const mockTransaction = jest.fn().mockResolvedValue(mockTx);
 const mockCartFindOne = jest.fn();
 const mockCartItemFindAll = jest.fn();
 const mockCartItemUpdate = jest.fn().mockResolvedValue([1]);
+const mockCartItemDestroy = jest.fn().mockResolvedValue(1);
 
 jest.mock('../../server/models/database.js', () => ({
     __esModule: true,
@@ -22,6 +23,7 @@ jest.mock('../../server/models/CartItem.model.js', () => ({
     default: {
         findAll: (...args) => mockCartItemFindAll(...args),
         update: (...args) => mockCartItemUpdate(...args),
+        destroy: (...args) => mockCartItemDestroy(...args),
     },
 }));
 
@@ -32,6 +34,7 @@ describe('mergeGuestCart', () => {
         jest.clearAllMocks();
         mockTx.finished = false;
         mockTransaction.mockResolvedValue(mockTx);
+        mockCartItemFindAll.mockResolvedValue([]);
     });
 
     it('moves each guest line into the account cart and recalculates its total once', async () => {
@@ -57,6 +60,22 @@ describe('mergeGuestCart', () => {
         expect(mockTx.rollback).not.toHaveBeenCalled();
     });
 
+    it('consolidates identical ticket selections from both carts exactly once', async () => {
+        const ticketSelection = { ticketTierId: 5, title: 'Adult', unitPrice: 10, quantity: 1 };
+        const metadata = { ScheduledExperienceId: 12, numberOfAttendees: 1, ticketSelections: [ticketSelection] };
+        const guestCart = { id: 11, update: jest.fn().mockResolvedValue(undefined) };
+        const accountCart = { id: 22, update: jest.fn().mockResolvedValue(undefined) };
+        const guestItem = { id: 1, ProductType: 'Experience', ProductId: 9, quantity: 1, totalPrice: '10.00', metadata };
+        const accountItem = { id: 2, ProductType: 'Experience', ProductId: 9, quantity: 1, totalPrice: '10.00', metadata };
+        mockCartFindOne.mockResolvedValueOnce(guestCart).mockResolvedValueOnce(accountCart);
+        mockCartItemFindAll.mockResolvedValueOnce([guestItem]).mockResolvedValueOnce([accountItem, guestItem]);
+
+        await expect(mergeGuestCart({ sessionToken: 'guest-token', customerId: 7 })).resolves.toBe(true);
+
+        expect(mockCartItemUpdate).toHaveBeenCalledWith(expect.objectContaining({ quantity: 2, totalPrice: 20 }), expect.objectContaining({ where: { id: 2 } }));
+        expect(mockCartItemDestroy).toHaveBeenCalledWith(expect.objectContaining({ where: expect.objectContaining({ id: expect.any(Object) }) }));
+        expect(accountCart.update).toHaveBeenCalledWith({ totalAmount: 20 }, { transaction: mockTx });
+    });
     it('reassigns the guest cart when the account has no active cart', async () => {
         const guestCart = { id: 11, update: jest.fn().mockResolvedValue(undefined) };
         mockCartFindOne.mockResolvedValueOnce(guestCart).mockResolvedValueOnce(null);

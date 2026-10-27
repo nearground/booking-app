@@ -22,6 +22,28 @@ const getCartOwnerFilter = (req) => {
     return null;
 };
 
+const validateExperienceMetadata = (metadata, quantity) => {
+    if (!metadata || typeof metadata !== 'object' || Array.isArray(metadata)) return 'Experience metadata is required';
+    if (!Number.isInteger(Number(metadata.ScheduledExperienceId)) || Number(metadata.ScheduledExperienceId) < 1) {
+        return 'metadata.ScheduledExperienceId is required for Experience items';
+    }
+    if (!Array.isArray(metadata.ticketSelections) || metadata.ticketSelections.length === 0) {
+        return 'metadata.ticketSelections must be a non-empty array for Experience items';
+    }
+    let selectedQuantity = 0;
+    for (const selection of metadata.ticketSelections) {
+        if (!selection || !Number.isInteger(Number(selection.ticketTierId)) || Number(selection.ticketTierId) < 1 ||
+            !Number.isInteger(Number(selection.quantity)) || Number(selection.quantity) < 1) {
+            return 'Each ticketSelection must have ticketTierId and a positive quantity';
+        }
+        selectedQuantity += Number(selection.quantity);
+    }
+    if (selectedQuantity !== quantity) return 'quantity must match the selected ticket quantities';
+    if (metadata.mainContact?.phone && !String(metadata.mainContact.phone).trim()) {
+        return 'metadata.mainContact.phone is required';
+    }
+    return null;
+};
 const ensureSessionToken = (req, res) => {
     if (req.user?.id) return null;
     let sessionToken = req.cookies?.[CART_SESSION_COOKIE];
@@ -40,21 +62,26 @@ const ensureSessionToken = (req, res) => {
 const getCart = async (req, res) => {
     try {
         const ownerFilter = getCartOwnerFilter(req);
-        if (!ownerFilter) {
-            return res.status(200).json({ errors: [], data: { cart: null } });
-        }
-
+        if (!ownerFilter) return res.status(200).json({ errors: [], data: { cart: null } });
         const cart = await Cart.findOne({
             where: { ...ownerFilter, status: { [Op.in]: ['active', 'checkout'] } },
             include: [{ model: CartItem, as: 'Items' }],
             order: [['createdAt', 'DESC']],
         });
-
-        if (!cart) {
-            return res.status(200).json({ errors: [], data: { cart: null } });
+        if (!cart) return res.status(200).json({ errors: [], data: { cart: null } });
+        let notice;
+        if (cart.status === 'active') {
+            const legacyItems = (cart.Items || []).filter((item) => item.ProductType !== 'Experience');
+            if (legacyItems.length > 0) {
+                await CartItem.destroy({ where: { id: { [Op.in]: legacyItems.map((item) => item.id) }, CartId: cart.id } });
+                const items = (cart.Items || []).filter((item) => item.ProductType === 'Experience');
+                const totalAmount = Number(items.reduce((sum, item) => sum + Number(item.totalPrice || 0), 0).toFixed(2));
+                await cart.update({ totalAmount });
+                cart.setDataValue('Items', items);
+                notice = 'Hotel and service items were removed because the cart now supports experience tickets only.';
+            }
         }
-
-        return res.status(200).json({ errors: [], data: { cart } });
+        return res.status(200).json({ errors: [], data: { cart, ...(notice ? { notice } : {}) } });
     } catch (error) {
         return sendError(res, { status: 500, message: 'Failed to retrieve cart' });
     }
@@ -68,9 +95,8 @@ const addItem = async (req, res) => {
             return sendError(res, { status: 400, message: 'ProductType, description, and unitPrice are required' });
         }
 
-        const validProductTypes = ['Experience', 'Service', 'Hotel'];
-        if (!validProductTypes.includes(ProductType)) {
-            return sendError(res, { status: 400, message: 'ProductType must be Experience, Service, or Hotel' });
+        if (ProductType !== 'Experience') {
+            return sendError(res, { status: 400, message: 'Only Experience items can be added to the cart' });
         }
 
         const parsedUnitPrice = Number(unitPrice);
@@ -83,25 +109,8 @@ const addItem = async (req, res) => {
             return sendError(res, { status: 400, message: 'quantity must be a positive integer' });
         }
 
-        // Validate experience-specific metadata
-        if (ProductType === 'Experience' && metadata) {
-            if (!metadata.ScheduledExperienceId) {
-                return sendError(res, { status: 400, message: 'metadata.ScheduledExperienceId is required for Experience items' });
-            }
-            if (!Array.isArray(metadata.ticketSelections) || metadata.ticketSelections.length === 0) {
-                return sendError(res, { status: 400, message: 'metadata.ticketSelections must be a non-empty array for Experience items' });
-            }
-            for (const ts of metadata.ticketSelections) {
-                if (!ts.ticketTierId || !Number.isInteger(Number(ts.quantity)) || Number(ts.quantity) < 1) {
-                    return sendError(res, { status: 400, message: 'Each ticketSelection must have ticketTierId and a positive quantity' });
-                }
-            }
-            if (metadata.mainContact) {
-                if (!metadata.mainContact.phone || !String(metadata.mainContact.phone).trim()) {
-                    return sendError(res, { status: 400, message: 'metadata.mainContact.phone is required' });
-                }
-            }
-        }
+        const metadataError = validateExperienceMetadata(metadata, parsedQuantity);
+        if (metadataError) return sendError(res, { status: 400, message: metadataError });
 
         // Find or create active cart for user or guest
         const ownerFilter = getCartOwnerFilter(req);
@@ -175,18 +184,23 @@ const updateItem = async (req, res) => {
             return sendError(res, { status: 404, message: 'Cart item not found' });
         }
 
-        const updates = {};
-        if (quantity != null) {
-            const parsedQuantity = Number(quantity);
-            if (!Number.isInteger(parsedQuantity) || parsedQuantity < 1) {
-                return sendError(res, { status: 400, message: 'quantity must be a positive integer' });
-            }
-            updates.quantity = parsedQuantity;
-            updates.totalPrice = Number((Number(item.unitPrice) * parsedQuantity).toFixed(2));
+        if (item.ProductType !== 'Experience') {
+            return sendError(res, { status: 400, message: 'Only Experience items can be updated in the cart' });
         }
-        if (metadata !== undefined) {
-            updates.metadata = metadata;
+
+        const parsedQuantity = quantity != null ? Number(quantity) : Number(item.quantity);
+        if (!Number.isInteger(parsedQuantity) || parsedQuantity < 1) {
+            return sendError(res, { status: 400, message: 'quantity must be a positive integer' });
         }
+        const nextMetadata = metadata !== undefined ? metadata : item.metadata;
+        const metadataError = validateExperienceMetadata(nextMetadata, parsedQuantity);
+        if (metadataError) return sendError(res, { status: 400, message: metadataError });
+
+        const updates = {
+            quantity: parsedQuantity,
+            totalPrice: Number((Number(item.unitPrice) * parsedQuantity).toFixed(2)),
+            metadata: nextMetadata,
+        };
 
         await item.update(updates);
 

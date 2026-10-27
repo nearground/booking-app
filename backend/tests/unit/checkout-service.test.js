@@ -122,13 +122,15 @@ const makeCartItem = (type, metadataOverrides = {}) => {
     };
 
     if (type === 'Experience') {
+        base.quantity = 2;
+        base.unitPrice = '50.00';
         base.metadata = {
             ScheduledExperienceId: 555,
             experienceTitle: 'Sunset Tour',
             experienceThumbnail: 'https://example.com/thumb.jpg',
             sessionDateTime: '2026-05-15T18:00:00.000Z',
             experienceDurationMinutes: 120,
-            ticketSelections: [{ quantity: 2, title: 'Adult', unitPrice: 50 }],
+            ticketSelections: [{ ticketTierId: 4, quantity: 2, title: 'Adult', unitPrice: 50 }],
             numberOfAttendees: 2,
             ...metadataOverrides,
         };
@@ -222,45 +224,35 @@ describe('checkoutCart – confirmationCode snapshotting into OrderItem.metadata
         expect(savedMetadata.confirmationCode).toBe('EXP-CONF-001');
     });
 
-    test('snapshots ServiceReservation confirmationCode into OrderItem metadata', async () => {
-        const item = makeCartItem('Service');
-        setupCart([item]);
-
-        await checkoutCart(1, 42, makeBillingInfo());
-
-        expect(OrderItem.create).toHaveBeenCalledTimes(1);
-        const savedMetadata = capturedOrderItemCreates[0].metadata;
-        expect(savedMetadata.confirmationCode).toBe('SVC-CONF-002');
+    test('rejects experience checkout when selections no longer match cart quantity', async () => {
+        setupCart([makeCartItem('Experience', { ticketSelections: [{ ticketTierId: 4, quantity: 1 }] })]);
+        await expect(checkoutCart(1, 42, makeBillingInfo())).rejects.toThrow('Invalid Experience ticket selections');
+        expect(ExperienceReservation.create).not.toHaveBeenCalled();
+    });
+    test('rejects legacy Service cart rows', async () => {
+        setupCart([makeCartItem('Service')]);
+        await expect(checkoutCart(1, 42, makeBillingInfo())).rejects.toThrow('Only Experience items can be checked out');
+        expect(OrderItem.create).not.toHaveBeenCalled();
     });
 
-    test('snapshots HotelReservation confirmationCode into OrderItem metadata', async () => {
-        const item = makeCartItem('Hotel');
-        setupCart([item]);
-
-        await checkoutCart(1, 42, makeBillingInfo());
-
-        expect(OrderItem.create).toHaveBeenCalledTimes(1);
-        const savedMetadata = capturedOrderItemCreates[0].metadata;
-        expect(savedMetadata.confirmationCode).toBe('HTL-CONF-003');
+    test('rejects legacy Hotel cart rows', async () => {
+        setupCart([makeCartItem('Hotel')]);
+        await expect(checkoutCart(1, 42, makeBillingInfo())).rejects.toThrow('Only Experience items can be checked out');
+        expect(OrderItem.create).not.toHaveBeenCalled();
     });
 
-    test('creates one OrderItem per cart item', async () => {
-        const items = [makeCartItem('Experience'), makeCartItem('Service')];
+    test('creates one OrderItem for each Experience cart line', async () => {
+        const items = [makeCartItem('Experience'), makeCartItem('Experience')];
         items[1].id = 2;
         setupCart(items);
-
         await checkoutCart(1, 42, makeBillingInfo());
-
         expect(OrderItem.create).toHaveBeenCalledTimes(2);
-        expect(capturedOrderItemCreates[0].metadata.confirmationCode).toBe('EXP-CONF-001');
-        expect(capturedOrderItemCreates[1].metadata.confirmationCode).toBe('SVC-CONF-002');
+        expect(capturedOrderItemCreates.every((item) => item.ProductType === 'Experience')).toBe(true);
     });
 
     test('generates an orderNumber when creating an order', async () => {
-        setupCart([makeCartItem('Service')]);
-
+        setupCart([makeCartItem('Experience')]);
         await checkoutCart(1, 42, makeBillingInfo());
-
         expect(capturedOrderCreates).toHaveLength(1);
         expect(capturedOrderCreates[0].orderNumber).toMatch(/^ORD-\d{8}-[A-Z0-9]{4}$/);
     });
@@ -295,29 +287,16 @@ describe('checkoutCart – confirmationCode snapshotting into OrderItem.metadata
         );
     });
 
-    test('creates ServiceReservation with correct billing email', async () => {
+    test('rejects Service cart rows before creating reservations', async () => {
         setupCart([makeCartItem('Service')]);
-
-        await checkoutCart(1, 42, makeBillingInfo());
-
-        expect(ServiceReservation.create).toHaveBeenCalledWith(
-            expect.objectContaining({ billingEmail: 'guest@example.com' }),
-            expect.anything()
-        );
+        await expect(checkoutCart(1, 42, makeBillingInfo())).rejects.toThrow('Only Experience items can be checked out');
+        expect(ServiceReservation.create).not.toHaveBeenCalled();
     });
 
-    test('creates HotelReservation with checkIn and checkOut dates', async () => {
+    test('rejects Hotel cart rows before creating reservations', async () => {
         setupCart([makeCartItem('Hotel')]);
-
-        await checkoutCart(1, 42, makeBillingInfo());
-
-        expect(HotelReservation.create).toHaveBeenCalledWith(
-            expect.objectContaining({
-                checkInDate: '2026-06-01',
-                checkOutDate: '2026-06-05',
-            }),
-            expect.anything()
-        );
+        await expect(checkoutCart(1, 42, makeBillingInfo())).rejects.toThrow('Only Experience items can be checked out');
+        expect(HotelReservation.create).not.toHaveBeenCalled();
     });
 
     test('transaction is committed on success', async () => {
@@ -339,6 +318,39 @@ describe('checkoutCart – confirmationCode snapshotting into OrderItem.metadata
     });
 });
 
+describe('checkoutCart � guest ownership', () => {
+    test('checks the guest session token and stores only a hashed receipt capability', async () => {
+        const cart = {
+            id: 5,
+            CustomerId: null,
+            sessionToken: 'guest-session',
+            Items: [makeCartItem('Experience')],
+            currency: 'USD',
+            totalAmount: '100.00',
+            discountAmount: '0.00',
+            update: jest.fn().mockResolvedValue({}),
+        };
+        Cart.findOne.mockResolvedValue(cart);
+        const guestReceipt = { tokenHash: 'a'.repeat(64), expiresAt: new Date(Date.now() + 60000).toISOString() };
+
+        await checkoutCart(5, null, makeBillingInfo(), { fullName: 'Jane Doe', email: 'guest@example.com' }, 'guest-session', guestReceipt);
+
+        expect(Cart.findOne).toHaveBeenCalledWith(expect.objectContaining({
+            where: expect.objectContaining({ id: 5, sessionToken: 'guest-session' }),
+        }));
+        expect(capturedOrderCreates[0]).toEqual(expect.objectContaining({
+            CustomerId: null,
+            metadata: expect.objectContaining({ guestReceiptTokenHash: 'a'.repeat(64) }),
+        }));
+        expect(cart.update).toHaveBeenLastCalledWith({ status: 'converted', sessionToken: null }, { transaction: txHolder.tx });
+        expect(Cart.create).toHaveBeenCalledWith(expect.objectContaining({ CustomerId: null, sessionToken: 'guest-session' }), { transaction: txHolder.tx });
+    });
+
+    test('rejects checkout without an authenticated owner or guest session', async () => {
+        await expect(checkoutCart(5, null, makeBillingInfo())).rejects.toThrow('Cart not found or not in a valid state for checkout');
+        expect(Cart.findOne).not.toHaveBeenCalled();
+    });
+});
 describe('checkoutCart – booking confirmation email', () => {
     const Order = require('../../server/models/Order.model.js');
 
@@ -373,7 +385,7 @@ describe('checkoutCart – booking confirmation email', () => {
 
     test('checkout succeeds even when email notification fails', async () => {
         sendNotification.mockRejectedValueOnce(new Error('SMTP down'));
-        setupCart([makeCartItem('Service')]);
+        setupCart([makeCartItem('Experience')]);
 
         const result = await checkoutCart(1, 42, makeBillingInfo());
 

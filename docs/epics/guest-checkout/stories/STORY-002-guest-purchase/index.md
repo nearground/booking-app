@@ -3,7 +3,7 @@ title: "Complete experience checkout as a guest"
 work_id: "EPIC-guest-checkout/STORY-002"
 work_type: story
 template_version: 1
-status: in-progress
+status: done
 parent: "EPIC-guest-checkout"
 branch: "epic/guest-checkout"
 depends_on: []
@@ -23,7 +23,7 @@ Allow cookie-owned guest cart checkout, server-controlled order/receipt access, 
 
 ## Acceptance criteria
 
-- [ ] Given a guest has a valid experience-ticket cart and supplies required attendee and billing information, when the guest submits checkout, then the backend creates the reservation and order without requiring req.user, and returns a receipt capability that can retrieve only that order.
+- [x] Given a guest has a valid experience-ticket cart and supplies required attendee and billing information, when the guest submits checkout, then the backend creates the reservation and order without requiring req.user, and returns a receipt capability that can retrieve only that order.
 - Epic acceptance coverage: checkout works without login while cookies remain server controlled; receipt access is secure; registration is optional and unobtrusive
 
 ## Ownership and dependencies
@@ -43,4 +43,4 @@ Backend tests cover guest and authenticated order creation, cart ownership, rece
 
 ## Progress and decisions
 
-- In progress; implementation and focused regression tests are underway.
+- Done. Guest checkout is bound to the HTTP-only session cookie and uses hashed, expiring receipt capabilities. The receipt screen offers optional registration. Backend/frontend full suites passed; focused guest receipt and CartModal tests pass. Cypress guest checkout E2E is written but not run against the shared stack.

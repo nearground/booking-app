@@ -2,6 +2,7 @@ import { createRequire } from 'node:module';
 const require = createRequire(import.meta.url);
 
 const { Op } = require('sequelize');
+const crypto = require('crypto');
 
 import sequelize from '../models/database.js';
 import Cart from '../models/Cart.model.js';
@@ -16,6 +17,17 @@ import ServiceReservation from '../models/ServiceReservation.model.js';
 import HotelReservation from '../models/HotelReservation.model.js';
 import { sendNotification } from './Notification.service.js';
 
+const hasValidTicketSelections = (item) => {
+    const selections = item.metadata?.ticketSelections;
+    if (!Array.isArray(selections) || selections.length === 0) return false;
+    let selectedQuantity = 0;
+    for (const selection of selections) {
+        if (!selection || !Number.isInteger(Number(selection.ticketTierId)) || Number(selection.ticketTierId) < 1 ||
+            !Number.isInteger(Number(selection.quantity)) || Number(selection.quantity) < 1) return false;
+        selectedQuantity += Number(selection.quantity);
+    }
+    return selectedQuantity === Number(item.quantity);
+};
 const generateConfirmationCode = (entityId, scheduledId) => {
     const randomSuffix = Math.random().toString(36).slice(2, 8).toUpperCase();
     return `${entityId}-${scheduledId}-${Date.now()}-${randomSuffix}`;
@@ -32,12 +44,15 @@ const generateOrderNumber = () => {
  * Creates an Order from a Cart, creating all reservations atomically.
  * Returns the created Order with its OrderItems.
  */
-export const checkoutCart = async (cartId, customerId, billingInfo, contactInfo = {}) => {
+export const checkoutCart = async (cartId, customerId, billingInfo, contactInfo = {}, sessionToken = null, guestReceipt = null) => {
     const transaction = await sequelize.transaction();
 
     try {
+        const ownerFilter = customerId ? { CustomerId: customerId } : sessionToken ? { sessionToken } : null;
+        if (!ownerFilter) throw new Error('Cart not found or not in a valid state for checkout');
+
         const cart = await Cart.findOne({
-            where: { id: cartId, CustomerId: customerId, status: { [Op.in]: ['active', 'checkout'] } },
+            where: { id: cartId, ...ownerFilter, status: { [Op.in]: ['active', 'checkout'] } },
             include: [{ model: CartItem, as: 'Items' }],
             transaction,
         });
@@ -66,12 +81,19 @@ export const checkoutCart = async (cartId, customerId, billingInfo, contactInfo 
             mainContactName: contactInfo.fullName || null,
             mainContactPhone: contactInfo.phone || null,
             mainContactEmail: contactInfo.email || null,
+            metadata: guestReceipt ? {
+                guestReceiptTokenHash: guestReceipt.tokenHash,
+                guestReceiptExpiresAt: guestReceipt.expiresAt,
+            } : null,
         }, { transaction });
 
         await cart.update({ status: 'checkout' }, { transaction });
 
-        // Process each cart item into a reservation + order item
+        // Process each supported cart item into a reservation + order item
         for (const item of cart.Items) {
+            if (item.ProductType !== 'Experience') {
+                throw new Error('Only Experience items can be checked out');
+            }
             const reservationFks = {
                 ExperienceReservationId: null,
                 ServiceReservationId: null,
@@ -79,11 +101,14 @@ export const checkoutCart = async (cartId, customerId, billingInfo, contactInfo 
             };
 
             const metadata = item.metadata || {};
+            if (!Number.isInteger(Number(metadata.ScheduledExperienceId)) || Number(metadata.ScheduledExperienceId) < 1 || !hasValidTicketSelections(item)) {
+                throw new Error('Invalid Experience ticket selections');
+            }
 
             if (item.ProductType === 'Experience') {
                 const reservation = await ExperienceReservation.create({
                     confirmationCode: generateConfirmationCode(item.ProductId, metadata.ScheduledExperienceId),
-                    numberOfAttendees: metadata.numberOfAttendees || 1,
+                    numberOfAttendees: Number(item.quantity),
                     totalPrice: Number(item.totalPrice),
                     status: 'pending',
                     specialRequests: metadata.specialRequests || null,
@@ -152,7 +177,7 @@ export const checkoutCart = async (cartId, customerId, billingInfo, contactInfo 
             } else if (item.ProductType === 'Service') {
                 const reservation = await ServiceReservation.create({
                     confirmationCode: generateConfirmationCode(item.ProductId, metadata.ScheduledServiceId),
-                    numberOfAttendees: metadata.numberOfAttendees || 1,
+                    numberOfAttendees: Number(item.quantity),
                     totalPrice: Number(item.totalPrice),
                     status: 'pending',
                     specialRequests: metadata.specialRequests || null,
@@ -207,10 +232,11 @@ export const checkoutCart = async (cartId, customerId, billingInfo, contactInfo 
         await order.update({ status: 'pending' }, { transaction });
 
         // Finalize the old cart and start a fresh active cart for the same user/session.
-        await cart.update({ status: 'converted' }, { transaction });
+        const cartSessionToken = cart.sessionToken;
+        await cart.update({ status: 'converted', sessionToken: null }, { transaction });
         await Cart.create({
             CustomerId: cart.CustomerId,
-            sessionToken: cart.sessionToken,
+            sessionToken: cartSessionToken,
             status: 'active',
             currency: cart.currency,
             totalAmount: 0.00,

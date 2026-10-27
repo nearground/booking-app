@@ -3,7 +3,7 @@ title: "Limit carts to experience tickets"
 work_id: "EPIC-guest-checkout/STORY-004"
 work_type: story
 template_version: 1
-status: in-progress
+status: done
 parent: "EPIC-guest-checkout"
 branch: "epic/guest-checkout"
 depends_on: []
@@ -23,7 +23,7 @@ Restrict cart API writes to valid Experience items with scheduled experience and
 
 ## Acceptance criteria
 
-- [ ] Given an existing cart has legacy Hotel or Service rows or a shopper is viewing a stay/service page, when the cart loads or the shopper attempts an unsupported add, then legacy rows are deleted and totals recalculated with a notice, API add/update rejects unsupported types, and no UI cart action is offered while detail pages remain browsable.
+- [x] Given an existing cart has legacy Hotel or Service rows or a shopper is viewing a stay/service page, when the cart loads or the shopper attempts an unsupported add, then legacy rows are deleted and totals recalculated with a notice, API add/update rejects unsupported types, and no UI cart action is offered while detail pages remain browsable.
 - Epic acceptance coverage: only experience ticket items are accepted; old stay/service cart items are removed with notice; historical non-experience orders remain viewable
 
 ## Ownership and dependencies
@@ -43,4 +43,4 @@ Backend tests reject Service/Hotel writes and clean old rows/totals; frontend te
 
 ## Progress and decisions
 
-- In progress; implementation and focused regression tests are underway.
+- Done. API add/update/checkout validate experience-only cart contents and ticket quantity selections; legacy Hotel/Service rows are cleared with a notice. No Hotel/Service add-to-cart controls existed in frontend/src, and browsing pages remain unchanged. Backend/frontend suites pass; Cypress browse checks are written but not run against the shared stack.

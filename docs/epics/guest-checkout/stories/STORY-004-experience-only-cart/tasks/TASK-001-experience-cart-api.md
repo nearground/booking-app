@@ -3,7 +3,7 @@ title: "Reject non-experience cart items and clean legacy items"
 work_id: "EPIC-guest-checkout/STORY-004/TASK-001"
 work_type: task
 template_version: 1
-status: in-progress
+status: done
 parent: "EPIC-guest-checkout/STORY-004"
 branch: "epic/guest-checkout"
 depends_on: []
@@ -23,13 +23,13 @@ Cart.controller.js currently permits Experience, Service and Hotel, and only val
 
 ## Implementation steps
 
-1. Reject Service/Hotel with explicit 400 errors; require valid scheduled experience and nonempty ticket selections for Experience; clear legacy unsupported cart rows on next cart read and return cleanup notice; add tests; preserve historical OrderItem and reservation readers.
+1. Reject Service/Hotel with explicit 400 errors; require scheduled-session metadata and positive ticket selections whose total equals cart quantity on add/update and checkout; clear legacy unsupported cart rows on next read and return a cleanup notice; preserve historical orders and reservations.
 
 ## Files to create or modify
 
 | Path | Change | Ownership/contract constraints |
 |------|--------|--------------------------------|
-| backend/server/controllers/Cart.controller.js | Enforce Experience-only writes and remove legacy Hotel/Service cart lines with totals recomputed and cleanup indicator. | Do not delete historical orders, reservations or models; validate authoritative ticket pricing and availability server-side at checkout; cookie ownership stays server-controlled. |
+| backend/server/controllers/Cart.controller.js | Enforce Experience-only writes and remove legacy Hotel/Service cart lines with totals recomputed and cleanup indicator. | Do not delete historical orders, reservations or models; revalidate ticket quantities before reservation hooks consume scheduled-session availability; cookie ownership stays server-controlled. |
 
 ## Dependencies
 
@@ -44,9 +44,9 @@ No prerequisite; this restriction defines valid cart contents for guest checkout
 
 ## Definition of Done
 
-- [ ] Story acceptance criteria covered with recorded results.
-- [ ] Targeted checks pass; existing intended behavior is preserved.
-- [ ] Documentation updated; no unresolved contract conflicts.
+- [x] Story acceptance criteria covered with recorded results.
+- [x] Targeted checks pass; existing intended behavior is preserved.
+- [x] Documentation updated; no unresolved contract conflicts.
 
 ## Documentation updates
 
@@ -54,7 +54,7 @@ Update Epic acceptance/progress with exact deprecated API behavior.
 
 ## Progress and completion evidence
 
-In progress. Implementation and test evidence will be added before this Task is marked done.
+Done. Experience-only API validation, legacy cleanup/notice, quantity-matched selections and checkout availability quantity are implemented. Backend cart-controller/checkout-service tests and the full suite pass (30 suites, 280 tests). Historical order readers remain unchanged.
 
 <!-- children:start -->
 <!-- children:end -->

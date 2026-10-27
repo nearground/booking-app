@@ -16,6 +16,8 @@ import {
     getUserBookings,
     getUserPaymentMethods,
     lookupUsername,
+    requestEmailVerification,
+    confirmEmailVerification,
 } from '../controllers/User.controller.js';
 import { authUser } from '../middlewares/auth.js';
 import {
@@ -37,6 +39,8 @@ const usernameLookupRateLimiter = createUsernameLookupRateLimiter();
  * @access Public
  */
 router.put('/register', registerRateLimiter, registerUser);
+router.post('/email-verification/request', forgotPasswordRateLimiter, requestEmailVerification);
+router.post('/email-verification/confirm', confirmEmailVerification);
 
 /**
  * @route POST /login

@@ -29,7 +29,7 @@ Cart.controller.js currently selects carts exclusively by CustomerId for authent
 
 | Path | Change | Ownership/contract constraints |
 |------|--------|--------------------------------|
-| backend/server/controllers/Cart.controller.js | Extract and expose an idempotent guest-to-user merge operation, consolidating canonical-identical experience lines and recalculating totals. | Preserve _cart_session cookie attributes, CSRF checks and existing authenticated cart ownership; do not merge orders or trust client-supplied user IDs. |
+| backend/server/services/Cart.service.js and backend/server/controllers/User.controller.js | Transfer guest ownership transactionally, consolidate canonical-identical experience lines, and recalculate totals during login. | Preserve _cart_session cookie attributes, CSRF checks and existing authenticated cart ownership; do not merge orders or trust client-supplied user IDs. |
 
 ## Dependencies
 
@@ -44,9 +44,9 @@ No prerequisite; merge contract and login handoff are owned by this Task.
 
 ## Definition of Done
 
-- [ ] Story acceptance criteria covered with recorded results.
-- [ ] Targeted checks pass; existing intended behavior is preserved.
-- [ ] Documentation updated; no unresolved contract conflicts.
+- [x] Story acceptance criteria covered with recorded results.
+- [x] Targeted checks pass; existing intended behavior is preserved.
+- [x] Documentation updated; no unresolved contract conflicts.
 
 ## Documentation updates
 
@@ -54,7 +54,7 @@ Document merge behavior and any migration/API contract in the owning Epic notes 
 
 ## Progress and completion evidence
 
-In progress. Implementation and test evidence will be added before this Task is marked done.
+Done. The login handoff transfers guest ownership transactionally, coalesces identical experience lines and keeps distinct ticket metadata. The guest cart is invalidated on success, so repeat login cannot re-merge it. Cart merge tests pass, including duplicate consolidation; full backend validation: 30 suites, 280 tests. Cypress integration remains written but unrun against the shared stack.
 
 <!-- children:start -->
 <!-- children:end -->

@@ -21,6 +21,17 @@ module.exports = {
       updatedAt: { type: Sequelize.DATE, allowNull: false },
     });
 
+    await queryInterface.createTable('EmailVerificationTokens', {
+      id: { type: Sequelize.INTEGER, primaryKey: true, autoIncrement: true, allowNull: false },
+      email: { type: Sequelize.STRING, allowNull: false },
+      tokenHash: { type: Sequelize.STRING(64), allowNull: false, unique: true },
+      expiresAt: { type: Sequelize.DATE, allowNull: false },
+      usedAt: { type: Sequelize.DATE, allowNull: true },
+      createdAt: { type: Sequelize.DATE, allowNull: false },
+      updatedAt: { type: Sequelize.DATE, allowNull: false },
+    });
+    await queryInterface.addIndex('EmailVerificationTokens', ['email'], { name: 'idx_email_verification_tokens_email' });
+
     await queryInterface.createTable('Locations', {
       id: { type: Sequelize.INTEGER, primaryKey: true, autoIncrement: true, allowNull: false },
       name: { type: Sequelize.STRING, allowNull: false },
@@ -460,6 +471,7 @@ module.exports = {
   },
 
   async down(queryInterface) {
+    await queryInterface.dropTable('EmailVerificationTokens');
     await queryInterface.dropTable('OrganizationMembers');
     await queryInterface.dropTable('ExperienceOrganizers');
     await queryInterface.dropTable('OrganizationInvites');

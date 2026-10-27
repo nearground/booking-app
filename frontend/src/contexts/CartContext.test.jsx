@@ -11,8 +11,8 @@ vi.mock('services/NetworkAdapter', () => ({
 import { networkAdapter } from 'services/NetworkAdapter';
 
 const Probe = () => {
-  const { cart, isLoading } = useContext(CartContext);
-  return <div><span data-testid="item">{cart?.Items?.[0]?.description || 'empty'}</span><span data-testid="loading">{String(isLoading)}</span></div>;
+  const { cart, cartNotice, isLoading } = useContext(CartContext);
+  return <div><span data-testid="item">{cart?.Items?.[0]?.description || 'empty'}</span><span data-testid="loading">{String(isLoading)}</span><span data-testid="notice">{cartNotice}</span></div>;
 };
 
 const renderWithAuth = (isAuthenticated) => render(
@@ -61,4 +61,9 @@ describe('CartProvider auth refresh', () => {
     renderWithAuth(false);
     await waitFor(() => expect(screen.getByTestId('loading')).toHaveTextContent('false'));
   });
-});
+
+  test('exposes the server notice when legacy cart lines were removed', async () => {
+    networkAdapter.get.mockResolvedValueOnce({ data: { cart: { Items: [] }, notice: 'Hotel items were removed.' }, errors: [] });
+    renderWithAuth(false);
+    await waitFor(() => expect(screen.getByTestId('notice')).toHaveTextContent('Hotel items were removed.'));
+  });});

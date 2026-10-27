@@ -3,7 +3,7 @@ title: "Verify email before claiming guest receipts"
 work_id: "EPIC-guest-checkout/STORY-003/TASK-001"
 work_type: task
 template_version: 1
-status: in-progress
+status: done
 parent: "EPIC-guest-checkout/STORY-003"
 branch: "epic/guest-checkout"
 depends_on: [EPIC-guest-checkout/STORY-002/TASK-001]
@@ -44,17 +44,17 @@ Depends on EPIC-guest-checkout/STORY-002/TASK-001 for guest order email and rece
 
 ## Definition of Done
 
-- [ ] Story acceptance criteria covered with recorded results.
-- [ ] Targeted checks pass; existing intended behavior is preserved.
-- [ ] Documentation updated; no unresolved contract conflicts.
+- [x] Story acceptance criteria covered with recorded results.
+- [x] Targeted checks pass; existing intended behavior is preserved.
+- [x] Documentation updated; no unresolved contract conflicts.
 
 ## Documentation updates
 
-Document verification flow, token expiry and migration in Epic notes.
+Document the 24-hour verification flow and baseline-schema table; do not seed ephemeral verification secrets.
 
 ## Progress and completion evidence
 
-In progress. Implementation and test evidence will be added before this Task is marked done.
+Done. Verification token expiry/replay, normalized-email claim behavior, transactional ownership and anti-enumeration are covered by Jest. Full backend validation: 30 suites and 280 tests passed.
 
 <!-- children:start -->
 <!-- children:end -->

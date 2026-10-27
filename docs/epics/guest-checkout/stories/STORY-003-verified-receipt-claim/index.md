@@ -3,7 +3,7 @@ title: "Claim guest receipts through verified accounts"
 work_id: "EPIC-guest-checkout/STORY-003"
 work_type: story
 template_version: 1
-status: in-progress
+status: done
 parent: "EPIC-guest-checkout"
 branch: "epic/guest-checkout"
 depends_on: []
@@ -23,7 +23,7 @@ Add purpose-bound email verification tokens for newly registered users who need 
 
 ## Acceptance criteria
 
-- [ ] Given an account was created using the guest receipt email but its email has not been verified, when the user requests or completes a receipt claim, then the receipt remains unclaimed until a valid one-time verification token is confirmed; after verification it appears through the authenticated orders panel and repeated claims do not duplicate ownership.
+- [x] Given an account was created using the guest receipt email but its email has not been verified, when the user requests or completes a receipt claim, then the receipt remains unclaimed until a valid one-time verification token is confirmed; after verification it appears through the authenticated orders panel and repeated claims do not duplicate ownership.
 - Epic acceptance coverage: email equality alone is insufficient to claim; verified account ownership grants authenticated receipt visibility; checkout-time registration supports first-login welcome UX
 
 ## Ownership and dependencies
@@ -43,4 +43,4 @@ Test verification-token entropy, expiry, one-time use, email mismatch, token rep
 
 ## Progress and decisions
 
-- In progress; implementation and focused regression tests are underway.
+- Done. Guest orders are claimed only after transactional confirmation of a single-use, hashed verification token for the matching email; the authenticated bookings panel shows claimed orders and the first-login Welcome is dismissible. The token table is folded into the existing baseline migration, with no token seeder. Focused claim, verification, confirmation and profile tests pass; Cypress E2E is written but not run against the shared stack.
