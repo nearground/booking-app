@@ -1,0 +1,2415 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Booking API (MCP research subset)",
+    "version": "0.1.0",
+    "description": "Verified current routes for authentication, organization onboarding/invites, experiences and management, cart/checkout, and customer order confirmation. This is a research snapshot, not a promise of future contracts. Unknown/partial schemas and authentication gaps are documented in inventory.md. Unsafe requests authenticated by _token cookie require matching _csrf_token cookie and x-csrf-token (or x-xsrf-token) header. Rate limits and cookie semantics vary by operation; see inventory.md."
+  },
+  "servers": [
+    {
+      "url": "http://localhost:4000",
+      "description": "Development API (optional read-only smoke target)"
+    }
+  ],
+  "paths": {
+    "/api/users/register": {
+      "put": {
+        "operationId": "registerUser",
+        "summary": "Register a user",
+        "tags": [
+          "Authentication"
+        ],
+        "description": "Public. Does not create a login session.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserRegistrationRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "$ref": "#/components/responses/CreatedEnvelope"
+          },
+          "default": {
+            "$ref": "#/components/responses/ErrorEnvelope"
+          }
+        }
+      }
+    },
+    "/api/users/login": {
+      "post": {
+        "operationId": "loginUser",
+        "summary": "Log in",
+        "tags": [
+          "Authentication"
+        ],
+        "description": "Public. Returns token in JSON and sets _token (HttpOnly) plus CSRF cookies; do not expose returned token to an agent model.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/LoginSuccess"
+          },
+          "default": {
+            "$ref": "#/components/responses/ErrorEnvelope"
+          }
+        }
+      }
+    },
+    "/api/organizers/onboarding/start": {
+      "post": {
+        "operationId": "startOrganizerOnboarding",
+        "summary": "Start organizer onboarding",
+        "tags": [
+          "Organizations"
+        ],
+        "description": "Public; mode=create or invite. Invite mode requires inviteToken or inviteCode.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OnboardingStartRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/SuccessEnvelope"
+          },
+          "default": {
+            "$ref": "#/components/responses/ErrorEnvelope"
+          }
+        }
+      }
+    },
+    "/api/organizers/onboarding/complete": {
+      "post": {
+        "operationId": "completeOrganizerOnboarding",
+        "summary": "Complete organizer onboarding and create or join organization",
+        "tags": [
+          "Organizations"
+        ],
+        "description": "Public; creates a user/organizer, then creates an organization in create mode or consumes a matching invite in invite mode. Sets auth and CSRF cookies.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OnboardingCompleteRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "$ref": "#/components/responses/CreatedEnvelope"
+          },
+          "default": {
+            "$ref": "#/components/responses/ErrorEnvelope"
+          }
+        }
+      }
+    },
+    "/api/organizers/invites/resolve": {
+      "get": {
+        "operationId": "resolveOrganizerInvite",
+        "summary": "Resolve an organization invite",
+        "tags": [
+          "Organizations"
+        ],
+        "description": "Public; query accepts token or code and optional email.",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/SuccessEnvelope"
+          },
+          "default": {
+            "$ref": "#/components/responses/ErrorEnvelope"
+          }
+        }
+      }
+    },
+    "/api/organizers/invites": {
+      "post": {
+        "operationId": "createOrganizerInvite",
+        "summary": "Create organization invite",
+        "tags": [
+          "Organizations"
+        ],
+        "description": "Requires authenticated organization admin; returns capability token and code.",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateInviteRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "$ref": "#/components/responses/CreatedEnvelope"
+          },
+          "default": {
+            "$ref": "#/components/responses/ErrorEnvelope"
+          }
+        }
+      }
+    },
+    "/api/organizers/invites/{id}/resend": {
+      "post": {
+        "operationId": "resendOrganizerInvite",
+        "summary": "Resend organization invite",
+        "tags": [
+          "Organizations"
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/SuccessEnvelope"
+          },
+          "default": {
+            "$ref": "#/components/responses/ErrorEnvelope"
+          }
+        }
+      }
+    },
+    "/api/organizers/invites/{id}": {
+      "delete": {
+        "operationId": "cancelOrganizerInvite",
+        "summary": "Cancel organization invite",
+        "tags": [
+          "Organizations"
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/SuccessEnvelope"
+          },
+          "default": {
+            "$ref": "#/components/responses/ErrorEnvelope"
+          }
+        }
+      }
+    },
+    "/api/experiences": {
+      "get": {
+        "operationId": "listExperiences",
+        "summary": "List experiences",
+        "tags": [
+          "Experiences"
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/SuccessEnvelope"
+          },
+          "default": {
+            "$ref": "#/components/responses/ErrorEnvelope"
+          }
+        }
+      }
+    },
+    "/api/experiences/verticalFilters": {
+      "get": {
+        "operationId": "getExperienceVerticalFilters",
+        "summary": "Get experience vertical filters",
+        "tags": [
+          "Experiences"
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/SuccessEnvelope"
+          },
+          "default": {
+            "$ref": "#/components/responses/ErrorEnvelope"
+          }
+        }
+      }
+    },
+    "/api/experiences/availableCities": {
+      "get": {
+        "operationId": "getExperienceCities",
+        "summary": "Get available experience cities",
+        "tags": [
+          "Experiences"
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/SuccessEnvelope"
+          },
+          "default": {
+            "$ref": "#/components/responses/ErrorEnvelope"
+          }
+        }
+      }
+    },
+    "/api/experiences/nearbyExperiences": {
+      "get": {
+        "operationId": "getNearbyExperiences",
+        "summary": "Find nearby experiences",
+        "tags": [
+          "Experiences"
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/SuccessEnvelope"
+          },
+          "default": {
+            "$ref": "#/components/responses/ErrorEnvelope"
+          }
+        }
+      }
+    },
+    "/api/experiences/{experienceCode}/schedule/calendar": {
+      "get": {
+        "operationId": "getExperienceCalendar",
+        "summary": "Get experience calendar summary",
+        "tags": [
+          "Experiences"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "experienceCode",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/SuccessEnvelope"
+          },
+          "default": {
+            "$ref": "#/components/responses/ErrorEnvelope"
+          }
+        }
+      }
+    },
+    "/api/experiences/{experienceCode}/schedule": {
+      "get": {
+        "operationId": "getExperienceSchedule",
+        "summary": "Get scheduled experiences",
+        "tags": [
+          "Experiences"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "experienceCode",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/SuccessEnvelope"
+          },
+          "default": {
+            "$ref": "#/components/responses/ErrorEnvelope"
+          }
+        }
+      }
+    },
+    "/api/experiences/{experienceCode}/reservations": {
+      "post": {
+        "operationId": "createExperienceReservation",
+        "summary": "Create experience reservation",
+        "tags": [
+          "Experiences"
+        ],
+        "description": "Public legacy/direct reservation endpoint; not the cart checkout flow.",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "experienceCode",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExperienceReservationRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "$ref": "#/components/responses/CreatedEnvelope"
+          },
+          "default": {
+            "$ref": "#/components/responses/ErrorEnvelope"
+          }
+        }
+      }
+    },
+    "/api/experiences/{experienceCode}/booking/enquiry": {
+      "get": {
+        "operationId": "getExperienceBookingEnquiry",
+        "summary": "Get experience booking enquiry",
+        "tags": [
+          "Experiences"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "experienceCode",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/SuccessEnvelope"
+          },
+          "default": {
+            "$ref": "#/components/responses/ErrorEnvelope"
+          }
+        }
+      }
+    },
+    "/api/experiences/manage": {
+      "post": {
+        "operationId": "createExperience",
+        "summary": "Create experience",
+        "tags": [
+          "Experiences"
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExperienceCreateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "$ref": "#/components/responses/CreatedEnvelope"
+          },
+          "default": {
+            "$ref": "#/components/responses/ErrorEnvelope"
+          }
+        }
+      }
+    },
+    "/api/experiences/manage/{experienceId}": {
+      "get": {
+        "operationId": "getExperienceForEdit",
+        "summary": "Get experience management details",
+        "tags": [
+          "Experiences"
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "experienceId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/SuccessEnvelope"
+          },
+          "default": {
+            "$ref": "#/components/responses/ErrorEnvelope"
+          }
+        }
+      },
+      "patch": {
+        "operationId": "updateExperience",
+        "summary": "Update experience",
+        "tags": [
+          "Experiences"
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "experienceId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExperienceUpdateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/SuccessEnvelope"
+          },
+          "default": {
+            "$ref": "#/components/responses/ErrorEnvelope"
+          }
+        }
+      },
+      "delete": {
+        "operationId": "deleteExperience",
+        "summary": "Delete experience",
+        "tags": [
+          "Experiences"
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "experienceId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/SuccessEnvelope"
+          },
+          "default": {
+            "$ref": "#/components/responses/ErrorEnvelope"
+          }
+        }
+      }
+    },
+    "/api/experiences/manage/{experienceId}/assign-organizers": {
+      "patch": {
+        "operationId": "assignExperienceOrganizers",
+        "summary": "Assign experience organizers",
+        "tags": [
+          "Experiences"
+        ],
+        "description": "Payload details are implemented in offering-manage.shared.js; not fully enumerated here.",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "experienceId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OpenObject"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/SuccessEnvelope"
+          },
+          "default": {
+            "$ref": "#/components/responses/ErrorEnvelope"
+          }
+        }
+      }
+    },
+    "/api/experiences/manage/{experienceId}/sync-schedule": {
+      "post": {
+        "operationId": "syncManagedExperienceSchedule",
+        "summary": "Synchronize managed experience schedule",
+        "tags": [
+          "Experiences"
+        ],
+        "description": "Payload details are implemented in offering-manage.shared.js; not fully enumerated here.",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "experienceId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OpenObject"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/SuccessEnvelope"
+          },
+          "default": {
+            "$ref": "#/components/responses/ErrorEnvelope"
+          }
+        }
+      }
+    },
+    "/api/experiences/manage/{experienceId}/schedule/preview-populate": {
+      "post": {
+        "operationId": "previewPopulateExperienceSchedule",
+        "summary": "Preview schedule population",
+        "tags": [
+          "Experiences"
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "experienceId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SchedulePopulateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/SuccessEnvelope"
+          },
+          "default": {
+            "$ref": "#/components/responses/ErrorEnvelope"
+          }
+        }
+      }
+    },
+    "/api/experiences/manage/{experienceId}/schedule/populate": {
+      "post": {
+        "operationId": "populateExperienceSchedule",
+        "summary": "Populate experience schedule",
+        "tags": [
+          "Experiences"
+        ],
+        "description": "Mutating operation; requires explicit user confirmation.",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "experienceId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SchedulePopulateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/SuccessEnvelope"
+          },
+          "default": {
+            "$ref": "#/components/responses/ErrorEnvelope"
+          }
+        }
+      }
+    },
+    "/api/experiences/manage/{experienceId}/schedule/preview-start-date": {
+      "post": {
+        "operationId": "previewExperienceStartDate",
+        "summary": "Preview experience start-date update",
+        "tags": [
+          "Experiences"
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "experienceId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PreviewStartDateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/SuccessEnvelope"
+          },
+          "default": {
+            "$ref": "#/components/responses/ErrorEnvelope"
+          }
+        }
+      }
+    },
+    "/api/experiences/manage/{experienceId}/schedule/update-start-date": {
+      "post": {
+        "operationId": "updateExperienceStartDate",
+        "summary": "Update experience start date",
+        "tags": [
+          "Experiences"
+        ],
+        "description": "Mutating operation; requires explicit user confirmation.",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "experienceId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateStartDateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/SuccessEnvelope"
+          },
+          "default": {
+            "$ref": "#/components/responses/ErrorEnvelope"
+          }
+        }
+      }
+    },
+    "/api/experiences/manage/{experienceId}/auto-sync": {
+      "patch": {
+        "operationId": "updateExperienceAutoSync",
+        "summary": "Update experience auto-sync setting",
+        "tags": [
+          "Experiences"
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "experienceId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EnabledRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/SuccessEnvelope"
+          },
+          "default": {
+            "$ref": "#/components/responses/ErrorEnvelope"
+          }
+        }
+      }
+    },
+    "/api/experiences/manage/{experienceId}/lookahead": {
+      "patch": {
+        "operationId": "updateExperienceScheduleLookahead",
+        "summary": "Update experience schedule lookahead",
+        "tags": [
+          "Experiences"
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "experienceId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LookaheadRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/SuccessEnvelope"
+          },
+          "default": {
+            "$ref": "#/components/responses/ErrorEnvelope"
+          }
+        }
+      }
+    },
+    "/api/experiences/manage/scheduled-experiences/{sessionId}/sync-lock": {
+      "patch": {
+        "operationId": "updateExperienceSessionSyncLock",
+        "summary": "Update scheduled experience sync lock",
+        "tags": [
+          "Experiences"
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "sessionId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LockedRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/SuccessEnvelope"
+          },
+          "default": {
+            "$ref": "#/components/responses/ErrorEnvelope"
+          }
+        }
+      }
+    },
+    "/api/cart": {
+      "get": {
+        "operationId": "getCart",
+        "summary": "Get current cart",
+        "tags": [
+          "Cart"
+        ],
+        "description": "Accepts optional cookie auth or anonymous _cart_session cookie; response cart may be null.",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/SuccessEnvelope"
+          },
+          "default": {
+            "$ref": "#/components/responses/ErrorEnvelope"
+          }
+        }
+      },
+      "delete": {
+        "operationId": "clearCart",
+        "summary": "Clear current cart",
+        "tags": [
+          "Cart"
+        ],
+        "description": "Accepts optional cookie auth or anonymous _cart_session cookie.",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/SuccessEnvelope"
+          },
+          "default": {
+            "$ref": "#/components/responses/ErrorEnvelope"
+          }
+        }
+      }
+    },
+    "/api/cart/items": {
+      "post": {
+        "operationId": "addCartItem",
+        "summary": "Add item to cart",
+        "tags": [
+          "Cart"
+        ],
+        "description": "Accepts optional cookie auth or anonymous _cart_session cookie.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CartItemRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "$ref": "#/components/responses/CreatedEnvelope"
+          },
+          "default": {
+            "$ref": "#/components/responses/ErrorEnvelope"
+          }
+        }
+      }
+    },
+    "/api/cart/items/{id}": {
+      "patch": {
+        "operationId": "updateCartItem",
+        "summary": "Update cart item",
+        "tags": [
+          "Cart"
+        ],
+        "description": "Accepts optional cookie auth or anonymous _cart_session cookie.",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CartItemUpdateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/SuccessEnvelope"
+          },
+          "default": {
+            "$ref": "#/components/responses/ErrorEnvelope"
+          }
+        }
+      },
+      "delete": {
+        "operationId": "removeCartItem",
+        "summary": "Remove cart item",
+        "tags": [
+          "Cart"
+        ],
+        "description": "Accepts optional cookie auth or anonymous _cart_session cookie.",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/SuccessEnvelope"
+          },
+          "default": {
+            "$ref": "#/components/responses/ErrorEnvelope"
+          }
+        }
+      }
+    },
+    "/api/cart/checkout": {
+      "post": {
+        "operationId": "initiateCheckout",
+        "summary": "Checkout cart",
+        "tags": [
+          "Cart"
+        ],
+        "description": "Authenticated customer only; no client idempotency key is accepted.",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CheckoutRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "$ref": "#/components/responses/CreatedEnvelope"
+          },
+          "default": {
+            "$ref": "#/components/responses/ErrorEnvelope"
+          }
+        }
+      }
+    },
+    "/api/orders": {
+      "get": {
+        "operationId": "listOrders",
+        "summary": "List customer orders",
+        "tags": [
+          "Orders"
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "description": "Defaults to 1."
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50
+            },
+            "description": "Defaults to 10; maximum 50."
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/SuccessEnvelope"
+          },
+          "default": {
+            "$ref": "#/components/responses/ErrorEnvelope"
+          }
+        }
+      }
+    },
+    "/api/orders/{orderNumber}/confirmation": {
+      "get": {
+        "operationId": "getOrderConfirmation",
+        "summary": "Get order confirmation",
+        "tags": [
+          "Orders"
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "orderNumber",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/SuccessEnvelope"
+          },
+          "default": {
+            "$ref": "#/components/responses/ErrorEnvelope"
+          }
+        }
+      }
+    },
+    "/api/orders/{orderNumber}": {
+      "get": {
+        "operationId": "getOrder",
+        "summary": "Get customer order",
+        "tags": [
+          "Orders"
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "orderNumber",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/SuccessEnvelope"
+          },
+          "default": {
+            "$ref": "#/components/responses/ErrorEnvelope"
+          }
+        }
+      }
+    },
+    "/api/experiences/{experienceCode}": {
+      "get": {
+        "operationId": "getExperienceByCode",
+        "summary": "Get experience details",
+        "tags": [
+          "Experiences"
+        ],
+        "description": "Public experience detail endpoint.",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "experienceCode",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/SuccessEnvelope"
+          },
+          "default": {
+            "$ref": "#/components/responses/ErrorEnvelope"
+          }
+        }
+      }
+    },
+    "/api/comments/received/{commentableType}/{commentableId}": {
+      "get": {
+        "operationId": "getCommentsBySource",
+        "summary": "Get comments received for a source",
+        "tags": [
+          "Comments"
+        ],
+        "description": "Public route. Current controller reads req.params.userId rather than these declared source parameters; behavior requires verification.",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "commentableType",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "commentableId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "currentPage",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "description": "Defaults to 1."
+          },
+          {
+            "in": "query",
+            "name": "pageSize",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "description": "Defaults to 5."
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/SuccessEnvelope"
+          },
+          "default": {
+            "$ref": "#/components/responses/ErrorEnvelope"
+          }
+        }
+      }
+    },
+    "/api/comments/sent/{userId}": {
+      "get": {
+        "operationId": "getCommentsSentByUser",
+        "summary": "Get comments sent by a user",
+        "tags": [
+          "Comments"
+        ],
+        "description": "Public route.",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "userId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "currentPage",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "description": "Defaults to 1."
+          },
+          {
+            "in": "query",
+            "name": "pageSize",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "description": "Defaults to 5."
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/SuccessEnvelope"
+          },
+          "default": {
+            "$ref": "#/components/responses/ErrorEnvelope"
+          }
+        }
+      }
+    },
+    "/api/comments/parent/{parentId}/replies": {
+      "get": {
+        "operationId": "getCommentReplies",
+        "summary": "Get replies to a comment",
+        "tags": [
+          "Comments"
+        ],
+        "description": "Public route.",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "parentId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "description": "Defaults to 1."
+          },
+          {
+            "in": "query",
+            "name": "pageSize",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "description": "Defaults to 100."
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "description": "Overrides paging limit."
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/SuccessEnvelope"
+          },
+          "default": {
+            "$ref": "#/components/responses/ErrorEnvelope"
+          }
+        }
+      }
+    },
+    "/api/comments/eligibility": {
+      "get": {
+        "operationId": "getReviewEligibility",
+        "summary": "Check review eligibility",
+        "tags": [
+          "Comments"
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "commentableType",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "commentableId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/SuccessEnvelope"
+          },
+          "default": {
+            "$ref": "#/components/responses/ErrorEnvelope"
+          }
+        }
+      }
+    },
+    "/api/comments/{commentableType}/{commentableId}": {
+      "post": {
+        "operationId": "postComment",
+        "summary": "Create a comment",
+        "tags": [
+          "Comments"
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "commentableType",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "commentableId",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CommentCreateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "$ref": "#/components/responses/CreatedEnvelope"
+          },
+          "default": {
+            "$ref": "#/components/responses/ErrorEnvelope"
+          }
+        }
+      }
+    },
+    "/api/comments/{id}": {
+      "put": {
+        "operationId": "updateComment",
+        "summary": "Update a comment",
+        "tags": [
+          "Comments"
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CommentUpdateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/SuccessEnvelope"
+          },
+          "default": {
+            "$ref": "#/components/responses/ErrorEnvelope"
+          }
+        }
+      },
+      "delete": {
+        "operationId": "deleteComment",
+        "summary": "Delete a comment",
+        "tags": [
+          "Comments"
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "$ref": "#/components/responses/NoContent"
+          },
+          "default": {
+            "$ref": "#/components/responses/ErrorEnvelope"
+          }
+        }
+      }
+    },
+    "/api/media/upload": {
+      "put": {
+        "operationId": "uploadMedia",
+        "summary": "Upload media",
+        "tags": [
+          "Media"
+        ],
+        "description": "Raw image bytes; body limit 6 MB; only the authenticated user may upload for their own user ID.",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "ownerType",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "user"
+              ]
+            }
+          },
+          {
+            "in": "query",
+            "name": "ownerId",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "kind",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "asset",
+                "profile",
+                "experience-thumbnail",
+                "experience-gallery",
+                "review-image"
+              ],
+              "default": "asset"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "image/jpeg": {
+              "schema": {
+                "type": "string",
+                "format": "binary"
+              }
+            },
+            "image/png": {
+              "schema": {
+                "type": "string",
+                "format": "binary"
+              }
+            },
+            "image/webp": {
+              "schema": {
+                "type": "string",
+                "format": "binary"
+              }
+            },
+            "image/gif": {
+              "schema": {
+                "type": "string",
+                "format": "binary"
+              }
+            },
+            "image/avif": {
+              "schema": {
+                "type": "string",
+                "format": "binary"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "$ref": "#/components/responses/MediaUploadSuccess"
+          },
+          "default": {
+            "$ref": "#/components/responses/ErrorEnvelope"
+          }
+        }
+      }
+    },
+    "/api/media/object/{objectKey}": {
+      "get": {
+        "operationId": "getMediaObject",
+        "summary": "Get a media object",
+        "tags": [
+          "Media"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "objectKey",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Encoded object key under an allowed media prefix; route uses an Express wildcard."
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/MediaBinary"
+          },
+          "default": {
+            "$ref": "#/components/responses/ErrorEnvelope"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "cookieAuth": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "_token",
+        "description": "Current middleware accepts only this cookie, not Authorization: Bearer. Login also returns a sensitive JWT in JSON. Do not send passwords or JWTs to an LLM."
+      }
+    },
+    "schemas": {
+      "Envelope": {
+        "type": "object",
+        "properties": {
+          "errors": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "data": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        },
+        "required": [
+          "errors",
+          "data"
+        ],
+        "description": "Common sendError/validation envelope; legacy handlers may vary."
+      },
+      "OpenObject": {
+        "type": "object",
+        "additionalProperties": true
+      },
+      "UserRegistrationRequest": {
+        "type": "object",
+        "required": [
+          "firstName",
+          "lastName",
+          "email",
+          "username",
+          "password",
+          "phoneNumber",
+          "country"
+        ],
+        "properties": {
+          "firstName": {
+            "type": "string"
+          },
+          "lastName": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "username": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 30,
+            "pattern": "^[a-zA-Z0-9._-]+$"
+          },
+          "password": {
+            "type": "string",
+            "format": "password",
+            "writeOnly": true,
+            "description": "At least 8 characters including upper/lowercase, digit, and one of $@#&!."
+          },
+          "phoneNumber": {
+            "type": "string",
+            "description": "US-style 10-digit number, optional hyphens/spaces/parentheses."
+          },
+          "country": {
+            "type": "string"
+          }
+        }
+      },
+      "LoginRequest": {
+        "type": "object",
+        "required": [
+          "username",
+          "password"
+        ],
+        "properties": {
+          "username": {
+            "type": "string"
+          },
+          "password": {
+            "type": "string",
+            "format": "password",
+            "writeOnly": true
+          },
+          "organizationUsername": {
+            "type": "string"
+          }
+        }
+      },
+      "OnboardingStartRequest": {
+        "type": "object",
+        "required": [
+          "mode",
+          "email"
+        ],
+        "properties": {
+          "mode": {
+            "type": "string",
+            "enum": [
+              "create",
+              "invite"
+            ]
+          },
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "inviteToken": {
+            "type": "string"
+          },
+          "inviteCode": {
+            "type": "string"
+          }
+        }
+      },
+      "OnboardingCompleteRequest": {
+        "type": "object",
+        "required": [
+          "mode",
+          "firstName",
+          "lastName",
+          "email",
+          "username",
+          "password",
+          "phoneNumber",
+          "country"
+        ],
+        "properties": {
+          "mode": {
+            "type": "string",
+            "enum": [
+              "create",
+              "invite"
+            ]
+          },
+          "firstName": {
+            "type": "string"
+          },
+          "lastName": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "username": {
+            "type": "string"
+          },
+          "password": {
+            "type": "string",
+            "format": "password",
+            "writeOnly": true
+          },
+          "phoneNumber": {
+            "type": "string"
+          },
+          "country": {
+            "type": "string"
+          },
+          "organizerDescription": {
+            "type": "string"
+          },
+          "inviteToken": {
+            "type": "string"
+          },
+          "inviteCode": {
+            "type": "string"
+          },
+          "organization": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "email": {
+                "type": "string",
+                "format": "email"
+              },
+              "organizationUsername": {
+                "type": "string"
+              },
+              "locationId": {
+                "type": "integer"
+              }
+            },
+            "description": "Required in create mode; optional locationId."
+          }
+        }
+      },
+      "CreateInviteRequest": {
+        "type": "object",
+        "required": [
+          "organizationId",
+          "email"
+        ],
+        "properties": {
+          "organizationId": {
+            "type": "integer"
+          },
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "member",
+              "admin"
+            ],
+            "default": "member"
+          },
+          "expiresInDays": {
+            "type": "integer",
+            "default": 7,
+            "minimum": 1,
+            "maximum": 30
+          }
+        }
+      },
+      "ExperienceCreateRequest": {
+        "type": "object",
+        "required": [
+          "title",
+          "capacity",
+          "duration",
+          "organizationId",
+          "locationId"
+        ],
+        "properties": {
+          "title": {
+            "type": "string",
+            "maxLength": 120
+          },
+          "capacity": {
+            "type": "integer"
+          },
+          "duration": {
+            "type": "integer"
+          },
+          "subtitle": {
+            "type": "string",
+            "maxLength": 180
+          },
+          "description": {
+            "type": "string",
+            "maxLength": 5000
+          },
+          "thumbnail": {
+            "type": "string"
+          },
+          "images": {
+            "type": "array",
+            "items": {}
+          },
+          "ratings": {
+            "type": "number"
+          },
+          "organizationId": {
+            "type": "integer"
+          },
+          "locationId": {
+            "type": "integer"
+          },
+          "userQuestionnary": {
+            "type": "array",
+            "items": {}
+          },
+          "schedules": {
+            "type": "array",
+            "items": {},
+            "description": "Nested schedule contract has additional normalization/validation."
+          },
+          "ticketTiers": {
+            "type": "array",
+            "items": {},
+            "description": "Nested ticket-tier contract has additional validation."
+          }
+        }
+      },
+      "ExperienceUpdateRequest": {
+        "type": "object",
+        "additionalProperties": true,
+        "description": "Partial normalized experience fields; optional userQuestionnary, schedules and ticketTiers arrays replace those collections."
+      },
+      "ExperienceReservationRequest": {
+        "type": "object",
+        "required": [
+          "scheduledExperienceId"
+        ],
+        "properties": {
+          "scheduledExperienceId": {
+            "type": "integer"
+          },
+          "mainContact": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "ticketSelections": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "ticketTierId": {
+                  "type": "integer"
+                },
+                "quantity": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              }
+            }
+          },
+          "billing": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "attendees": {
+            "type": "array",
+            "items": {}
+          },
+          "mainContactIndex": {
+            "type": "integer"
+          },
+          "totalPrice": {
+            "type": "number",
+            "description": "Do not treat as authoritative; controller computes totals."
+          }
+        },
+        "additionalProperties": true
+      },
+      "SchedulePopulateRequest": {
+        "type": "object",
+        "required": [
+          "templateId",
+          "startDate",
+          "endDate"
+        ],
+        "properties": {
+          "templateId": {
+            "type": "integer"
+          },
+          "startDate": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "endDate": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "PreviewStartDateRequest": {
+        "type": "object",
+        "required": [
+          "newStartDate"
+        ],
+        "properties": {
+          "newStartDate": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "UpdateStartDateRequest": {
+        "type": "object",
+        "required": [
+          "newStartDate"
+        ],
+        "properties": {
+          "newStartDate": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "cancelEmptySessions": {
+            "type": "boolean"
+          }
+        }
+      },
+      "EnabledRequest": {
+        "type": "object",
+        "required": [
+          "enabled"
+        ],
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          }
+        }
+      },
+      "LookaheadRequest": {
+        "type": "object",
+        "required": [
+          "days"
+        ],
+        "properties": {
+          "days": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 730
+          }
+        }
+      },
+      "LockedRequest": {
+        "type": "object",
+        "required": [
+          "locked"
+        ],
+        "properties": {
+          "locked": {
+            "type": "boolean"
+          }
+        }
+      },
+      "CartItemRequest": {
+        "type": "object",
+        "required": [
+          "ProductType",
+          "description",
+          "unitPrice"
+        ],
+        "properties": {
+          "ProductType": {
+            "type": "string",
+            "enum": [
+              "Experience",
+              "Service",
+              "Hotel"
+            ]
+          },
+          "ProductId": {
+            "type": "integer"
+          },
+          "description": {
+            "type": "string"
+          },
+          "unitPrice": {
+            "type": "number",
+            "minimum": 0
+          },
+          "quantity": {
+            "type": "integer",
+            "minimum": 1,
+            "default": 1
+          },
+          "metadata": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Experience items require ScheduledExperienceId and non-empty ticketSelections; mainContact.phone is required if mainContact is supplied."
+          }
+        }
+      },
+      "CartItemUpdateRequest": {
+        "type": "object",
+        "properties": {
+          "quantity": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "metadata": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      },
+      "CheckoutRequest": {
+        "type": "object",
+        "required": [
+          "cartId",
+          "billingInfo"
+        ],
+        "properties": {
+          "cartId": {
+            "type": "integer"
+          },
+          "billingInfo": {
+            "type": "object",
+            "required": [
+              "email",
+              "name",
+              "address",
+              "city",
+              "state",
+              "postalCode"
+            ],
+            "properties": {
+              "email": {
+                "type": "string",
+                "format": "email"
+              },
+              "name": {
+                "type": "string"
+              },
+              "address": {
+                "type": "string"
+              },
+              "city": {
+                "type": "string"
+              },
+              "state": {
+                "type": "string"
+              },
+              "postalCode": {
+                "type": "string"
+              }
+            },
+            "additionalProperties": true
+          },
+          "contact": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        },
+        "description": "No idempotency key is currently consumed."
+      },
+      "CommentCreateRequest": {
+        "type": "object",
+        "properties": {
+          "stars": {
+            "type": "integer"
+          },
+          "title": {
+            "type": "string"
+          },
+          "comment": {
+            "type": "string"
+          },
+          "ParentId": {
+            "type": "integer"
+          },
+          "anonymity": {
+            "type": "boolean"
+          },
+          "images": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "additionalProperties": true
+      },
+      "CommentUpdateRequest": {
+        "type": "object",
+        "properties": {
+          "comment": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "stars": {
+            "type": "integer"
+          },
+          "anonymity": {
+            "type": "boolean"
+          },
+          "images": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "additionalProperties": true
+      },
+      "MediaUploadResponse": {
+        "type": "object",
+        "properties": {
+          "errors": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "data": {
+            "type": "object",
+            "required": [
+              "objectKey",
+              "url",
+              "contentType",
+              "size"
+            ],
+            "properties": {
+              "objectKey": {
+                "type": "string"
+              },
+              "url": {
+                "type": "string",
+                "format": "uri"
+              },
+              "contentType": {
+                "type": "string"
+              },
+              "size": {
+                "type": "integer"
+              }
+            }
+          }
+        }
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "required": [
+          "errors"
+        ],
+        "properties": {
+          "errors": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "data": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "metadata": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "paging": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        },
+        "description": "Common error shape; route-specific legacy responses can omit data."
+      }
+    },
+    "responses": {
+      "SuccessEnvelope": {
+        "description": "Successful response.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Envelope"
+            }
+          }
+        }
+      },
+      "CreatedEnvelope": {
+        "description": "Resource created.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Envelope"
+            }
+          }
+        }
+      },
+      "ErrorEnvelope": {
+        "description": "Error response; exact status and fields vary by route.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "LoginSuccess": {
+        "description": "Authenticated; response includes a sensitive token and sets cookies.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "errors": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "data": {
+                  "type": "object",
+                  "properties": {
+                    "token": {
+                      "type": "string",
+                      "description": "Sensitive JWT; never expose to a model."
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "MediaUploadSuccess": {
+        "description": "Media uploaded.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/MediaUploadResponse"
+            }
+          }
+        }
+      },
+      "MediaBinary": {
+        "description": "Binary media object.",
+        "content": {
+          "image/*": {
+            "schema": {
+              "type": "string",
+              "format": "binary"
+            }
+          },
+          "application/octet-stream": {
+            "schema": {
+              "type": "string",
+              "format": "binary"
+            }
+          }
+        }
+      },
+      "NoContent": {
+        "description": "Operation completed; empty response body."
+      }
+    }
+  }
+}
