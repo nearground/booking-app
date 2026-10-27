@@ -26,7 +26,7 @@ Current auth middleware is cookie-only; unsafe authenticated methods require CSR
 1. Compare the inventory with middleware/controller code and list browser-only assumptions and API gaps.
 2. Propose a least-privilege, host-managed MCP authentication boundary that keeps credentials and cookie state out of model context.
 3. Catalogue read and write tool candidates and state explicit confirmation requirements for account/org changes, publishing/schedule edits, booking/cart changes and checkout.
-4. Label endpoint/schema gaps that require future contract work, including receipt lookup and guest claim.
+4. Distinguish implemented guest receipt/email-verification flows from future confirmation-code lookup, delegated auth and schema work.
 
 ## Files to create or modify
 
@@ -42,7 +42,7 @@ Current auth middleware is cookie-only; unsafe authenticated methods require CSR
 
 ## Dependencies
 
-No prerequisite for recommendation; relies on inventory from Story 001/TASK-001. Guest receipt lookup/claim is blocked on the separate Guest Checkout Epic contract.
+No prerequisite for recommendation; relies on inventory from Story 001/TASK-001. The Guest Checkout Epic is complete and its implemented receipt/claim contracts are now consumed; no remaining integration blocker for this research.
 
 ## Testing
 
@@ -64,6 +64,8 @@ The memo is an input to future MCP implementation planning, not authorization to
 ## Progress and completion evidence
 
 Done: published source-grounded gaps and tool catalogue; reviewed against inventory and backend middleware/controllers. Planning validation passed; full backend Jest suite passed (27 suites, 265 tests). No production source changed.
+
+2026-10-27: Refreshed guest checkout/receipt/verified claim recommendations against source and the updated inventory. Kept confirmation-code lookup deferred, documented GET side effects and host-only handling of receipt/verification capabilities, and recorded a discovery-first Discord handoff. Current backend validation: 34 suites / 342 tests passed. Historical results above are preserved, not substituted for current verification.
 
 ## Git history
 

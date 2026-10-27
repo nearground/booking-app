@@ -1,4 +1,5 @@
 import React from 'react';
+import { vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import ImageGalleryModal from './ImageGalleryModal';
 
@@ -27,6 +28,16 @@ const mixedImages = [
 ];
 
 describe('ImageGalleryModal', () => {
+  test('restores page scrolling when unmounted with a nested lightbox open', () => {
+    const { unmount } = render(
+      <ImageGalleryModal images={mockImages} isOpen onClose={() => {}} />
+    );
+    fireEvent.click(screen.getAllByRole('img')[0]);
+    expect(document.body.style.overflow).toBe('hidden');
+    unmount();
+    expect(document.body.style.overflow).toBe('');
+  });
+
   test('renders nothing when isOpen is false', () => {
     const { container } = render(
       <ImageGalleryModal images={mockImages} isOpen={false} onClose={() => {}} />
@@ -63,7 +74,7 @@ describe('ImageGalleryModal', () => {
     render(
       <ImageGalleryModal images={mockImages} isOpen={true} onClose={onClose} />
     );
-    fireEvent.keyDown(window, { key: 'Escape' });
+    fireEvent.keyDown(document.activeElement, { key: 'Escape' });
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
@@ -127,7 +138,7 @@ describe('ImageGalleryModal', () => {
     expect(screen.getByText('1 / 3')).toBeInTheDocument();
 
     // Escape should close lightbox back to gallery, not close modal
-    fireEvent.keyDown(window, { key: 'Escape' });
+    fireEvent.keyDown(document.activeElement, { key: 'Escape' });
     expect(onClose).not.toHaveBeenCalled();
     // Gallery should be visible again with all thumbnails
     expect(screen.getAllByRole('img')).toHaveLength(3);

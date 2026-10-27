@@ -43,4 +43,4 @@ Vitest/Cypress covers host extraction, reserved names, path resolution and empty
 
 ## Progress and decisions
 
-- In progress: implementation is underway on epic/organization-profile-sites.
+- Complete and merged on main. Local profile navigation is browser-tested; hostname resolver/configuration is unit-tested. External wildcard DNS/tunnel activation and live-host verification remain deferred to production launch by user decision.

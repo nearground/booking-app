@@ -15,9 +15,11 @@ This matrix is the layout coverage target for customer-facing routes. Dimensions
 
 ## Route smoke coverage
 
-The Cypress viewport spec visits the app root (home redirect), experience browse, experience details, cart overlay when the populated-cart control is available, checkout, booking confirmation/receipt, login, register, and organizer profile. It checks the global menu control and app content root on every route, plus the login/register form controls. Protected organizer pages may redirect to login when the e2e user is unauthenticated; checkout and receipt may render empty-state or redirect when no booking context exists. These route checks are intentionally read-only and do not submit bookings or mutate account/cart state.
+The Cypress viewport spec visits home, experience browse, a real seeded experience detail, populated cart, checkout, receipt, login/register, authenticated organizer profile, and public organization profile at every matrix size. It discovers experience IDs after reseeding rather than relying on stale IDs. Cart cases add a real ticket via the booking UI and check close/checkout controls. Organizer cases use a cached admin login, not a login-page redirect.
 
-Cart and booking overlays are covered by their existing focused Cypress/component tests; the matrix conditionally opens the cart when the read-only app session already exposes its cart control because the application has no standalone cart route. For manual overlay checks, open the cart or booking dialog using the normal app flow and verify: the overlay is contained by the visible dynamic viewport (`dvh`), scroll remains inside the dialog, safe-area insets leave controls reachable, Escape/backdrop/close actions work, and keyboard focus stays in the active dialog. Also test a virtual keyboard open on a real phone if available.
+Checkout and receipt matrix cases supply explicit router-state layout fixtures so the actual form and confirmation render rather than redirecting to browse. They do not claim to execute payments or generate orders. Separate live booking/guest-checkout suites create real orders and verify receipts. The matrix reseeds development data and mutates anonymous carts; run only against a disposable development database.
+
+For manual overlay checks, verify the overlay fits the visible dynamic viewport (`dvh`), content scrolls internally, safe-area insets leave controls reachable, and Escape/backdrop/close actions work. Also test a virtual keyboard on a real phone if available; emulated viewport reduction is not physical-device certification.
 
 ## Accessibility and media checks
 
@@ -35,6 +37,10 @@ From `frontend`, install dependencies and run:
 npx cypress run --e2e --spec "cypress/e2e/responsive/responsive-viewport.cy.js"
 ```
 
-The configured base URL is `http://localhost:3000`. To run against the shared main checkout at port 8080 as a read-only baseline, set `CYPRESS_baseUrl=http://localhost:8080`; that does not validate the responsive worktree changes. Otherwise run the worktree Vite server on port 3300 with strict port binding and stop it after Cypress exits.
+The configured base URL is `http://localhost:8080`. Use the development Compose stack with seeded experiences and generated sessions. The seed task also refreshes sessions and clears development Redis.
 
-Comments presentation checks are deferred until the comment-photo-editing branch merges; do not interpret this matrix document as evidence those comment surfaces have been implemented.
+## Comments and reduced viewport height
+
+`frontend/cypress/e2e/responsive/comments-viewport.cy.js` supplies controlled API fixtures with long unbroken review text, names, threads and photo references. At all eight sizes it checks card/dialog overflow, >=44px actions, nested photo-gallery/lightbox dismissal, and focus restoration. Three additional cases edit a review, remove a photo and submit at 360x420 (reduced keyboard-sized height), 844x390 and 1280x800. Submission payload checks preserve the canonical media contract; these layout fixtures do not replace backend authorization or live booking tests.
+
+Comment composers remain in normal scroll flow, with no fixed-height reply clipping. Photo removal controls stay inside thumbnail bounds. Nested dialogs use the shared focus helper and restore their scroll lock on unmount. Physical keyboard, notch and LAN testing remain manual launch checks.

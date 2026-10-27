@@ -66,5 +66,7 @@ Backend validation: 34 Jest suites / 330 tests passed. Frontend Vitest suite pas
 
 ## Progress and decisions
 
+- Wave 1 release verification: all guest/cart checkout browser checks pass, including default linking consent, explicit opt-out, optional registration and login continuity. After correcting responsive dialog wiring, booking-modal/cart-checkout/guest-cart suites pass again (18 tests). Full backend validation passes (357 application tests plus 3 OpenAPI checks); frontend unit validation passes (283 tests). Production build passes; diagnostics remain development-only.
+
 - Implementation is complete on `epic/guest-checkout`; all eight Tasks are marked done. Secure receipt claiming uses hashed, purpose-specific verification tokens. The existing baseline migration defines the token table for fresh databases; verification tokens are not demo-seeded.
 - Post-merge on main: E2E specs were run and pass. Seed tasks now generate sessions (`npm run schedule:sync`) and flush Redis after reseeding; specs answer required booking questionnaire prompts. The mock card-payment fields were removed from the cart modal (no card data is collected; payment-provider integration remains out of scope).

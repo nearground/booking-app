@@ -65,6 +65,8 @@ Keep OpenAPI route coverage synchronized with inventory and current router regis
 
 Done: DB-free contract test passed twice after correcting route coverage; full backend Jest suite passed (27 suites, 265 tests). The OpenAPI document contains 48 operations and the explicit test suite detects missing or unregistered target method/path pairs.
 
+2026-10-27: Added three implemented guest receipt/email-verification operations (51 total), guest-session checkout security, experience-only item schema, and distinct schedule/calendar success schemas. The registration check now verifies each selected operation in its owning router and verifies mount prefixes from `app.js`, all as source text without app/model imports. Targeted Jest: 3 tests passed; full backend Jest: 34 suites / 342 tests passed. It does not validate middleware, runtime responses, schema semantics or detect new operations outside the explicit target set; source review remains required.
+
 ## Git history
 
 Link implementation commits only when their commit message contains an exact

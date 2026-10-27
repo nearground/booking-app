@@ -2,6 +2,8 @@
 
 This inventory reflects route registrations, controller/service behavior and middleware in the current `backend/server/` tree. It describes the REST API as found; it does not propose or implement contract changes. Route base paths come from `server/app.js`. Source-specific details and unresolved behavior are called out rather than inferred.
 
+Refreshed 2026-10-27 after the [Guest Checkout Epic](../../../epics/guest-checkout/index.md) completed. The database-free contract test checks selected method/path registrations and mount prefixes, not middleware, payload semantics, response schemas, or newly added routes outside its explicit target list.
+
 ## Authentication, CSRF, errors, and limits
 
 - `server/routes/users.js` mounts at `/api/users`; `POST /api/users/login` and `PUT /api/users/register` are public. Protected `authUser` in `middlewares/auth.js` reads only `req.cookies._token`; it does not accept an Authorization/Bearer header. Missing token returns 401 `{data:{isAuthenticated:false,userDetails:{}},errors:[...]}`; invalid token returns 403 `{status:"Validation of token failed"}`.
@@ -16,6 +18,22 @@ This inventory reflects route registrations, controller/service behavior and mid
 |---|---|---|---|
 | `PUT /api/users/register` | `User.controller.registerUser` â†’ `User.service.createUser`; public + registration limiter | JSON: `firstName`, `lastName`, `email`, `username`, `password`, `phoneNumber`, `country`. Validator requires all; username 3â€“30 chars `[a-z0-9._-]`, phone is US-style 10 digits with optional punctuation, password at least 8 chars including lower/upper/digit and one of `$@#&!`. | 201 `{errors:[],data:{status:"Registration Successful"}}`; validation 400, duplicate/other service errors vary through `sendError`. Does not authenticate automatically. |
 | `POST /api/users/login` | `User.controller.loginUser` â†’ `User.service.authenticateUser`; public + login limiter | JSON `{username,password,organizationUsername?}`; missing username/password gives 400. | 200 `{data:{token},errors:[]}` plus `_token` and CSRF cookies. Auth/service failures are `sendError`; limiter 429. `organizationUsername` is passed to the service, but its selection behavior is not further specified here. |
+
+## Wave 1 account verification and recovery
+
+Emails are trimmed/lowercased and unique across customer and organizer registrations (validator plus database unique index). Registration starts email verification without creating a session; sign-in merges the cookie-backed guest cart into the account cart without duplicating selections.
+
+| Method and route | Handler / auth | Request | Success and notable errors |
+|---|---|---|---|
+| `POST /api/users/email-verification/request` | Public, shared forgot-password limiter (default 8/hour/IP); `{email}` | 200 generic anti-enumeration message regardless of missing/already-verified account. Sends an unverified account a 24-hour verification link; only its token hash is stored. Delivery failure behavior is service-specific; unexpected failure 500; limiter 429. |
+| `POST /api/users/email-verification/confirm` | Public capability exchange; `{token}` (32–256 characters) | 200 `{errors:[],data:{emailVerified:true,claimedOrderCount}}`. Purpose-specific hashed tokens expire after 24 hours. Claiming is transactional and transfers unclaimed orders matching normalized `mainContactEmail`, excluding orders explicitly opted out with `saveBookingForLater:false`. Invalid, used or expired token 400; does not log in the caller. |
+| `POST /api/users/forgot-password` | Public, forgot-password limiter; `{email}` | 200 generic response for existing/unknown addresses; missing email 400. Reset token expires after one hour. |
+| `GET /api/users/reset-password/{token}` | Public token validation | 200 `{errors:[],data:{valid,...}}`; invalid/expired links do not authorize a reset. |
+| `POST /api/users/reset-password` | Public capability exchange; `{token,newPassword,email?}` | 200 `data.status:"Password updated"`; new password minimum six characters. Optional email constrains the token account after normalization; invalid/expired/reused tokens rejected. `/api/users/reset` is a compatibility alias outside the target route subset. |
+
+Email links use configured `FRONTEND_BASE_URL` (development default `http://localhost:8080`), with legacy `FRONTEND_URL` fallback. Unlike browser navigation, emailed links cannot infer the recipient device's hostname.
+
+These are user-mediated email proof flows, not a Discord-account or agent grant. Email equality alone is not ownership proof. Global CSRF applies to either public POST when an auth cookie is present.
 
 ## Organization creation/onboarding and invitations
 
@@ -39,7 +57,7 @@ There is no standalone organization-create route. Creation is the `mode:"create"
 | `GET /api/experiences/` | `getAllExperiences`; public | Query/filter/pagination details are implemented in controller; success returns experience list envelope. Exact supported query contract needs per-filter documentation; see unknowns. |
 | `GET /api/experiences/verticalFilters`, `/availableCities`, `/nearbyExperiences` | `getVerticalFilters`, `getCities`, `getNearbyExperiences`; public | Query parameters are controller-defined; response is JSON discovery/filter data. Exact schemas are not established in this Epic. |
 | `GET /api/experiences/{experienceCode}` | `getExperienceByCode`; public | Path `experienceCode`; returns experience detail or error envelope. |
-| `GET /api/experiences/{experienceCode}/schedule` and `/schedule/calendar` | `getScheduledExperiences`, `getScheduledExperiencesCalendarSummary`; public | Path code; query/filter specifics should be confirmed from controller before client generation. |
+| `GET /api/experiences/{experienceCode}/schedule` and `/schedule/calendar` | `getScheduledExperiences`, `getScheduledExperiencesCalendarSummary`; public | Schedule query: `currentPage` (default 1), `pageSize` (default 6), `startDate` (date in schedule timezone); returns `{elements,paging:{currentPage,totalPages,pageSize},metadata:{totalResults,timezone}}`. Calendar query: `month` (`YYYY-MM`); returns `{elements:[{date,status:"open"|"full"}],metadata:{month,timezone,totalDays}}`. Neither uses the common `errors/data` success envelope. Both may synchronize/populate schedules when no sessions are found: GET is not a guarantee of no backend writes. |
 | `GET /api/experiences/{experienceCode}/booking/enquiry` | `getExperienceBookingEnquiry`; public | Path code; returns enquiry data. Request query schema not fully specified in this inventory. |
 | `POST /api/experiences/{experienceCode}/reservations` | `createExperienceReservation`; public route, DB-backed reservation controller | Supports new flow `{scheduledExperienceId,mainContact,ticketSelections,billing,...}` and legacy `attendees` + `mainContactIndex`. Billing and phone validation are required. Controller calculates ticket totals and validates selected tiers. Success/error shapes use `errors` and `data`; do not assume client-supplied `totalPrice` is authoritative. This is a separate direct reservation contract, not `/cart/checkout`. |
 | `POST /api/experiences/manage` | `createExperience`; `authUser` + `requireOrganizationAdmin` | Body normalized from `title,capacity,duration,subtitle,description,thumbnail,images,ratings,organizationId,locationId`, optional `userQuestionnary,schedules,ticketTiers`. Organization in payload must match admin context; location must belong to org. 201 `{errors:[],data:{experience}}`. |
@@ -65,19 +83,20 @@ The Epic scope also names comments and media route modules because experience pr
 | `GET /api/comments/eligibility` | `getReviewEligibility`; `authUser` | Query requires `commentableType` and `commentableId`. Controller returns service JSON directly; precise shape is not declared in this handler. |
 | `POST /api/comments/{commentableType}/{commentableId}` | `postComment`; `authUser` | Body fields consumed: `stars,title,comment,ParentId,anonymity,images`. Success 201 `{errors,data}`; service may return 429 `{errors:[...]}`; several non-success responses omit `data`. |
 | `PUT /api/comments/{id}` / `DELETE /api/comments/{id}` | `updateComment` / `deleteComment`; `authUser` | Update body consumes `comment,title,stars,anonymity,images`. Delete can return 204 empty response. Service performs operation-specific authorization; endpoint is not rate-limited in router. |
-| `PUT /api/media/upload` | `uploadMedia`; `authUser` | Raw image bytes (JPEG/PNG/WebP/GIF/AVIF, body limit 6 MB); query `ownerType=user,ownerId,kind?`. Only own user ID is allowed; supported kind `asset,profile,experience-thumbnail,experience-gallery,review-image`. Unsupported content type is 415; successful upload returns 201 `{errors:[],data:{objectKey,url,contentType,size}}`. No route-level limiter. |
+| `PUT /api/media/upload` | `uploadMedia`; `authUser` | Raw JPEG/PNG/WebP/GIF/AVIF or MP4 bytes, body limit 6 MB; query `ownerType=user,ownerId,kind?`. Only own user ID is allowed; supported kinds include `asset,profile,experience-thumbnail,experience-gallery,review-image,organization-logo,organization-cover`. Unsupported content type is 415; successful upload returns 201 `{errors:[],data:{objectKey,url,contentType,size}}`. No route-level limiter. |
 | `GET /api/media/object/*` | `getMediaObject`; public | Wildcard object key; validates allowed key prefixes and reads through configured storage worker. Returns binary media with content type/cache headers; unavailable storage gives 500/502, unknown object 404. |
 ## Cart, checkout, and receipt/order lookup
 
-Cart handlers in `Cart.controller.js` accept both authenticated customers and anonymous cookie-backed carts. `POST /api/cart/checkout` requires authentication. The route has no explicit rate limiter. No client-supplied idempotency key is read by the checkout controller/service.
+Cart handlers in `Cart.controller.js` accept authenticated customers and anonymous cookie-backed carts. Checkout uses optional cookie auth; guests must possess the cart session cookie. These routes have no explicit rate limiter. No client-supplied idempotency key is read by the checkout controller/service. New cart items and checkout support experience tickets only; historical hotel/service orders remain readable.
 
 | Method and route | Handler / auth | Request | Success and notable errors |
 |---|---|---|---|
-| `GET /api/cart` | `getCart`; optional cookie auth | No body. Anonymous caller receives/uses `_cart_session` cookie (HTTP-only, 30 days); response `data.cart` is cart or null. | 200 `{errors:[],data:{cart}}`. |
-| `POST /api/cart/items` | `addItem`; optional cookie auth | `{ProductType:"Experience"|"Service"|"Hotel",ProductId?,description,unitPrice,quantity?,metadata?}`. Experience metadata checks `ScheduledExperienceId`, non-empty `ticketSelections` (`ticketTierId`, positive quantity), and mainContact phone when present. | 201 `{errors:[],data:{item,cartTotal}}`; input errors 400. Anonymous cart is cookie-only. |
+| `GET /api/cart` | `getCart`; optional cookie auth | No body. Uses an existing `_cart_session`; without owner/session returns null and does not create a cart cookie. | 200 `{errors:[],data:{cart,notice?}}`. Loading an active cart removes legacy hotel/service items and recomputes totals, returning a notice; this GET can mutate state. |
+| `POST /api/cart/items` | `addItem`; optional cookie auth | `{ProductType:"Experience",ProductId?,description,unitPrice,quantity?=1,metadata}`. Requires positive `ScheduledExperienceId`, non-empty `ticketSelections` (positive tier IDs/quantities), with quantities summing to item quantity. Non-experience items are rejected. The phone check rejects truthy whitespace-only `mainContact.phone`, not every missing phone. | 201 `{errors:[],data:{item,cartTotal}}`; input errors 400. Creates `_cart_session` when needed (HttpOnly, SameSite=Lax, secure in production, 30 days). |
 | `PATCH /api/cart/items/{id}` | `updateItem`; optional cookie auth | `{quantity?,metadata?}`; active owned cart required. | 200 `{errors:[],data:{item}}`; 401/404/400 as applicable. |
 | `DELETE /api/cart/items/{id}` / `DELETE /api/cart` | `removeItem` / `clearCart`; optional cookie auth | No body; active owned cart required. | 200 data message; missing session/cart/item errors use `sendError`. |
-| `POST /api/cart/checkout` | `Order.controller.initiateCheckout` â†’ `Checkout.service.checkoutCart`; `authUser` | `{cartId,billingInfo:{email,name,address,city,state,postalCode,...},contact?}`. Requires cart ID and those billing fields. | 201 returns `orderId,orderNumber,status,totalAmount,mainContactName,mainContactPhone,mainContactEmail,items`; empty/missing cart 400; insufficient inventory 409. Payment processing is not described as an idempotent client command. |
+| `POST /api/cart/checkout` | `Order.controller.initiateCheckout` → `Checkout.service.checkoutCart`; optional cookie auth | `{cartId,billingInfo:{email,name,address,city,state,postalCode,...},contact?,saveBookingForLater?}`. Boolean guest preference defaults true; non-boolean is 400. Ownership is checked by customer ID or guest session. | 201 returns `orderId,orderNumber,status,totalAmount,mainContactName,mainContactPhone,mainContactEmail,items,confirmationEmail`; guests additionally receive `guestReceiptToken` and `saveBookingForLater`. Empty/missing cart or non-experience items 400; insufficient inventory 409; no guest cart session 401. Receipt capability is random, stored as a SHA-256 hash with 30-day expiry, and must remain private. SMTP is attempted after commit with bounded timeouts; failure records status but does not invalidate the pending order. |
+| `POST /api/orders/guest-receipt` | `Order.controller.getGuestOrder`; no customer session required, no explicit route limiter | `{orderNumber,receiptToken}` in JSON (never URL); token is returned once at checkout and persisted as a hash | 200 `{errors:[],data:{order}}` for an unclaimed (`CustomerId:null`) order with matching unexpired token. Private metadata/hash are omitted; response includes confirmation email status. Missing input 400; invalid/expired/claimed/missing order 404; unexpected failure 500. Requires neither cart cookie nor account session; CSRF applies if `_token` is present. |
 | `GET /api/orders/{orderNumber}/confirmation` | `getOrderConfirmation`; `authUser` | Path order number; constrained to `CustomerId=req.user.id`. | 200 returns order ID/number/status/amount/contact/items. 404 for other/missing orders; no lookup by reservation confirmation code. |
 | `GET /api/orders/{orderNumber}` and `GET /api/orders` | `getOrder`, `listOrders`; `authUser` | Path order number; list accepts `page` (default 1) and `limit` (default 10, max 50). | 200 order or paginated list `{orders,pagination}`; 404 or standard error. These are customer-scoped. |
 
@@ -87,5 +106,25 @@ Cart handlers in `Cart.controller.js` accept both authenticated customers and an
 - No route queries a receipt/reservation by reservation `confirmationCode`. The existing order confirmation route takes `orderNumber` and requires the authenticated customer. `confirmationCode` is generated for reservation records and included inside order-item reservation relations.
 - Cart session identity and CSRF both rely on cookies. An agent operating without a cookie jar cannot directly use cart operations; authenticated unsafe requests need a CSRF cookie/header pair.
 - No idempotency key is handled by checkout. A separate payment webhook has event/payment-reference handling, but it is not the client checkout contract and is not included in the MCP-facing spec.
-- Guest checkout and receipt claim are intentionally pending the Guest Checkout Epic; this document does not invent a future route or contract.
+- Guest checkout, capability-based receipt access, and email-verified ownership transfer are implemented as described above. Email equality or an order/reservation number alone is not proof: guest reading needs the receipt capability; account association requires the verification token and excludes explicit linking opt-outs. These flows do not provide lookup by reservation confirmation code alone, delegated agent credentials, or Discord account linking. Diagnostic email failure banners appear only in development builds; persisted statuses/logs remain available in production.
 - Exact discovery filter schemas, complete `schedules`/`ticketTiers` nested validation, organizer-assignment payload, managed schedule-sync payload, checkout contact nesting, and all validation/error variants need additional source-level or runtime verification before client SDK generation. A GET-only development smoke is intentionally separate from DB-backed contract tests.
+
+## Public organization sites and branding
+
+| Method and route | Auth / contract |
+|---|---|
+| `GET /api/organization-sites/{slug}` | Public. Lowercases incoming slug and rejects reserved/invalid values. Selects only ID/name and branding fields, plus experiences with upcoming `scheduled` sessions. Returns `{errors:[],data:{organization,experiences}}`; unknown site 404; valid empty sites return 200. No private member/account email is included; explicitly published contact links are public. |
+| `GET /api/organization-sites/admin/{organizationId}/branding` | `authUser` plus organization-admin membership. Returns safe branding attributes only. |
+| `PATCH /api/organization-sites/admin/{organizationId}/branding` | Same admin guard plus global CSRF. Partial fields: `slug,logoMediaKey,coverMediaKey,coverMediaType,primaryColor,accentColor,font,tagline,about,socialLinks,contactLinks,layoutTemplate`. Unknown fields rejected (400); unique slug conflict 409. Media references must be uploaded by the acting admin. Hex colors; supported font/layout allow-lists; tagline <=160 and about <=4000 chars; contact/social links validated (HTTPS except email/phone); no arbitrary HTML/CSS. |
+
+Public browser pages use `/o/{slug}` on localhost/LAN and the active origin for experience links. Experience detail exposes only `Organization.name` and `Organization.slug` for its host profile link. Production wildcard DNS/tunnel activation remains explicitly deferred to launch.
+
+## Running the database-free route check in Docker
+
+From the repository root, mount the contract documents read-only for a disposable backend test container:
+
+```powershell
+docker compose run --rm --no-deps -v "${PWD}\docs:/contracts:ro" -e API_CONTRACT_DOCS_ROOT=/contracts backend npx jest tests/api-openapi-contract.test.js --runInBand
+```
+
+The test parses route source and the JSON subset of YAML without initializing the application or database. It covers the explicit target operation set, not every route or runtime authorization behavior.

@@ -47,27 +47,28 @@ const ReplyForm = ({ parentComment, commentableType, commentableId, onSuccess, o
   };
 
   return (
-    <form className="mt-3 border-t pt-3" onSubmit={submit}>
+    <form className="min-w-0 mt-3 border-t pt-3 scroll-mb-6" onSubmit={submit}>
       <textarea
-        className="w-full border rounded p-2 text-sm"
+        className="w-full border rounded p-2 scroll-m-6"
+        aria-label="Reply"
         placeholder="Write your reply..."
         value={body}
         onChange={(e) => setBody(e.target.value)}
         rows={4}
         disabled={isSubmitting}
       />
-      {error && <p className="text-xs text-red-600 mt-1">{error}</p>}
-      <div className="mt-2 flex gap-2">
+      {error && <p role="alert" className="text-sm text-red-600 mt-1 break-words">{error}</p>}
+      <div className="mt-2 flex flex-wrap gap-2">
         <button
           type="submit"
-          className="px-3 py-1.5 rounded bg-slate-800 text-white text-sm"
+          className="min-h-11 min-w-11 px-3 py-2 rounded bg-slate-800 text-white text-sm"
           disabled={isSubmitting}
         >
           {isSubmitting ? 'Posting...' : 'Reply'}
         </button>
         <button
           type="button"
-          className="px-3 py-1.5 rounded bg-white text-slate-700 border text-sm"
+          className="min-h-11 min-w-11 px-3 py-2 rounded bg-white text-slate-700 border text-sm"
           onClick={() => { setBody(''); if (onCancel) onCancel(); }}
           disabled={isSubmitting}
         >

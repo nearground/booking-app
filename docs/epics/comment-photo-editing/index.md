@@ -3,7 +3,7 @@ title: "Comment privacy and photo editing"
 work_id: "EPIC-comment-photo-editing"
 work_type: epic
 template_version: 1
-status: in-progress
+status: done
 parent: null
 branch: "epic/comment-photo-editing"
 depends_on: []
@@ -39,7 +39,7 @@ No formal dependency. Agree a narrow composer visibility/edit API boundary with 
 
 ## User Stories
 
-The Epic is expanded into two Stories and four implementation Tasks; implementation is in progress.
+The Epic is expanded into two Stories and four implementation Tasks; all are complete and merged into main.
 
 <!-- children:start -->
 - [STORY-001: Comment only after sign-in](stories/STORY-001-authenticated-commenting/index.md)
@@ -54,6 +54,8 @@ The Epic is expanded into two Stories and four implementation Tasks; implementat
 ## Verification and completion evidence
 
 Run `AddCommentForm.test.jsx`, `CommentCard.test.jsx`, guest prompt entry-point tests, and `backend/tests/unit/comment-service.test.js`; verify the canonical response key and rejection of external media URLs.
+
+Wave 1 release verification: full backend suite passed (357 tests excluding the separately run database-free OpenAPI check); full frontend unit suite passed (283 tests). Responsive comments browser checks passed (11). The earlier Cypress configuration blocker and Login test failure are resolved on main. Photo-editing/auth contracts remain intact.
 
 ## Progress and decisions
 

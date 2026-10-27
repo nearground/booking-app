@@ -6,7 +6,7 @@ const GuestCommentPrompt = () => {
 
   return (
     <p className="text-sm text-slate-500">
-      <Link to="/login" state={{ from: location }} className="text-blue-600 hover:underline">
+      <Link to="/login" state={{ from: location }} className="inline-flex min-h-11 items-center text-blue-600 hover:underline">
         Log in to comment
       </Link>
     </p>

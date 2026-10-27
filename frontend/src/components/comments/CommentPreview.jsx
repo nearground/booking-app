@@ -4,10 +4,10 @@ import { networkAdapter } from 'services/NetworkAdapter';
 const AddCommentForm = lazy(() => import('./AddCommentForm'));
 
 const CommentPreview = ({ reply, renderStars, formatCommentDate, userDetails, loadComments, commentsTargetType }) => {
-  if (!reply) return null;
-
   const [isEditing, setIsEditing] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [error, setError] = useState('');
+  if (!reply) return null;
 
   const isAnonymous = Number(reply.anonymity) === 0;
   let author = 'Guest User';
@@ -27,18 +27,18 @@ const CommentPreview = ({ reply, renderStars, formatCommentDate, userDetails, lo
   const canDelete = Boolean(isOwnerOfComment || isOrganizerForTarget);
 
   return (
-    <div className="bg-slate-50 rounded p-2">
+    <div className="min-w-0 bg-slate-50 rounded p-2 [overflow-wrap:anywhere]">
       {!isEditing && (
         <>
           <div className="text-sm text-slate-700 mt-1 whitespace-pre-wrap break-words">{reply.comment}</div>
-          <div className="mt-2 flex justify-between items-center">
+          <div className="mt-2 flex flex-wrap justify-between items-center gap-2">
             <div className="text-xs text-slate-500">{formatCommentDate(reply.createdAt)}</div>
-            <div className="flex items-center gap-2">
+            <div className="min-w-0 flex flex-wrap items-center gap-2">
               <div className="text-xs text-slate-500">{author}</div>
               {canEdit && (
                 <button
                   type="button"
-                  className="px-2 py-1 rounded text-xs border bg-white text-slate-700"
+                  className="min-h-11 min-w-11 px-3 py-2 rounded text-sm border bg-white text-slate-700"
                   onClick={() => setIsEditing(true)}
                 >
                   Edit
@@ -48,19 +48,22 @@ const CommentPreview = ({ reply, renderStars, formatCommentDate, userDetails, lo
                 <button
                   type="button"
                   disabled={deleting}
-                  className="px-2 py-1 rounded text-xs border bg-white text-red-600"
+                  className="min-h-11 min-w-11 px-3 py-2 rounded text-sm border bg-white text-red-600"
                   onClick={async () => {
                     if (!window.confirm('Delete this comment and its replies?')) return;
                     setDeleting(true);
+                    setError('');
                     try {
                       const resp = await networkAdapter.delete(`/api/comments/${reply.id}`);
                       if (resp && resp.ok) {
                         if (loadComments) loadComments({ page: 1, append: false, targetType: commentsTargetType });
                       } else if (resp && resp.status === 401) {
                         window.location.href = '/register';
+                      } else {
+                        setError(resp?.errors?.join(', ') || 'Unable to delete comment.');
                       }
                     } catch (e) {
-                      // ignore
+                      setError(e.message || 'Unable to delete comment.');
                     } finally {
                       setDeleting(false);
                     }
@@ -69,6 +72,7 @@ const CommentPreview = ({ reply, renderStars, formatCommentDate, userDetails, lo
                   {deleting ? 'Deleting…' : 'Delete'}
                 </button>
               )}
+              {error && <p role="alert" className="mt-2 text-sm text-red-600">{error}</p>}
             </div>
           </div>
         </>

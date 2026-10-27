@@ -17,6 +17,7 @@ const useModalAccessibility = ({ isOpen, onClose, dialogRef }) => {
     (focusables[0] || dialog).focus({ preventScroll: true });
 
     const handleKeyDown = (event) => {
+      if (event.defaultPrevented) return;
       if (event.key === 'Escape') {
         event.preventDefault();
         onCloseRef.current();

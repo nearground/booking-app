@@ -28,33 +28,80 @@ const assertWithinViewport = (selector, checkTouchTarget = false) => {
 const routes = [
   { name: 'home', path: '/' },
   { name: 'experience browse', path: '/experiences' },
-  { name: 'experience details', path: '/experience/1' },
-  { name: 'cart overlay when populated', path: '/experiences', cartOverlay: true },
-  { name: 'checkout', path: '/checkout?bookingType=experience' },
-  { name: 'receipt', path: '/booking-confirmation' },
+  { name: 'experience details', experienceDetails: true, control: '[data-testid="experience-details__title"]' },
+  { name: 'populated cart overlay', cartOverlay: true },
+  { name: 'checkout', path: '/checkout?bookingType=experience', checkout: true },
+  { name: 'receipt', path: '/booking-confirmation', receipt: true, control: '[data-testid="confirmation__heading"]' },
   { name: 'login', path: '/login', control: 'input[name="username"]' },
   { name: 'register', path: '/register', control: 'input[name="email"]' },
-  { name: 'organizer profile', path: '/organizer-profile' },
+  { name: 'organizer profile', path: '/organizer-profile', organizer: true },
+  { name: 'public organization profile', path: '/o/testcompany1', control: '.org-site-brand h1', publicOrganization: true },
 ];
 
 describe('responsive viewport matrix', () => {
+  let experiencePath;
+  let bookingContext;
+  const confirmationData = {
+    orderNumber: 'ORD-VIEWPORT-FIXTURE', status: 'pending', totalAmount: '20.00',
+    mainContactName: 'Viewport Guest', mainContactEmail: 'viewport@example.invalid',
+    guestReceiptToken: 'layout-fixture-not-a-real-capability', saveBookingForLater: true,
+    items: [{
+      id: 1, ProductType: 'Experience', description: 'Viewport fixture tickets',
+      quantity: 1, unitPrice: '20.00', totalPrice: '20.00',
+      metadata: { experienceTitle: 'Viewport fixture experience', sessionDateTime: '2027-01-15T12:00:00Z' },
+    }],
+  };
+
+  before(() => {
+    cy.task('seedDb');
+    cy.visit('/experiences');
+    cy.getByTestId('experience-card').first().click();
+    cy.location('pathname').then((path) => {
+      experiencePath = path;
+      cy.request(`/api/experiences/${path.split('/').pop()}`).then(({ body }) => {
+        const tier = body.data.TicketTiers[0];
+        bookingContext = {
+          sessionDateTime: '2027-01-15T12:00:00Z', experienceTitle: body.data.title,
+          totalTickets: 1, tickets: [{ ticketTierId: tier.id, quantity: 1 }],
+          previewTicketTiers: body.data.TicketTiers,
+        };
+      });
+    });
+  });
+
   viewports.forEach(({ name: viewportName, width, height }) => {
     describe(`${viewportName} (${width}x${height})`, () => {
       beforeEach(() => {
         cy.viewport(width, height);
       });
 
-      routes.forEach(({ name: routeName, path, control, cartOverlay }) => {
+      routes.forEach(({ name: routeName, path, control, cartOverlay, experienceDetails, checkout, receipt, organizer, publicOrganization }) => {
         it(`keeps ${routeName} content and key controls in the viewport`, () => {
-          cy.visit(path, { failOnStatusCode: false });
-          let openedCart = false;
+          if (organizer) {
+            cy.session('responsive-organizer', () => cy.login('admin', 'adminpassword'));
+          }
+          const targetPath = experienceDetails || cartOverlay ? experiencePath : path;
+          const state = receipt ? { confirmationData } : checkout ? { bookingContext } : null;
+          cy.visit(targetPath, {
+            onBeforeLoad(window) {
+              if (state) window.history.replaceState({ usr: state, key: 'viewport', idx: 0 }, '', targetPath);
+            },
+          });
+          if (experienceDetails) cy.getByTestId('experience-details__title').should('be.visible');
+          if (organizer) cy.contains('h2', 'Organizer Home').should('be.visible');
+          if (checkout) cy.contains('Billing Section').should('exist');
           if (cartOverlay) {
-            cy.get('body').then(($body) => {
-              if ($body.find('[data-testid="cart-fab"]').length) {
-                openedCart = true;
-                cy.get('[data-testid="cart-fab"]').click();
-              }
-            });
+            cy.getByTestId('session-card').first().click();
+            cy.get('[aria-label="Close booking modal"]').should('have.focus');
+            cy.getByTestId('tier-selector').first().find('[aria-label*="Increase"]').click();
+            cy.getByTestId('contact-form__phone').clear();
+            cy.getByTestId('contact-form__phone').type('5551234567');
+            cy.answerBookingQuestionnaire();
+            cy.getByTestId('session-summary__add-to-cart').focus();
+            cy.focused().trigger('keydown', { key: 'Tab' });
+            cy.get('[aria-label="Close booking modal"]').should('have.focus');
+            cy.getByTestId('session-summary__add-to-cart').click();
+            cy.getByTestId('cart-item-card').should('have.length', 1);
           }
           cy.get('#root').should('be.visible');
           cy.document().should((document) => {
@@ -65,12 +112,21 @@ describe('responsive viewport matrix', () => {
               document.documentElement.clientWidth
             );
           });
-          assertWithinViewport('[data-testid="menu-toggle__button"]', true);
-          if (openedCart) {
+          if (!cartOverlay && !publicOrganization) assertWithinViewport('[data-testid="menu-toggle__button"]', true);
+          if (cartOverlay) {
             cy.get('[data-testid="cart-modal"]').should('be.visible');
             assertWithinViewport('[data-testid="cart-modal"] button[aria-label="Close cart"]', true);
+            cy.getByTestId('cart-modal__checkout-btn').scrollIntoView();
+            assertWithinViewport('[data-testid="cart-modal__checkout-btn"]', true);
+            cy.getByTestId('cart-modal__checkout-btn').focus();
+            cy.focused().trigger('keydown', { key: 'Tab' });
+            cy.get('[data-testid="cart-modal"] button').first().should('have.focus');
+            cy.focused().trigger('keydown', { key: 'Escape' });
+            cy.getByTestId('cart-modal').should('not.exist');
+            cy.document().its('body.style.overflow').should('not.eq', 'hidden');
           }
           if (control) {
+            cy.get(`#root ${control}`).first().scrollIntoView({ offset: { top: -16, left: 0 } });
             assertWithinViewport(`#root ${control}`);
           }
         });
