@@ -47,4 +47,31 @@ describe('Experience Browse', () => {
     cy.getByTestId('experience-details__rating').should('be.visible');
     cy.getByTestId('schedule-widget').should('be.visible');
   });
+
+  it('links from the host section to the experience organization profile on the current host', () => {
+    cy.getByTestId('experience-card').first().click();
+    cy.getByTestId('experience-details__organization-link')
+      .should('have.attr', 'href')
+      .and('match', /^\/o\/[a-z0-9-]+$/);
+    cy.getByTestId('experience-details__organization-link').click();
+    cy.location('pathname').should('match', /^\/o\/[a-z0-9-]+$/);
+    cy.location('hostname').should('eq', 'localhost');
+    cy.get('.org-site-brand h1').should('be.visible');
+  });
+
+  [null, { name: 'No public profile', slug: null }, { name: 'Invalid profile', slug: 'admin' }].forEach((organization) => {
+    it(`omits the profile link for ${organization?.name || 'a missing organization'}`, () => {
+      cy.intercept('GET', /\/api\/experiences\/\d+$/, (req) => {
+        delete req.headers['if-none-match'];
+        delete req.headers['if-modified-since'];
+        req.continue((res) => {
+          res.body.data.Organization = organization;
+        });
+      });
+      cy.getByTestId('experience-card').first().click();
+      cy.getByTestId('experience-details__title').should('be.visible');
+      cy.getByTestId('experience-details__organization-link').should('not.exist');
+      cy.getByTestId('schedule-widget').should('be.visible');
+    });
+  });
 });
