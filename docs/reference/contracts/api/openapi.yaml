@@ -2,7 +2,7 @@
   "openapi": "3.0.3",
   "info": {
     "title": "Booking API (MCP research subset)",
-    "version": "0.1.0",
+    "version": "0.2.0",
     "description": "Verified current routes for authentication, organization onboarding/invites, experiences and management, cart/checkout, and customer order confirmation. This is a research snapshot, not a promise of future contracts. Unknown/partial schemas and authentication gaps are documented in inventory.md. Unsafe requests authenticated by _token cookie require matching _csrf_token cookie and x-csrf-token (or x-xsrf-token) header. Rate limits and cookie semantics vary by operation; see inventory.md."
   },
   "servers": [
@@ -12,6 +12,96 @@
     }
   ],
   "paths": {
+    "/api/users/email-verification/request": {
+      "post": {
+        "operationId": "requestEmailVerification",
+        "summary": "Request a user-mediated email verification link",
+        "description": "Public; shared forgot-password limiter, default 8/hour/IP. Always returns a generic success message for missing or already-verified accounts; does not prove email delivery.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": { "email": { "type": "string", "format": "email" } }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "$ref": "#/components/responses/SuccessEnvelope" },
+          "default": { "$ref": "#/components/responses/ErrorEnvelope" }
+        }
+      }
+    },
+    "/api/users/email-verification/confirm": {
+      "post": {
+        "operationId": "confirmEmailVerification",
+        "summary": "Verify account email and transfer matching guest orders",
+        "description": "Public, user-mediated proof. Consumes a single-use 24-hour verification token, verifies email and claims unowned orders matching normalized mainContactEmail. Does not create a login session. No explicit route limiter. Keep tokens out of model context and chat.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["token"],
+                "properties": {
+                  "token": { "type": "string", "minLength": 32, "maxLength": 256, "writeOnly": true }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Email verified; data contains emailVerified=true and claimedOrderCount.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Envelope" }
+              }
+            }
+          },
+          "400": { "description": "Verification link is invalid, used or expired." },
+          "default": { "$ref": "#/components/responses/ErrorEnvelope" }
+        }
+      }
+    },
+    "/api/orders/guest-receipt": {
+      "post": {
+        "operationId": "getGuestOrder",
+        "summary": "Read an unclaimed guest receipt using its private capability",
+        "description": "No account or cart cookie required. Requires orderNumber plus receiptToken, not a reservation confirmation code. Checks a hashed token and 30-day expiry, and CustomerId must be null. No explicit route limiter. Global CSRF applies if _token is present. Never expose the capability to a model or public chat.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["orderNumber", "receiptToken"],
+                "properties": {
+                  "orderNumber": { "type": "string" },
+                  "receiptToken": { "type": "string", "minLength": 1, "writeOnly": true }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "data.order includes items and confirmationEmail; order metadata is set to null.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Envelope" }
+              }
+            }
+          },
+          "400": { "description": "orderNumber and receiptToken are required." },
+          "404": { "description": "Receipt not found (unknown, claimed, invalid or expired capability)." },
+          "default": { "$ref": "#/components/responses/ErrorEnvelope" }
+        }
+      }
+    },
     "/api/users/register": {
       "put": {
         "operationId": "registerUser",
@@ -311,6 +401,7 @@
       "get": {
         "operationId": "getExperienceCalendar",
         "summary": "Get experience calendar summary",
+        "description": "Public. May synchronize/populate schedules if none are found; not guaranteed side-effect-free.",
         "tags": [
           "Experiences"
         ],
@@ -322,11 +413,21 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "in": "query",
+            "name": "month",
+            "schema": { "type": "string", "description": "YYYY-MM in the schedule timezone; defaults to current month." }
           }
         ],
         "responses": {
           "200": {
-            "$ref": "#/components/responses/SuccessEnvelope"
+            "description": "Calendar success uses elements/metadata, not errors/data.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ExperienceCalendar" }
+              }
+            }
           },
           "default": {
             "$ref": "#/components/responses/ErrorEnvelope"
@@ -338,6 +439,7 @@
       "get": {
         "operationId": "getExperienceSchedule",
         "summary": "Get scheduled experiences",
+        "description": "Public. May synchronize/populate schedules if none are found; not guaranteed side-effect-free.",
         "tags": [
           "Experiences"
         ],
@@ -349,11 +451,19 @@
             "schema": {
               "type": "string"
             }
-          }
+          },
+          { "in": "query", "name": "currentPage", "schema": { "type": "integer", "minimum": 1, "default": 1 } },
+          { "in": "query", "name": "pageSize", "schema": { "type": "integer", "minimum": 1, "default": 6 } },
+          { "in": "query", "name": "startDate", "schema": { "type": "string", "format": "date", "description": "Date in the schedule timezone." } }
         ],
         "responses": {
           "200": {
-            "$ref": "#/components/responses/SuccessEnvelope"
+            "description": "Schedule success uses elements/paging/metadata, not errors/data. Nested session fields remain partial.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ExperienceSchedule" }
+              }
+            }
           },
           "default": {
             "$ref": "#/components/responses/ErrorEnvelope"
@@ -1075,8 +1185,11 @@
         "tags": [
           "Cart"
         ],
-        "description": "Authenticated customer only; no client idempotency key is accepted.",
+        "description": "Optional customer auth, otherwise requires the owning _cart_session cookie. Experience tickets only. No client idempotency key is accepted; never retry blindly. Global CSRF applies when _token is present.",
         "security": [
+          {
+            "cartSession": []
+          },
           {
             "cookieAuth": []
           }
@@ -1093,7 +1206,12 @@
         },
         "responses": {
           "201": {
-            "$ref": "#/components/responses/CreatedEnvelope"
+            "description": "Pending order with orderId, orderNumber, status, totalAmount, contact fields, confirmationEmail and items in data. Guests also receive a sensitive guestReceiptToken (30-day capability); capture only in trusted host storage, never model/chat output.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Envelope" }
+              }
+            }
           },
           "default": {
             "$ref": "#/components/responses/ErrorEnvelope"
@@ -1688,6 +1806,12 @@
   },
   "components": {
     "securitySchemes": {
+      "cartSession": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "_cart_session",
+        "description": "Private anonymous cart session established by adding an item, not by GET cart."
+      },
       "cookieAuth": {
         "type": "apiKey",
         "in": "cookie",
@@ -1696,6 +1820,56 @@
       }
     },
     "schemas": {
+      "ExperienceSchedule": {
+        "type": "object",
+        "required": ["elements", "paging", "metadata"],
+        "properties": {
+          "elements": { "type": "array", "items": { "$ref": "#/components/schemas/OpenObject" } },
+          "paging": {
+            "type": "object",
+            "required": ["currentPage", "totalPages", "pageSize"],
+            "properties": {
+              "currentPage": { "type": "integer" },
+              "totalPages": { "type": "integer" },
+              "pageSize": { "type": "integer" }
+            }
+          },
+          "metadata": {
+            "type": "object",
+            "required": ["totalResults", "timezone"],
+            "properties": {
+              "totalResults": { "type": "integer" },
+              "timezone": { "type": "string" }
+            }
+          }
+        }
+      },
+      "ExperienceCalendar": {
+        "type": "object",
+        "required": ["elements", "metadata"],
+        "properties": {
+          "elements": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["date", "status"],
+              "properties": {
+                "date": { "type": "string", "format": "date" },
+                "status": { "type": "string", "enum": ["open", "full"] }
+              }
+            }
+          },
+          "metadata": {
+            "type": "object",
+            "required": ["month", "timezone", "totalDays"],
+            "properties": {
+              "month": { "type": "string" },
+              "timezone": { "type": "string" },
+              "totalDays": { "type": "integer" }
+            }
+          }
+        }
+      },
       "Envelope": {
         "type": "object",
         "properties": {
@@ -2112,15 +2286,14 @@
         "required": [
           "ProductType",
           "description",
-          "unitPrice"
+          "unitPrice",
+          "metadata"
         ],
         "properties": {
           "ProductType": {
             "type": "string",
             "enum": [
-              "Experience",
-              "Service",
-              "Hotel"
+              "Experience"
             ]
           },
           "ProductId": {
@@ -2141,7 +2314,7 @@
           "metadata": {
             "type": "object",
             "additionalProperties": true,
-            "description": "Experience items require ScheduledExperienceId and non-empty ticketSelections; mainContact.phone is required if mainContact is supplied."
+            "description": "Requires positive ScheduledExperienceId and non-empty ticketSelections with positive ticketTierId and quantity; selected quantities must sum to item quantity. A truthy whitespace-only mainContact.phone is rejected; missing phone is not consistently rejected here."
           }
         }
       },

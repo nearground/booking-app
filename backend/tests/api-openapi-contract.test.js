@@ -15,6 +15,7 @@ const routeSources = {
 
 const expectedOperations = [
   ['users', 'put', '/register'], ['users', 'post', '/login'],
+  ['users', 'post', '/email-verification/request'], ['users', 'post', '/email-verification/confirm'],
   ['organizers', 'post', '/onboarding/start'], ['organizers', 'post', '/onboarding/complete'],
   ['organizers', 'get', '/invites/resolve'], ['organizers', 'post', '/invites'],
   ['organizers', 'post', '/invites/:id/resend'], ['organizers', 'delete', '/invites/:id'],
@@ -35,7 +36,8 @@ const expectedOperations = [
   ['experiences', 'patch', '/manage/scheduled-experiences/:sessionId/sync-lock'],
   ['cart', 'get', '/'], ['cart', 'post', '/items'], ['cart', 'patch', '/items/:id'],
   ['cart', 'delete', '/items/:id'], ['cart', 'delete', '/'], ['cart', 'post', '/checkout'],
-  ['orders', 'get', '/'], ['orders', 'get', '/:orderNumber/confirmation'], ['orders', 'get', '/:orderNumber'],
+  ['orders', 'get', '/'], ['orders', 'post', '/guest-receipt'],
+  ['orders', 'get', '/:orderNumber/confirmation'], ['orders', 'get', '/:orderNumber'],
   ['comments', 'get', '/received/:commentableType/:commentableId'],
   ['comments', 'get', '/sent/:userId'], ['comments', 'get', '/parent/:parentId/replies'],
   ['comments', 'get', '/eligibility'], ['comments', 'post', '/:commentableType/:commentableId'],
@@ -59,8 +61,9 @@ const parseRouter = ({ file, prefix }) => {
 
 describe('OpenAPI target route contract', () => {
   const spec = JSON.parse(fs.readFileSync(specPath, 'utf8').replace(/^\uFEFF/, ''));
-  const registered = new Set();
-  Object.values(routeSources).forEach(source => parseRouter(source).forEach(route => registered.add(route)));
+  const registeredByGroup = Object.fromEntries(
+     Object.entries(routeSources).map(([group, source]) => [group, parseRouter(source)])
+  );
   const documented = new Set();
   Object.entries(spec.paths).forEach(([route, methods]) => {
     Object.keys(methods).filter(method => ['get', 'post', 'put', 'patch', 'delete'].includes(method))
@@ -73,12 +76,32 @@ describe('OpenAPI target route contract', () => {
 
   test('specifies only the target operations and every target operation is registered in Express', () => {
     expect([...documented].sort()).toEqual([...expected].sort());
-    const missingFromRouter = [...expected].filter(route => !registered.has(route));
+    const missingFromRouter = expectedOperations.filter(([group, method, route]) => {
+       const { prefix } = routeSources[group];
+       return !registeredByGroup[group].has(routeKey(method, `${prefix}${route}`));
+    });
     expect(missingFromRouter).toEqual([]);
   });
 
-  test('every documented method/path exists in its corresponding router source', () => {
-    const unregistered = [...documented].filter(route => !registered.has(route));
-    expect(unregistered).toEqual([]);
+  test('selected router prefixes match their mounts in the Express app source', () => {
+    const source = fs.readFileSync(path.join(backendRoot, 'server', 'app.js'), 'utf8');
+    const mounts = new Map(
+       [...source.matchAll(/app\.use\(\s*(['"])([^'"]+)\1\s*,\s*(\w+)\s*\)/g)]
+          .map(match => [match[3], match[2]])
+    );
+    Object.entries(routeSources).forEach(([group, { prefix }]) => {
+       expect(mounts.get(`${group}Router`)).toBe(prefix);
+    });
+  });
+
+  test('records guest checkout and receipt capability boundaries explicitly', () => {
+    expect(spec.paths['/api/cart/checkout'].post.security).toEqual([
+       { cartSession: [] }, { cookieAuth: [] },
+    ]);
+    const receipt = spec.paths['/api/orders/guest-receipt'].post;
+    const schema = receipt.requestBody.content['application/json'].schema;
+    expect(schema.required).toEqual(['orderNumber', 'receiptToken']);
+    expect(schema.properties.receiptToken.writeOnly).toBe(true);
+    expect(spec.components.schemas.CartItemRequest.properties.ProductType.enum).toEqual(['Experience']);
   });
 });

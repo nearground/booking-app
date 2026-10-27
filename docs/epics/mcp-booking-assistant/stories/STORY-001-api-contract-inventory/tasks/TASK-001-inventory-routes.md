@@ -41,7 +41,7 @@ Routes mount in `backend/server/app.js`; relevant route modules are `users.js`, 
 
 ## Dependencies
 
-None for source inventory. Exact future receipt claim behavior depends on the Guest Checkout Epic and must be recorded as unknown rather than predicted.
+None for source inventory. The Guest Checkout Epic has landed; document its implemented capability receipt and email-verification contracts without inventing confirmation-code lookup.
 
 ## Testing
 
@@ -63,6 +63,8 @@ The inventory is the API evidence source for the Story's OpenAPI, test and gap a
 ## Progress and completion evidence
 
 Done: wrote the source-verified route/auth/request/response/error/rate-limit inventory, identified cookie-only auth and the absent confirmation-code lookup contract, and validated planning documents with `node scripts/planning.mjs validate`.
+
+2026-10-27: Refreshed against `routes/cart.js`, `routes/orders.js`, `routes/users.js`, `Cart.controller.js`, `Order.controller.js`, `User.controller.js`, `User.service.js`, and schedule handlers in `Experience.controller.js`. Corrected guest checkout, experience-only cart policy, cookie establishment, receipt capabilities/expiry and verified claims. Recorded GET side effects and non-envelope schedule responses. No production files changed.
 
 ## Git history
 

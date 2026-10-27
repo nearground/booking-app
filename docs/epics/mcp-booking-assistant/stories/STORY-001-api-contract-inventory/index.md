@@ -29,7 +29,7 @@ Document the existing registration/login, organizer onboarding and invites, expe
 
 ## Ownership and dependencies
 
-Owned files are `docs/reference/contracts/api/inventory.md`, `docs/reference/contracts/api/openapi.yaml`, and `backend/tests/api-openapi-contract.test.js`. The backend route owners remain authoritative; this Story documents existing behavior and must not edit production behavior. No prerequisite; guest receipt claims remain outside scope until the Guest Checkout Epic lands.
+Owned files are `docs/reference/contracts/api/inventory.md`, `docs/reference/contracts/api/openapi.yaml`, and `backend/tests/api-openapi-contract.test.js`. The backend route owners remain authoritative; this Story documents existing behavior and must not edit production behavior. The completed Guest Checkout Epic supplies the guest purchase, capability receipt and email-verified ownership contracts now included here.
 
 ## Tasks
 
@@ -42,6 +42,9 @@ Owned files are `docs/reference/contracts/api/inventory.md`, `docs/reference/con
 
 Verified `node scripts/planning.mjs validate`; the DB-free route test and full backend Jest suite passed (27 suites, 265 tests). The test inspects route source without importing the Express app or database. No API smoke was needed.
 
+2026-10-27 refresh: full backend Jest suite passed (34 suites, 342 tests), including three selected-route contract checks. Added receipt/verification coverage, owning-router checks and mount-prefix checks; clarified that this is not runtime/schema/middleware validation or automatic discovery of new routes. Inventory and OpenAPI now distinguish guest receipt capabilities, verified ownership transfer, experience-only carts, and schedule response envelopes/GET side effects. Production source is unchanged.
+
 ## Progress and decisions
 
 - Expanded from the API research Epic; route and auth facts are being verified against backend source.
+- 2026-10-27: Reconciled the research with the completed guest-checkout contracts and reverified Story acceptance criteria. Original results above are historical; refresh results describe the current checkout.
