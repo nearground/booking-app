@@ -48,6 +48,8 @@ No prerequisite for research. Receipt/checkout portions have been refreshed afte
 
 Follow-up: [Basic Discord booking API interface](../discord-booking-bot/index.md), a draft Epic for public REST discovery and browser booking handoff, with explicit approval questions before implementation.
 
+The subsequent user-requested [public MCP server implementation](../mcp-server/index.md) is tracked separately, with [setup and protocol-test instructions](../../reference/mcp-server.md). This research Epic's original non-goals and completion evidence remain unchanged.
+
 ## User Stories
 
 <!-- children:start -->
