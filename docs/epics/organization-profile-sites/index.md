@@ -26,10 +26,10 @@ In scope: Organization branding fields + migration with safe defaults; admin edi
 ## Acceptance criteria
 
 - [ ] `{slug}.puertovallarta.today` (and `/o/{slug}` in dev) resolves an organization and renders its chosen template with its branding and visible experiences linking to the main site's experience details/booking.
-- [ ] Org admins can edit all branding fields and choose a template; non-admins cannot; colors, fonts and links are validated, media goes through the existing upload pipeline.
-- [ ] Missing/invalid branding renders safe defaults; no executable markup can be injected.
-- [ ] Unknown or reserved subdomains (`www`, `api`, `admin`, `internal`, etc.) do not resolve to organizations; slugs are unique and validated.
-- [ ] Tests cover host/slug resolution, public read privacy, admin-only writes, validation, templates and empty states.
+- [x] Org admins can edit all branding fields and choose a template; non-admins cannot; colors, fonts and links are validated, media goes through the existing upload pipeline.
+- [x] Missing/invalid branding renders safe defaults; no executable markup can be injected.
+- [x] Unknown or reserved subdomains (`www`, `api`, `admin`, `internal`, etc.) do not resolve to organizations; slugs are unique and validated.
+- [x] Tests cover host/slug resolution, public read privacy, admin-only writes, validation, templates and empty states.
 
 ## Branch independence and ownership
 
@@ -62,9 +62,10 @@ Children are created only when expansion is explicitly requested.
 
 ## Verification and completion evidence
 
-Backend tests for slug/host resolution, privacy and admin-only writes; UI tests for templates and states; manual check via `/o/{slug}` in dev and a wildcard subdomain through the tunnel.
+Backend full suite passed (27 suites, 299 tests). Focused organization-site frontend suite passed (14 tests); production build passed. Full frontend unit suite had 237 passing tests and one unrelated pre-existing failure in `Login.test.jsx` (`Username: user1` hint is not rendered); no changed login files. A simultaneous build/test attempt hit memory pressure; the build passed when rerun alone. The migration was not executed against any database, and Cloudflare wildcard DNS/tunnel ingress plus live-host checks remain manual.
 
 ## Progress and decisions
 
 - 2026-10-26: User chose subdomain URLs and the initial branding field set.
 - 2026-10-26: Expanded into three stories and six tasks; implementation underway.
+- 2026-10-27: Implemented branding persistence, public API, editor, templates, hostname routing and wildcard configuration. `COOKIE_DOMAIN` remains unchanged. Manual Cloudflare setup and live-host verification are pending.
