@@ -35,6 +35,144 @@
   margin: 1rem 0 2.5rem;
 }
 
+.activity {
+  margin: 2rem 0 2.5rem;
+}
+
+.chartGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 360px), 1fr));
+  gap: 1rem;
+}
+
+.chartCard {
+  min-width: 0;
+  padding: 1rem;
+  border: 1px solid var(--ifm-color-emphasis-300);
+  border-radius: var(--ifm-card-border-radius);
+}
+
+.chartCard h3 {
+  margin: 0 0 0.8rem;
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.8rem;
+  color: var(--ifm-color-emphasis-700);
+  font-size: 0.8rem;
+}
+
+.legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.legend i {
+  width: 0.65rem;
+  height: 0.65rem;
+  border-radius: 2px;
+}
+
+.linkedKey,
+.linkedBar {
+  background: var(--ifm-color-primary);
+}
+
+.unlinkedKey,
+.unlinkedBar {
+  background: var(--ifm-color-emphasis-500);
+}
+
+.dailyChart {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 0.35rem;
+  margin-top: 0.75rem;
+}
+
+.dayColumn {
+  display: grid;
+  grid-template-rows: 1.2rem 9rem auto;
+  justify-items: center;
+  min-width: 0;
+}
+
+.barCount,
+.dayLabel {
+  color: var(--ifm-color-emphasis-700);
+  font-size: 0.75rem;
+  line-height: 1.2rem;
+  white-space: nowrap;
+}
+
+.barTrack {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  width: 100%;
+  border-bottom: 1px solid var(--ifm-color-emphasis-300);
+}
+
+.stackedBar {
+  display: flex;
+  flex-direction: column;
+  width: min(70%, 2.25rem);
+  min-height: 0;
+  overflow: hidden;
+  border-radius: 3px 3px 0 0;
+}
+
+.linkedBar,
+.unlinkedBar {
+  display: block;
+  flex: 0 0 auto;
+  min-height: 1px;
+}
+
+.dayLabel {
+  font-size: 0.7rem;
+}
+
+.horizontalChart {
+  display: grid;
+  gap: 0.9rem;
+  margin: 1.25rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.horizontalChart li {
+  display: grid;
+  grid-template-columns: minmax(5rem, 1fr) minmax(4rem, 2fr) 1.5rem;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.activityItemTitle {
+  overflow: hidden;
+  font-size: 0.8rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.horizontalTrack {
+  height: 0.65rem;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--ifm-color-emphasis-200);
+}
+
+.horizontalBar {
+  display: block;
+  height: 100%;
+  min-width: 2px;
+  border-radius: inherit;
+  background: var(--ifm-color-primary);
+}
+
 .card {
   min-width: 0;
   padding: 1rem;
