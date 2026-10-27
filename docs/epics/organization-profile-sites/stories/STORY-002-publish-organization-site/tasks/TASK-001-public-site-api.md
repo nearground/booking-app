@@ -54,7 +54,7 @@ Documented the public response projection in `backend/server/utils/organization-
 
 ## Progress and completion evidence
 
-Completed. Jest verified the read query selects only public organization/experience fields and includes scheduled future sessions only; response projection excludes membership, reservation, email and username data. 36 targeted backend tests passed.
+Completed. Jest verifies public-field projection and scheduled-future occurrence filtering. The organization-to-experience join is optional, so seeded `/o/martinllc` renders its branding and empty state even without experiences; the nested occurrence join remains required so only visible experiences are listed. Backend full suite passed (28 suites, 303 tests); frontend full suite retained one pre-existing login-hint failure (237 passed).
 
 ## Git history
 

@@ -4,7 +4,7 @@ const require = createRequire(import.meta.url);
 const { DataTypes } = require('sequelize');
 
 import sequelize from './database.js';
-import { createOrganizationSlug, isValidOrganizationSlug, validateOrganizationBranding } from '../utils/organization-branding.js';
+import { ORGANIZATION_FONTS, ORGANIZATION_LAYOUTS, createOrganizationSlug, isValidOrganizationSlug, validateOrganizationBranding } from '../utils/organization-branding.js';
 
 const Organization = sequelize.define('Organization', {
     id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
@@ -34,12 +34,12 @@ const Organization = sequelize.define('Organization', {
     coverMediaType: { type: DataTypes.STRING(16), allowNull: false, defaultValue: 'image', validate: { isSupportedType(value) { if (!['image', 'video'].includes(value)) throw new Error('Cover media type is not supported'); } } },
     primaryColor: { type: DataTypes.STRING(7), allowNull: false, defaultValue: '#0f766e', validate: { isHexColor(value) { if (!/^#[0-9a-fA-F]{6}$/.test(value)) throw new Error('primaryColor must be a hex color'); } } },
     accentColor: { type: DataTypes.STRING(7), allowNull: false, defaultValue: '#f59e0b', validate: { isHexColor(value) { if (!/^#[0-9a-fA-F]{6}$/.test(value)) throw new Error('accentColor must be a hex color'); } } },
-    font: { type: DataTypes.STRING(32), allowNull: false, defaultValue: 'system', validate: { isSupportedFont(value) { if (!['system', 'inter', 'roboto', 'lato', 'montserrat'].includes(value)) throw new Error('Font is not supported'); } } },
+    font: { type: DataTypes.STRING(32), allowNull: false, defaultValue: 'system', validate: { isSupportedFont(value) { if (!ORGANIZATION_FONTS.includes(value)) throw new Error('Font is not supported'); } } },
     tagline: { type: DataTypes.STRING(160), allowNull: false, defaultValue: '' },
     about: { type: DataTypes.TEXT, allowNull: false, defaultValue: '' },
     socialLinks: { type: DataTypes.JSON, allowNull: false, defaultValue: {} },
     contactLinks: { type: DataTypes.JSON, allowNull: false, defaultValue: {} },
-    layoutTemplate: { type: DataTypes.STRING(32), allowNull: false, defaultValue: 'classic', validate: { isSupportedTemplate(value) { if (!['classic', 'editorial', 'immersive'].includes(value)) throw new Error('Layout template is not supported'); } } },
+    layoutTemplate: { type: DataTypes.STRING(32), allowNull: false, defaultValue: 'classic', validate: { isSupportedTemplate(value) { if (!ORGANIZATION_LAYOUTS.includes(value)) throw new Error('Layout template is not supported'); } } },
     email: {
         type: DataTypes.STRING,
         allowNull: false,

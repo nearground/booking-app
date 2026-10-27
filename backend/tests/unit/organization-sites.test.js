@@ -77,9 +77,12 @@ describe('public site response privacy', () => {
     const res = makeResponse();
     await getPublicOrganizationSite({ params: { slug: 'org-site' } }, res);
     expect(res.status).toHaveBeenCalledWith(200);
+    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ experiences: [] }) }));
     const query = organization.findOne.mock.calls[0][0];
     expect(query.attributes).toContain('slug');
     expect(query.attributes).not.toContain('email');
+    expect(query.include[0].required).toBe(false);
+    expect(query.include[0].include[0].required).toBe(true);
     expect(query.include[0].attributes).toEqual(['id', 'title', 'subtitle', 'description', 'thumbnail', 'duration']);
     expect(query.include[0].include[0].where.status).toBe('scheduled');
     expect(query.include[0].include[0].where.dateTime[Op.gte]).toBeInstanceOf(Date);

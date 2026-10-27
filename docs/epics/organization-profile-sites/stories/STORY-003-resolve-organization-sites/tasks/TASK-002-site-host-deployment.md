@@ -39,7 +39,7 @@ Independent configuration/documentation task in this Story.
 
 - Unit: Run Vite build/config checks and host-resolver tests.
 - Integration: Validate available nginx config checks only; never start/stop/rebuild shared Docker.
-- Manual/UX: Operator manually adds wildcard DNS and tunnel ingress in Cloudflare.
+- Manual/UX: At production launch only, the operator adds wildcard DNS and tunnel ingress in Cloudflare. No Cloudflare changes now; local/LAN demo sites use `/o/:slug`.
 - Regression coverage: Confirm COOKIE_DOMAIN unchanged and app apex remains served.
 
 ## Definition of Done
@@ -54,7 +54,7 @@ Add explicit Cloudflare dashboard instructions to DEPLOYMENT.md.
 
 ## Progress and completion evidence
 
-Completed. Vite server/preview allow the apex and wildcard host; nginx accepts the apex and one-level wildcard. DEPLOYMENT.md documents manual wildcard DNS and tunnel ingress. Frontend production build passed; COOKIE_DOMAIN was not changed. Cloudflare dashboard configuration was not performed.
+Completed. Vite server/preview allow the apex and wildcard host; nginx accepts the apex and one-level wildcard. DEPLOYMENT.md documents manual wildcard DNS and tunnel ingress. Frontend production build passed; COOKIE_DOMAIN was not changed. Cloudflare dashboard configuration is explicitly deferred to production launch. Seeded sites work locally without DNS/tunnel changes; no configuration was performed.
 
 ## Git history
 

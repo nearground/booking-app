@@ -23,7 +23,7 @@ const getPublicOrganizationSite = async (req, res) => {
       include: [{
         model: Experience,
         attributes: ['id', 'title', 'subtitle', 'description', 'thumbnail', 'duration'],
-        required: true,
+        required: false,
         include: [{
           model: ScheduledExperience,
           as: 'ScheduledExperiences',

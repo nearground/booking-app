@@ -260,6 +260,14 @@ docker-compose up -d --build
 Warning: this removes persisted Docker volume data.
 
 
-## Organization site wildcard routing
+## Organization site wildcard routing (production launch only)
 
-Organization sites use one-level hosts such as `sample.puertovallarta.today`. Before enabling this feature, add a Cloudflare DNS wildcard record `*.puertovallarta.today` pointing to the existing tunnel, then add a matching Cloudflare Tunnel ingress rule for `*.puertovallarta.today` to the production web service. Keep the existing apex `puertovallarta.today` ingress and origin rules. Confirm that the wildcard route reaches the same frontend/nginx service and that the API remains proxied to the existing backend. This is a manual Cloudflare dashboard step; no tunnel or DNS changes are made by this application. Do not widen `COOKIE_DOMAIN`; organization sites remain separate hosts and booking continues on the main site.
+No Cloudflare changes are needed for local development or seeded demos. After creating a fresh development database and running the existing seeders, open `/o/martinllc` or `/o/testcompany1`, `/o/testcompany2`, `/o/testcompany3` on the main localhost/LAN frontend. The demo organizations showcase the classic, editorial and immersive templates. Media defaults to no logo/cover until an admin uploads it.
+
+At production launch, an operator must manually:
+
+1. Add a Cloudflare wildcard DNS record `*.puertovallarta.today` pointing to the existing tunnel.
+2. Add a matching Tunnel ingress rule for `*.puertovallarta.today` to the production web service, before the catch-all rule. Keep the existing apex `puertovallarta.today` ingress and origin rules.
+3. Verify that a one-level host such as `sample.puertovallarta.today` reaches the same frontend/nginx service and that the API remains proxied to the existing backend.
+
+These DNS/tunnel steps are deferred until production launch; the application does not make them. Do not widen `COOKIE_DOMAIN`: organization sites remain separate hosts and booking continues on the main site.

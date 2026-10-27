@@ -19,17 +19,22 @@ Add organization branding fields and an admin-only read/update API.
 
 ## Requirements and current state
 
-Organization.model.js currently defines name, organizationUsername and email. organization-auth.js already exposes requireOrganizationAdmin using OrganizationMembers.isAdmin. Preserve old rows with safe migration defaults. Add DNS-safe unique lowercase slug derived from organizationUsername; reject reserved names/collisions. Validate hex colors, fixed font/template allow-lists, HTTPS links/emails. Use existing media upload pipeline; never accept markup.
+Organization.model.js currently defines name, organizationUsername and email. organization-auth.js already exposes requireOrganizationAdmin using OrganizationMembers.isAdmin. There is no live data: fold branding into the existing initial organization migrations instead of adding a new migration. Keep the migration schema and Organization.model.js aligned. Add DNS-safe unique lowercase slug derived from organizationUsername; reject reserved names/collisions. Validate hex colors, fixed font/template allow-lists, HTTPS links/emails. Use existing media upload pipeline; never accept markup.
 
 ## Implementation steps
 
-1. Inspect model registry, Sequelize migrations, route/controller conventions and upload pipeline; add columns/defaults and validators.
+1. Keep branding columns, the non-null slug and unique slug index in `20260417130000-add-organization-username.js`, which already finalizes the Organizations schema after the baseline. Its rollback removes those fields and indexes.
+2. Keep the Organization model compatible with `sequelize.sync`; reuse fixed font/template validation allow-lists.
+3. Populate startup/demo organization seed rows with valid slugs, representative branding and JSON-serialized social/contact links; leave unseeded logo/cover media null.
 
 ## Files to create or modify
 
 | Path | Change | Ownership/contract constraints |
 |------|--------|--------------------------------|
-| backend/server/models/Organization.model.js | Define slug and constrained branding attributes. | Only the Epic-owned schema/migration; safe compatibility for existing organizations. |
+| backend/server/models/Organization.model.js | Define slug and constrained branding attributes. | Match the initial migration schema and shared allow-lists. |
+| backend/server/migrations/20260417130000-add-organization-username.js | Define branding columns and unique slug index alongside organizationUsername. | Existing migration only; no new migration file. |
+| backend/server/seeders/20260212222654-startup-org-and-admin.js | Brand `/o/martinllc`. | Null logo/cover; valid JSON links. |
+| backend/server/seeders/20260214193720-demo-experiences.js | Brand `/o/testcompany1`, `/o/testcompany2`, `/o/testcompany3` with three templates. | Do not execute against the shared database. |
 
 ## Dependencies
 
@@ -50,11 +55,11 @@ Foundation for editor and public site; no external dependency.
 
 ## Documentation updates
 
-Record contract and migration name in Epic subtree. Migration: `20261027013100-add-organization-branding.js`.
+Branding is folded into the existing `20260417130000-add-organization-username.js`; the separate branding migration was deleted. `DEPLOYMENT.md` lists seeded demo URLs and defers Cloudflare setup until production launch.
 
 ## Progress and completion evidence
 
-Completed. `npm --prefix backend test -- --runInBand tests/unit/organization-sites.test.js`: 36 tests passed, including slug/defaults, reserved names, branding validation, admin middleware and private-data projection. `npm ci --prefix backend` completed. Migration was not run against any database per the shared-DB restriction.
+Completed. Follow-up verification: backend full Jest suite passed (28 suites, 303 tests), including mocked initial migration/schema parity, rollback and organization seed validation. Both seeders provide valid slugs/colors/fonts/taglines/about/links/templates. Mocked tests execute no database operations; no migrations or seeders were run against the shared dev database.
 
 ## Git history
 
