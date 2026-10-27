@@ -83,7 +83,7 @@ firewall exception if you no longer need LAN development access.
 Use this sequence for resilient releases.
 
 Before shipping, run the full E2E checklist in
-[E2E_TESTING.md](docs/reference/E2E_TESTING.md).
+[E2E_TESTING.md](docs/legacy/E2E_TESTING.md).
 
 1. Prepare production environment values in `.env`.
 2. Apply database migrations.

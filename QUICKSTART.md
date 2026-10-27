@@ -108,7 +108,7 @@ docker-compose down -v
 
 Run the complete organizer-recruiting and security-hardening validation checklist:
 
-- [E2E_TESTING.md](docs/reference/E2E_TESTING.md)
+- [E2E_TESTING.md](docs/legacy/E2E_TESTING.md)
 
 ## Access URLs
 

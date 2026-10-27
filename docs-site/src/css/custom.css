@@ -27,3 +27,30 @@
 .menu__link {
   font-size: 0.92rem;
 }
+
+/* Work item status dot in the sidebar (classes set by sidebar-items.cjs). */
+.sidebar-work-item > .menu__link::before,
+.sidebar-work-item > .menu__list-item-collapsible > .menu__link::before {
+  content: '';
+  flex: none;
+  width: 0.5rem;
+  height: 0.5rem;
+  margin-right: 0.5rem;
+  border-radius: 50%;
+  background: var(--sidebar-status-color, var(--ifm-color-emphasis-400));
+}
+
+.sidebar-work-item > .menu__link,
+.sidebar-work-item > .menu__list-item-collapsible > .menu__link {
+  display: flex;
+  align-items: center;
+}
+
+.sidebar-status--ready { --sidebar-status-color: var(--ifm-color-info); }
+.sidebar-status--in-progress { --sidebar-status-color: var(--ifm-color-primary); }
+.sidebar-status--blocked { --sidebar-status-color: var(--ifm-color-danger); }
+.sidebar-status--done { --sidebar-status-color: var(--ifm-color-success); }
+.sidebar-status--cancelled > .menu__link,
+.sidebar-status--cancelled > .menu__list-item-collapsible > .menu__link {
+  text-decoration: line-through;
+}
