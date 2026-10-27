@@ -3,7 +3,7 @@ title: "Refresh cart after authentication changes"
 work_id: "EPIC-guest-checkout/STORY-001/TASK-002"
 work_type: task
 template_version: 1
-status: in-progress
+status: done
 parent: "EPIC-guest-checkout/STORY-001"
 branch: "epic/guest-checkout"
 depends_on: [EPIC-guest-checkout/STORY-001/TASK-001]
