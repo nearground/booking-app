@@ -3,7 +3,7 @@ title: "Specify target routes and detect route drift"
 work_id: "EPIC-mcp-booking-assistant/STORY-001/TASK-002"
 work_type: task
 template_version: 1
-status: in-progress
+status: done
 parent: "EPIC-mcp-booking-assistant/STORY-001"
 branch: "epic/mcp-booking-assistant"
 depends_on: []
@@ -53,9 +53,9 @@ No code dependencies. Builds on route facts in Story 001/TASK-001; refresh inven
 
 ## Definition of Done
 
-- [ ] Story acceptance criteria covered with recorded results.
-- [ ] Targeted checks pass; existing intended behavior is preserved.
-- [ ] Documentation updated; no unresolved contract conflicts.
+- [x] Story acceptance criteria covered with recorded results.
+- [x] Targeted checks pass; existing intended behavior is preserved.
+- [x] Documentation updated; no unresolved contract conflicts.
 
 ## Documentation updates
 
@@ -63,7 +63,7 @@ Keep OpenAPI route coverage synchronized with inventory and current router regis
 
 ## Progress and completion evidence
 
-In progress; complete after focused and full Jest runs and static validation of the spec.
+Done: DB-free contract test passed twice after correcting route coverage; full backend Jest suite passed (27 suites, 265 tests). The OpenAPI document contains 48 operations and the explicit test suite detects missing or unregistered target method/path pairs.
 
 ## Git history
 
