@@ -54,7 +54,18 @@ Update app-facing booking guidance only if current docs describe login as mandat
 
 ## Progress and completion evidence
 
-Done. Guest checkout UI and optional post-purchase registration are implemented. Targeted frontend tests pass; the full frontend suite passed (255 tests). Cypress E2E coverage is written but was not run because it requires the prohibited shared Docker/database stack.
+Done. Guest checkout UI and optional post-purchase registration are implemented.
+
+Follow-up: guest checkout offers "Save this booking to my email for later
+registration", checked by default. The API persists the boolean preference and
+verified-email claims skip opted-out bookings, without removing their receipt or
+confirmation email. Post-booking account creation remains optional and carries
+the receipt email into registration. The confirmation explains the saved choice.
+
+Verification: 42 targeted backend tests and 36 frontend tests pass. All five
+guest-cart Cypress E2E tests pass against the development stack, including default
+opt-in, explicit opt-out, receipt access, optional registration and authenticated
+cart continuity. The production build passes.
 
 <!-- children:start -->
 <!-- children:end -->

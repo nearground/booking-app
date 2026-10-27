@@ -183,7 +183,7 @@ class UserService {
                 },
                 transaction,
             });
-            const claimableOrders = guestOrders;
+            const claimableOrders = guestOrders.filter((order) => order.metadata?.saveBookingForLater !== false);
             for (const order of claimableOrders) {
                 await order.update({ CustomerId: user.id }, { transaction });
             }

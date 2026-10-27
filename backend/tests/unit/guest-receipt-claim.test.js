@@ -106,6 +106,23 @@ describe('guest receipt email verification', () => {
         await expect(service.confirmEmailVerification(token)).resolves.toEqual({ valid: true, claimedOrderCount: 0 });
         expect(mockOrder.findAll).toHaveBeenCalledWith(expect.objectContaining({ where: expect.objectContaining({ CustomerId: null }), transaction: mockTx }));
     });
+
+    test('never claims opted-out bookings, while preserving opted-in and legacy bookings', async () => {
+        mockVerificationToken.findOne.mockResolvedValue({
+            email: 'guest@example.com', expiresAt: new Date(Date.now() + 60000), usedAt: null,
+        });
+        mockUser.findOne.mockResolvedValue({ id: 8, email: 'guest@example.com', update: jest.fn() });
+        const optedIn = { metadata: { saveBookingForLater: true }, update: jest.fn() };
+        const optedOut = { metadata: { saveBookingForLater: false }, update: jest.fn() };
+        const legacy = { metadata: null, update: jest.fn() };
+        mockOrder.findAll.mockResolvedValue([optedIn, optedOut, legacy]);
+
+        await expect(service.confirmEmailVerification('d'.repeat(64))).resolves.toEqual({ valid: true, claimedOrderCount: 2 });
+
+        expect(optedIn.update).toHaveBeenCalledWith({ CustomerId: 8 }, { transaction: mockTx });
+        expect(legacy.update).toHaveBeenCalledWith({ CustomerId: 8 }, { transaction: mockTx });
+        expect(optedOut.update).not.toHaveBeenCalled();
+    });
     test('rejects short tokens and expired verification links', async () => {
         await expect(service.confirmEmailVerification('bad')).resolves.toEqual({ valid: false });
         mockVerificationToken.findOne.mockResolvedValue({ expiresAt: new Date(Date.now() - 1000), email: 'guest@example.com' });

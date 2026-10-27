@@ -44,11 +44,35 @@ describe('Guest Cart', () => {
     addExperienceToCart();
     fillCheckout('Guest User', 'guest@example.com');
 
+    cy.getByTestId('cart-modal__save-booking').should('be.checked');
     cy.getByTestId('cart-modal__checkout-btn').click();
-    cy.wait('@checkout').its('response.statusCode').should('eq', 201);
+    cy.wait('@checkout').then(({ request, response }) => {
+      expect(response.statusCode).to.eq(201);
+      expect(request.body.saveBookingForLater).to.eq(true);
+      expect(response.body.data.saveBookingForLater).to.eq(true);
+    });
     cy.url().should('include', '/booking-confirmation');
     cy.getByTestId('confirmation__heading').should('contain.text', 'Booking Confirmed');
     cy.contains('Create an optional account').should('be.visible');
+  });
+
+  it('lets guests opt out of future linking while keeping their receipt and account creation option', () => {
+    cy.intercept('POST', '**/api/cart/checkout').as('checkout');
+    addExperienceToCart();
+    fillCheckout('Guest User', 'opted-out@example.invalid');
+    cy.getByTestId('cart-modal__save-booking').should('be.checked');
+    cy.getByTestId('cart-modal__save-booking').uncheck();
+    cy.getByTestId('cart-modal__checkout-btn').click();
+    cy.wait('@checkout').then(({ request, response }) => {
+      expect(response.statusCode).to.eq(201);
+      expect(request.body.saveBookingForLater).to.eq(false);
+      expect(response.body.data.saveBookingForLater).to.eq(false);
+      expect(response.body.data.guestReceiptToken).to.be.a('string');
+    });
+    cy.getByTestId('confirmation__heading').should('contain.text', 'Booking Confirmed');
+    cy.contains('You chose not to link this booking').should('be.visible');
+    cy.contains('Create an optional account').click();
+    cy.get('input[name="email"]').should('have.value', 'opted-out@example.invalid');
   });
 
   it('supports optional account registration, verified login, and claimed-booking visibility', () => {

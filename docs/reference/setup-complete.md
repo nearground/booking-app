@@ -166,6 +166,15 @@ email status. No automatic retry or resend is performed.
 
 ### Account email identity and password-reset testing
 
+Guest checkout includes a checked-by-default "Save this booking to my email for
+later registration" option. Checkout accepts the boolean `saveBookingForLater`
+(defaults to true when omitted) and stores it in order metadata. Unchecking
+does not cancel the receipt or confirmation email; it prevents later verified
+email registration from claiming that booking. Existing bookings without the
+flag retain their previous claim behavior. The confirmation page offers optional
+account creation with the receipt email prefilled whether or not linking was
+selected; opting out does not prevent registering for future purchases.
+
 Each user has one unique email address. Account writes normalize email casing and
 surrounding whitespace; registration and organizer onboarding reject duplicates,
 and the database unique index protects concurrent registrations. Usernames remain

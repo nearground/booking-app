@@ -324,6 +324,23 @@ describe('checkoutCart – confirmationCode snapshotting into OrderItem.metadata
 });
 
 describe('checkoutCart � guest ownership', () => {
+    test.each([undefined, true, false])('persists guest save-for-later preference %s with receipt access intact', async (preference) => {
+        Cart.findOne.mockResolvedValue({
+            id: 5, CustomerId: null, sessionToken: 'guest-session',
+            Items: [makeCartItem('Experience')], currency: 'USD',
+            totalAmount: '100.00', discountAmount: '0.00',
+            update: jest.fn().mockResolvedValue({}),
+        });
+        await checkoutCart(5, null, makeBillingInfo(), {}, 'guest-session', {
+            tokenHash: 'a'.repeat(64), expiresAt: '2030-01-01T00:00:00Z', saveBookingForLater: preference,
+        });
+        expect(capturedOrderCreates[0].metadata).toEqual({
+            guestReceiptTokenHash: 'a'.repeat(64),
+            guestReceiptExpiresAt: '2030-01-01T00:00:00Z',
+            saveBookingForLater: preference !== false,
+        });
+    });
+
     test('checks the guest session token and stores only a hashed receipt capability', async () => {
         const cart = {
             id: 5,

@@ -302,5 +302,13 @@ describe('BookingConfirmation', () => {
     renderWithState(makeConfirmationData({ guestReceiptToken: 'guest-capability' }));
     const link = screen.getByRole('link', { name: /create an optional account/i });
     expect(link).toHaveAttribute('href', '/register');
-    expect(screen.getByText(/verify the receipt email/i)).toBeInTheDocument();
-  });});
+    expect(screen.getByText(/saved to your receipt email for later registration/i)).toBeInTheDocument();
+  });
+
+  test('keeps account creation optional without promising to link an opted-out booking', () => {
+    renderWithState(makeConfirmationData({ guestReceiptToken: 'guest-capability', saveBookingForLater: false }));
+    expect(screen.getByRole('link', { name: /create an optional account/i })).toHaveAttribute('href', '/register');
+    expect(screen.getByText(/you chose not to link this booking/i)).toBeInTheDocument();
+    expect(screen.queryByText(/saved to your receipt email for later registration/i)).not.toBeInTheDocument();
+  });
+});

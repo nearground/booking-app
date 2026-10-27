@@ -32,6 +32,7 @@ const CartModal = () => {
   // Contact info (collected at checkout, not in booking modal)
   const [contact, setContact] = useState({ fullName: '', phone: '', email: '' });
   const [contactErrors, setContactErrors] = useState({});
+  const [saveBookingForLater, setSaveBookingForLater] = useState(true);
 
   useEffect(() => {
     if (!isAuthenticated || !userDetails) return;
@@ -149,6 +150,7 @@ const CartModal = () => {
     try {
       const response = await networkAdapter.post('/api/cart/checkout', {
         cartId: cart?.id,
+        ...(!isAuthenticated ? { saveBookingForLater } : {}),
         billingInfo: {
           email: contact.email.trim(),
           name: contact.fullName.trim(),
@@ -357,6 +359,25 @@ const CartModal = () => {
                       </div>
                     </div>
                   </section>
+
+                  {!isAuthenticated && (
+                    <label className="flex items-start gap-3 rounded-lg border border-slate-200 bg-white p-4 text-sm text-slate-700">
+                      <input
+                        type="checkbox"
+                        checked={saveBookingForLater}
+                        onChange={(event) => setSaveBookingForLater(event.target.checked)}
+                        data-testid="cart-modal__save-booking"
+                        className="mt-1 h-5 w-5 shrink-0"
+                      />
+                      <span>
+                        Save this booking to my email for later registration
+                        <span className="mt-1 block text-xs text-slate-500">
+                          Create an account after booking or another time. Verify this email to add the booking to your account.
+                          If unchecked, you will still receive your receipt, but this booking will not be linked to a future account.
+                        </span>
+                      </span>
+                    </label>
+                  )}
 
                   {/* Error */}
                   {submitError && (

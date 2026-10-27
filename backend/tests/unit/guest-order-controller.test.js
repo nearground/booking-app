@@ -27,6 +27,29 @@ const makeResponse = () => ({
 describe('guest receipt capability', () => {
     beforeEach(() => jest.clearAllMocks());
 
+    test.each([undefined, true, false])('checkout applies guest save-for-later preference %s', async (preference) => {
+        checkoutCart.mockResolvedValue({ id: 1, metadata: {} });
+        const res = makeResponse();
+        await initiateCheckout({
+            cookies: { _cart_session: 'guest-session' },
+            body: {
+                cartId: 1, saveBookingForLater: preference,
+                billingInfo: { email: 'guest@example.com', name: 'Guest', address: '1 Main', city: 'Town', state: 'State', postalCode: '12345' },
+            },
+        }, res);
+        expect(res.status).toHaveBeenCalledWith(201);
+        expect(checkoutCart.mock.calls[0][5].saveBookingForLater).toBe(preference !== false);
+        expect(res.json.mock.calls[0][0].data.saveBookingForLater).toBe(preference !== false);
+        expect(res.json.mock.calls[0][0].data.guestReceiptToken).toBeTruthy();
+    });
+
+    test('rejects non-boolean save-for-later values rather than accidentally opting in', async () => {
+        const res = makeResponse();
+        await initiateCheckout({ body: { saveBookingForLater: 'false' } }, res);
+        expect(res.status).toHaveBeenCalledWith(400);
+        expect(checkoutCart).not.toHaveBeenCalled();
+    });
+
     test('returns an unclaimed guest order only with its valid, unexpired capability', async () => {
         const token = 'capability-token';
         const order = {
