@@ -51,6 +51,17 @@ beforeEach(() => {
 // ─── forgotPassword ─────────────────────────────────────────────────────────
 
 describe('forgotPassword', () => {
+  test('normalizes email casing and surrounding whitespace before issuing a reset token', async () => {
+    User.findOne.mockResolvedValue({ id: 1, email: 'user@test.com' });
+    PasswordReset.create.mockResolvedValue({});
+
+    await UserService.forgotPassword('  User@Test.COM  ');
+
+    expect(User.findOne).toHaveBeenCalledWith({ where: { email: 'user@test.com' } });
+    expect(PasswordReset.create).toHaveBeenCalledWith(expect.objectContaining({ email: 'user@test.com' }));
+    expect(sendNotification).toHaveBeenCalledWith(expect.objectContaining({ to: 'user@test.com' }));
+  });
+
   test('uses the configured app origin for emailed reset links', async () => {
     const previous = process.env.FRONTEND_BASE_URL;
     try {

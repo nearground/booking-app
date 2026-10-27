@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useId } from 'react';
 import { networkAdapter } from 'services/NetworkAdapter';
 
 const MAX_IMAGES = 10;
@@ -25,6 +25,7 @@ const AddCommentForm = ({
   const [selectedImageFiles, setSelectedImageFiles] = useState([]);
   const fileInputRef = useRef(null);
   const selectedImageFilesRef = useRef([]);
+  const fieldId = useId();
 
   useEffect(() => {
     if (initial) {
@@ -205,15 +206,15 @@ const AddCommentForm = ({
   };
 
   return (
-    <form onSubmit={save} className="bg-white border rounded p-3">
+    <form onSubmit={save} className="min-w-0 bg-white border rounded p-3 scroll-mb-6">
       {errors.length > 0 && (
-        <div className="text-sm text-red-600 mb-2">{errors.join(', ')}</div>
+        <div role="alert" className="text-sm text-red-600 mb-2 break-words">{errors.join(', ')}</div>
       )}
 
       {!initial?.ParentId && (
         <div className="mb-2">
-          <label className="block text-sm text-slate-700">Rating</label>
-          <select value={stars} onChange={(e) => setStars(Number(e.target.value))} className="mt-1 p-2 border rounded">
+          <label htmlFor={`${fieldId}-rating`} className="block text-sm text-slate-700">Rating</label>
+          <select id={`${fieldId}-rating`} value={stars} onChange={(e) => setStars(Number(e.target.value))} className="mt-1 min-h-11 p-2 border rounded">
             {[5,4,3,2,1].map((s) => <option key={s} value={s}>{s} star{s>1?'s':''}</option>)}
           </select>
         </div>
@@ -221,8 +222,8 @@ const AddCommentForm = ({
 
       {!initial?.ParentId && (
         <div className="mb-2">
-          <label className="block text-sm text-slate-700">Title (optional)</label>
-          <input value={title} onChange={(e) => setTitle(e.target.value)} maxLength={75} className="mt-1 p-2 border rounded w-full" />
+          <label htmlFor={`${fieldId}-title`} className="block text-sm text-slate-700">Title (optional)</label>
+          <input id={`${fieldId}-title`} value={title} onChange={(e) => setTitle(e.target.value)} maxLength={75} className="mt-1 min-h-11 p-2 border rounded w-full" />
           <div className={`text-xs mt-1 ${title.length >= 75 ? 'text-red-600' : title.length >= 60 ? 'text-yellow-600' : 'text-slate-400'}`}>
             {title.length} / 75
           </div>
@@ -230,14 +231,14 @@ const AddCommentForm = ({
       )}
 
       <div className="mb-2">
-        <label className="block text-sm text-slate-700">Comment</label>
-        <textarea value={comment} onChange={(e) => setComment(e.target.value)} rows={4} className="mt-1 p-2 border rounded w-full" required />
+        <label htmlFor={`${fieldId}-comment`} className="block text-sm text-slate-700">Comment</label>
+        <textarea id={`${fieldId}-comment`} value={comment} onChange={(e) => setComment(e.target.value)} rows={4} className="mt-1 p-2 border rounded w-full scroll-m-6" required />
       </div>
 
       {!initial?.ParentId && (
         <div className="mb-3">
-          <div className="flex items-center justify-between mb-2">
-            <label className="block text-sm text-slate-700">Attach Photos</label>
+          <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+            <span className="block text-sm text-slate-700">Attach Photos</span>
             <span className="text-xs text-slate-500">{existingImages.length + selectedImageFiles.length} / {MAX_IMAGES} photos attached</span>
           </div>
 
@@ -252,7 +253,7 @@ const AddCommentForm = ({
 
           <button
             type="button"
-            className="px-3 py-2 border rounded text-sm text-slate-700 bg-white"
+            className="min-h-11 min-w-11 px-3 py-2 border rounded text-sm text-slate-700 bg-white"
             onClick={() => fileInputRef.current?.click()}
             disabled={existingImages.length + selectedImageFiles.length >= MAX_IMAGES}
           >
@@ -260,7 +261,7 @@ const AddCommentForm = ({
           </button>
 
           {(existingImages.length > 0 || selectedImageFiles.length > 0) && (
-            <div className="mt-3 grid grid-cols-3 sm:grid-cols-4 gap-2">
+            <div className="mt-3 grid grid-cols-2 sm:grid-cols-4 gap-3">
               {existingImages.map((image, index) => (
                 <div key={`existing-${image.imageUrl}-${index}`} className="relative">
                   <img
@@ -271,7 +272,7 @@ const AddCommentForm = ({
                   />
                   <button
                     type="button"
-                    className="absolute -top-2 -right-2 bg-black/80 text-white rounded-full w-6 h-6 text-xs"
+                    className="absolute top-0 right-0 bg-black/80 text-white rounded-full w-11 h-11 text-sm"
                     onClick={() => removeExistingImage(index)}
                     aria-label="Remove attached image"
                   >
@@ -290,7 +291,7 @@ const AddCommentForm = ({
                   />
                   <button
                     type="button"
-                    className="absolute -top-2 -right-2 bg-black/80 text-white rounded-full w-6 h-6 text-xs"
+                    className="absolute top-0 right-0 bg-black/80 text-white rounded-full w-11 h-11 text-sm"
                     onClick={() => removeSelectedImage(entry.id)}
                     aria-label="Remove selected image"
                   >
@@ -303,16 +304,16 @@ const AddCommentForm = ({
         </div>
       )}
 
-      <div className="flex items-center gap-3 mb-3">
-        <label className="text-sm text-slate-700">Post as anonymous</label>
+      <label className="flex min-h-11 items-center gap-3 mb-3 text-sm text-slate-700">
         <input type="checkbox" checked={Number(anonymity) === 0} onChange={(e) => setAnonymity(e.target.checked ? 0 : 2)} />
-      </div>
+        Post as anonymous
+      </label>
 
-      <div className="flex gap-2">
-        <button type="submit" disabled={loading} className="px-3 py-2 bg-brand text-white rounded disabled:opacity-60">
+      <div className="flex flex-wrap gap-2">
+        <button type="submit" disabled={loading} className="min-h-11 min-w-11 px-3 py-2 bg-brand text-white rounded disabled:opacity-60">
           {loading ? 'Saving…' : (initial ? 'Update' : 'Post Comment')}
         </button>
-        <button type="button" onClick={onCancel} className="px-3 py-2 border rounded">
+        <button type="button" onClick={onCancel} className="min-h-11 min-w-11 px-3 py-2 border rounded">
           Cancel
         </button>
       </div>

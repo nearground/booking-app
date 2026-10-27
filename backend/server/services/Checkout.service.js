@@ -84,6 +84,7 @@ export const checkoutCart = async (cartId, customerId, billingInfo, contactInfo 
             metadata: guestReceipt ? {
                 guestReceiptTokenHash: guestReceipt.tokenHash,
                 guestReceiptExpiresAt: guestReceipt.expiresAt,
+                saveBookingForLater: guestReceipt.saveBookingForLater !== false,
             } : null,
         }, { transaction });
 

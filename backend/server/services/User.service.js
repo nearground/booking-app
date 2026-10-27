@@ -19,7 +19,7 @@ class UserService {
             firstName: payload.firstName,
             lastName: payload.lastName,
             username: payload.username,
-            email: payload.email,
+            email: typeof payload.email === 'string' ? payload.email.trim().toLowerCase() : payload.email,
             password: hash,
             phoneNumber: payload.phoneNumber,
             country: payload.country,
@@ -131,7 +131,7 @@ class UserService {
     }
 
     async startEmailVerification(email) {
-        const emailAddress = String(email || '').trim();
+        const emailAddress = String(email || '').trim().toLowerCase();
         if (!emailAddress) return { sent: true };
         const user = await User.findOne({ where: { email: emailAddress } });
         if (!user || user.isEmailVerified) return { sent: true };
@@ -183,7 +183,7 @@ class UserService {
                 },
                 transaction,
             });
-            const claimableOrders = guestOrders;
+            const claimableOrders = guestOrders.filter((order) => order.metadata?.saveBookingForLater !== false);
             for (const order of claimableOrders) {
                 await order.update({ CustomerId: user.id }, { transaction });
             }
@@ -199,6 +199,7 @@ class UserService {
         }
     }
     async forgotPassword(email) {
+        email = String(email || '').trim().toLowerCase();
         // Anti-enumeration: always return success regardless of whether user exists
         const user = await User.findOne({ where: { email } });
         if (!user) return { sent: true };
@@ -234,7 +235,7 @@ class UserService {
 
     async completePasswordReset(token, email, newPassword) {
         const whereClause = { token, usedAt: null };
-        if (email) whereClause.email = email;
+        if (email) whereClause.email = String(email).trim().toLowerCase();
         const record = await PasswordReset.findOne({ where: whereClause });
         if (!record || new Date(record.expiresAt).getTime() <= Date.now()) {
             const err = new Error('Invalid or expired token');
@@ -270,6 +271,7 @@ class UserService {
     }
 
     async lookupUsernameByEmail(email) {
+        email = String(email || '').trim().toLowerCase();
         const users = await User.findAll({
             where: { email },
             include: [

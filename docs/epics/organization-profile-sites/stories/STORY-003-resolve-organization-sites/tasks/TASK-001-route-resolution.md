@@ -56,6 +56,8 @@ Document local resolution in Epic subtree.
 
 Completed. The frontend routes /o/:slug and resolves one-level *.puertovallarta.today hosts; reserved/malformed names fail closed. Vitest resolver suite passed (9 tests), organization templates passed, and production build passed. Full browser/manual deployment verification remains an operator step.
 
+Experience details also expose a small organization profile link in the Hosted By section, using the current host's /o/:slug route. The public experience API includes only the organization's name and slug. Missing organizations and missing/invalid public slugs do not render a link; individual organizer cards remain unchanged. The experience-browse Cypress suite covers profile navigation and these unavailable-profile cases.
+
 ## Git history
 
 Link implementation commits only when their commit message contains an exact

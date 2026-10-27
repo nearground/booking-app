@@ -44,9 +44,9 @@ Shared safe-area/Tailwind utilities from STORY-001/TASK-001.
 
 ## Definition of Done
 
-- [ ] Story acceptance criteria covered with recorded results.
-- [ ] Targeted checks pass; existing intended behavior is preserved.
-- [ ] Documentation updated; no unresolved contract conflicts.
+- [x] Story acceptance criteria covered with recorded results.
+- [x] Targeted checks pass; existing intended behavior is preserved.
+- [x] Documentation updated; no unresolved contract conflicts.
 
 ## Documentation updates
 
@@ -54,7 +54,7 @@ Document dynamic viewport and safe-area overlay conventions in the device matrix
 
 ## Progress and completion evidence
 
-Completed: booking/cart surfaces use dynamic viewport and safe-area sizing; shared keyboard focus trap, Escape/backdrop dismissal, and focus restoration are implemented. The shared hook unit test and responsive menu keyboard checks pass; cart data was not populated in the read-only browser session.
+Completed and release-reverified: booking/cart attach the shared dialog ref, role and labels, use dynamic viewport/safe-area sizing, and keep header/footer separate from scrolling content. The new populated-cart matrix caught and removed sticky-header coverage of the phone input at 360px. All eight viewports verify booking/cart Tab wrapping, Escape dismissal, visible close/checkout actions and restored scrolling. Live booking/cart/guest regression passes again (18 tests).
 
 ## Git history
 

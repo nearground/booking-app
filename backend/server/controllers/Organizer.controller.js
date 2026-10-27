@@ -155,6 +155,20 @@ const getSessionReservations = async (req, res) => {
     }
 };
 
+const createManualBooking = async (req, res) => {
+    try {
+        const result = await OrganizerService.createManualBookingService({
+            userId: req.user.id,
+            sessionId: req.params.sessionId,
+            booking: req.body,
+        });
+        return res.status(201).json({ errors: [], data: result });
+    } catch (error) {
+        if (error && error.status && error.errors) return res.status(error.status).json({ errors: error.errors, data: {} });
+        return sendError(res, { status: 500, message: 'Error creating manual booking', requestId: req.requestId });
+    }
+};
+
 const cancelSession = async (req, res) => {
     try {
         const result = await OrganizerService.cancelSessionService({ userId: req.user.id, sessionId: req.params.sessionId });
@@ -195,7 +209,7 @@ const cancelInvite = async (req, res) => {
     }
 };
 
-const defaultExport = { createInvite, resendInvite, cancelInvite, resolveInvite, startOnboarding, completeOnboarding, getOnboardingMeta, updateOrganizerProfile, updateOrganization, createOrganizationLocation, updateOrganizationLocation, deleteOrganizationLocation, getOrganizerWorkspace, getOrganizerReceivedComments, getSessionReservations, cancelSession };
+const defaultExport = { createInvite, resendInvite, cancelInvite, resolveInvite, startOnboarding, completeOnboarding, getOnboardingMeta, updateOrganizerProfile, updateOrganization, createOrganizationLocation, updateOrganizationLocation, deleteOrganizationLocation, getOrganizerWorkspace, getOrganizerReceivedComments, getSessionReservations, createManualBooking, cancelSession };
 
-export { createInvite, resendInvite, cancelInvite, resolveInvite, startOnboarding, completeOnboarding, getOnboardingMeta, updateOrganizerProfile, updateOrganization, createOrganizationLocation, updateOrganizationLocation, deleteOrganizationLocation, getOrganizerWorkspace, getOrganizerReceivedComments, getSessionReservations, cancelSession };
+export { createInvite, resendInvite, cancelInvite, resolveInvite, startOnboarding, completeOnboarding, getOnboardingMeta, updateOrganizerProfile, updateOrganization, createOrganizationLocation, updateOrganizationLocation, deleteOrganizationLocation, getOrganizerWorkspace, getOrganizerReceivedComments, getSessionReservations, createManualBooking, cancelSession };
 export default defaultExport;

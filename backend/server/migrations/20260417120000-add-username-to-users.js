@@ -57,19 +57,6 @@ module.exports = {
       name: 'users_username_unique',
     });
 
-    // 4. Remove unique constraint on email (allow multiple accounts per email)
-    const indexes = await queryInterface.showIndex('Users');
-    const emailIndex = indexes.find(
-      (idx) =>
-        idx.unique &&
-        idx.fields &&
-        idx.fields.some((f) => (f.attribute || f) === 'email') &&
-        idx.fields.length === 1
-    );
-
-    if (emailIndex) {
-      await queryInterface.removeIndex('Users', emailIndex.name);
-    }
   },
 
   async down(queryInterface, Sequelize) {

@@ -1,8 +1,9 @@
 const fs = require('node:fs');
 const path = require('node:path');
+const { describe, expect, test } = require('@jest/globals');
 
 const backendRoot = path.resolve(__dirname, '..');
-const specPath = path.resolve(backendRoot, '..', 'docs', 'reference', 'contracts', 'api', 'openapi.yaml');
+const specPath = path.join(process.env.API_CONTRACT_DOCS_ROOT || path.resolve(backendRoot, '..', 'docs'), 'reference', 'contracts', 'api', 'openapi.yaml');
 const routeSources = {
   users: { file: 'users.js', prefix: '/api/users' },
   organizers: { file: 'organizers.js', prefix: '/api/organizers' },
@@ -11,14 +12,19 @@ const routeSources = {
   orders: { file: 'orders.js', prefix: '/api/orders' },
   comments: { file: 'comments.js', prefix: '/api/comments' },
   media: { file: 'media.js', prefix: '/api/media' },
+  organizationSites: { file: 'organization-sites.js', prefix: '/api/organization-sites' },
 };
 
 const expectedOperations = [
   ['users', 'put', '/register'], ['users', 'post', '/login'],
   ['users', 'post', '/email-verification/request'], ['users', 'post', '/email-verification/confirm'],
+  ['users', 'post', '/forgot-password'], ['users', 'get', '/reset-password/:token'], ['users', 'post', '/reset-password'],
+  ['organizationSites', 'get', '/:slug'],
+  ['organizationSites', 'get', '/admin/:organizationId/branding'], ['organizationSites', 'patch', '/admin/:organizationId/branding'],
   ['organizers', 'post', '/onboarding/start'], ['organizers', 'post', '/onboarding/complete'],
   ['organizers', 'get', '/invites/resolve'], ['organizers', 'post', '/invites'],
   ['organizers', 'post', '/invites/:id/resend'], ['organizers', 'delete', '/invites/:id'],
+  ['organizers', 'post', '/sessions/:sessionId/reservations'],
   ['experiences', 'get', '/'], ['experiences', 'get', '/verticalFilters'],
   ['experiences', 'get', '/availableCities'], ['experiences', 'get', '/nearbyExperiences'],
   ['experiences', 'get', '/:experienceCode/schedule/calendar'], ['experiences', 'get', '/:experienceCode/schedule'],
@@ -64,6 +70,7 @@ describe('OpenAPI target route contract', () => {
   const registeredByGroup = Object.fromEntries(
      Object.entries(routeSources).map(([group, source]) => [group, parseRouter(source)])
   );
+  const registered = new Set(Object.values(registeredByGroup).flatMap(routes => [...routes]));
   const documented = new Set();
   Object.entries(spec.paths).forEach(([route, methods]) => {
     Object.keys(methods).filter(method => ['get', 'post', 'put', 'patch', 'delete'].includes(method))
@@ -94,14 +101,21 @@ describe('OpenAPI target route contract', () => {
     });
   });
 
-  test('records guest checkout and receipt capability boundaries explicitly', () => {
+  test('every documented method/path exists in its corresponding router source', () => {
+    expect([...documented].filter(route => !registered.has(route))).toEqual([]);
+  });
+
+  test('guest checkout and receipt capabilities stay distinct from customer authentication', () => {
     expect(spec.paths['/api/cart/checkout'].post.security).toEqual([
-       { cartSession: [] }, { cookieAuth: [] },
+       {}, { cartSession: [] }, { cookieAuth: [] },
     ]);
-    const receipt = spec.paths['/api/orders/guest-receipt'].post;
-    const schema = receipt.requestBody.content['application/json'].schema;
-    expect(schema.required).toEqual(['orderNumber', 'receiptToken']);
-    expect(schema.properties.receiptToken.writeOnly).toBe(true);
+    expect(spec.paths['/api/orders/guest-receipt'].post.security).toEqual([]);
+    expect(spec.paths['/api/orders/{orderNumber}/confirmation'].get.security).toEqual([{ cookieAuth: [] }]);
     expect(spec.components.schemas.CartItemRequest.properties.ProductType.enum).toEqual(['Experience']);
+    expect(spec.components.schemas.CheckoutRequest.properties.saveBookingForLater).toMatchObject({ type: 'boolean', default: true });
+    const receipt = spec.paths['/api/orders/guest-receipt'].post.requestBody.content['application/json'].schema;
+    expect(receipt.required).toEqual(['orderNumber', 'receiptToken']);
+    expect(receipt.properties.receiptToken.writeOnly).toBe(true);
+    expect(spec.components.schemas.GuestReceiptRequest.required).toEqual(['orderNumber', 'receiptToken']);
   });
 });

@@ -28,10 +28,18 @@ const CartModal = () => {
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const dialogRef = useRef(null);
   useModalAccessibility({ isOpen: isCartOpen, onClose: closeCart, dialogRef });
+  useEffect(() => {
+    if (!isCartOpen) return undefined;
+    const previousOverflow = document.body.style.overflow;
+    if (previousOverflow === 'hidden') return undefined;
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = previousOverflow; };
+  }, [isCartOpen]);
 
   // Contact info (collected at checkout, not in booking modal)
   const [contact, setContact] = useState({ fullName: '', phone: '', email: '' });
   const [contactErrors, setContactErrors] = useState({});
+  const [saveBookingForLater, setSaveBookingForLater] = useState(true);
 
   useEffect(() => {
     if (!isAuthenticated || !userDetails) return;
@@ -149,6 +157,7 @@ const CartModal = () => {
     try {
       const response = await networkAdapter.post('/api/cart/checkout', {
         cartId: cart?.id,
+        ...(!isAuthenticated ? { saveBookingForLater } : {}),
         billingInfo: {
           email: contact.email.trim(),
           name: contact.fullName.trim(),
@@ -196,12 +205,17 @@ const CartModal = () => {
   return (
     <div className="responsive-overlay fixed inset-0 z-[9998] flex items-center justify-center bg-black/50" onClick={(event) => { if (event.target === event.currentTarget) closeCart(); }}>
       <div
-        className="bg-slate-50 w-full max-w-3xl max-h-[90vh] rounded-xl shadow-xl border border-slate-200 flex flex-col"
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="cart-modal-title"
+        tabIndex={-1}
+        className="responsive-dialog bg-slate-50 max-w-3xl rounded-xl shadow-xl border border-slate-200 flex flex-col"
         data-testid="cart-modal"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 bg-white rounded-t-xl">
+        <div className="shrink-0 flex flex-wrap gap-2 items-center justify-between px-4 py-3 border-b border-slate-200 bg-white rounded-t-xl">
           <h2 id="cart-modal-title" className="text-xl font-bold text-slate-800">Your Cart</h2>
           <div className="flex items-center gap-2">
             <button
@@ -358,6 +372,25 @@ const CartModal = () => {
                     </div>
                   </section>
 
+                  {!isAuthenticated && (
+                    <label className="flex items-start gap-3 rounded-lg border border-slate-200 bg-white p-4 text-sm text-slate-700">
+                      <input
+                        type="checkbox"
+                        checked={saveBookingForLater}
+                        onChange={(event) => setSaveBookingForLater(event.target.checked)}
+                        data-testid="cart-modal__save-booking"
+                        className="mt-1 h-5 w-5 shrink-0"
+                      />
+                      <span>
+                        Save this booking to my email for later registration
+                        <span className="mt-1 block text-xs text-slate-500">
+                          Create an account after booking or another time. Verify this email to add the booking to your account.
+                          If unchecked, you will still receive your receipt, but this booking will not be linked to a future account.
+                        </span>
+                      </span>
+                    </label>
+                  )}
+
                   {/* Error */}
                   {submitError && (
                     <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-md px-3 py-2" data-testid="cart-modal__error">
@@ -372,7 +405,7 @@ const CartModal = () => {
 
         {/* Footer with total & checkout */}
         {!submitSuccess && cartItems.length > 0 && (
-          <div className="border-t border-slate-200 bg-white px-6 py-4 rounded-b-xl flex items-center justify-between">
+          <div className="shrink-0 border-t border-slate-200 bg-white px-4 py-3 rounded-b-xl flex flex-wrap gap-2 items-center justify-between">
             <div>
               <p className="text-sm text-slate-500">Total</p>
               <p className="text-2xl font-bold text-slate-800" data-testid="cart-modal__total">${cartTotal.toFixed(2)}</p>

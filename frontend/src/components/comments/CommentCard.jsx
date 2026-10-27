@@ -22,6 +22,8 @@ const CommentCard = ({
   const [deleting, setDeleting] = useState(false);
   const [isGalleryOpen, setIsGalleryOpen] = useState(false);
   const [galleryStartIndex, setGalleryStartIndex] = useState(0);
+  const [replyError, setReplyError] = useState('');
+  const [actionError, setActionError] = useState('');
 
   const isFullyAnonymous = Number(comment.anonymity) === 0;
   const commenterLocation = [comment.commenter?.city, comment.commenter?.country]
@@ -60,11 +62,14 @@ const CommentCard = ({
         if (repliesCount <= 0) return;
         const resp = await networkAdapter.get(`/api/comments/parent/${comment.id}/replies?limit=1`);
         if (!mounted) return;
-        if (resp?.errors?.length) return;
+        if (resp?.errors?.length) {
+          setReplyError(resp.errors.join(', '));
+          return;
+        }
         const el = Array.isArray(resp?.data?.elements) && resp.data.elements.length ? resp.data.elements[0] : null;
         setFirstReply(el);
       } catch (e) {
-        // ignore
+        if (mounted) setReplyError(e.message || 'Unable to load replies.');
       }
     };
 
@@ -75,36 +80,37 @@ const CommentCard = ({
   const loadAllReplies = async () => {
     if (!comment) return;
     setLoadingReplies(true);
+    setReplyError('');
     try {
       const resp = await networkAdapter.get(`/api/comments/parent/${comment.id}/replies`);
       if (resp?.errors?.length) {
-        setAllReplies([]);
-        setLoadingReplies(false);
+        setReplyError(resp.errors.join(', '));
         return;
       }
       const els = Array.isArray(resp?.data?.elements) ? resp.data.elements : [];
       setAllReplies(els);
     } catch (e) {
-      setAllReplies([]);
+      setReplyError(e.message || 'Unable to load replies.');
     } finally {
       setLoadingReplies(false);
     }
   };
 
   return (
-    <div className="border rounded p-3 bg-white">
+    <div className="min-w-0 border rounded p-3 bg-white [overflow-wrap:anywhere]" data-testid="comment-card">
       <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-2">
-        <div>
+        <div className="min-w-0 flex-1">
           <p className="text-amber-500 text-sm">{renderStars(comment.stars)}</p>
           <p className="text-sm font-semibold text-slate-800 break-words">{comment.title}</p>
           <p className="text-sm text-slate-600 mt-1 whitespace-pre-wrap break-words">{comment.comment}</p>
           {thumbnailImages.length > 0 && (
-            <div className="mt-3 flex items-center gap-2">
+            <div className="mt-3 grid grid-cols-3 gap-2 max-w-xs">
               {thumbnailImages.map((image, index) => (
                 <button
                   key={`${image.imageUrl}-${index}`}
                   type="button"
-                  className="relative w-16 h-16 rounded overflow-hidden border border-slate-200"
+                  className="relative min-w-11 min-h-11 aspect-square rounded overflow-hidden border border-slate-200"
+                  aria-label={`Open review photo ${index + 1}`}
                   onClick={() => {
                     setGalleryStartIndex(index);
                     setIsGalleryOpen(true);
@@ -127,7 +133,7 @@ const CommentCard = ({
           )}
         </div>
 
-        <div className="text-xs text-slate-500 md:text-right">
+        <div className="min-w-0 text-xs text-slate-500 md:text-right md:max-w-[40%]">
           <p>
             {comment.target?.type === 'organizer' ? 'Organizer' : 'Experience'}: {comment.target?.name || 'Unknown'}
           </p>
@@ -139,7 +145,7 @@ const CommentCard = ({
       {(Number(comment.repliesCount || 0) > 0) && (
         <div className="mt-3">
           {firstReply && !allReplies && (
-            <div className="pl-4 border-l border-slate-200 mb-2">
+            <div className="min-w-0 pl-2 sm:pl-4 border-l border-slate-200 mb-2">
               <CommentPreview reply={firstReply} renderStars={renderStars} formatCommentDate={formatCommentDate} userDetails={userDetails} loadComments={loadComments} commentsTargetType={commentsTargetType} />
             </div>
           )}
@@ -147,7 +153,7 @@ const CommentCard = ({
             <div className="text-sm">
               <button
                 type="button"
-                className="text-slate-600 underline"
+                className="min-h-11 min-w-11 py-2 text-slate-600 underline text-left"
                 onClick={loadAllReplies}
                 disabled={loadingReplies}
               >
@@ -158,7 +164,7 @@ const CommentCard = ({
           {allReplies && (
             <div className="space-y-2 mt-2">
                 {allReplies.map((r) => (
-                <div key={r.id} className="pl-4 border-l border-slate-200">
+                <div key={r.id} className="min-w-0 pl-2 sm:pl-4 border-l border-slate-200">
                   <CommentPreview reply={r} renderStars={renderStars} formatCommentDate={formatCommentDate} userDetails={userDetails} loadComments={loadComments} commentsTargetType={commentsTargetType} />
                 </div>
               ))}
@@ -167,19 +173,21 @@ const CommentCard = ({
         </div>
       )}
 
-      <div className="mt-3 flex justify-between items-center">
-        <p className="text-xs text-slate-500 text-right">
+      {replyError && <p role="alert" className="mt-2 text-sm text-red-600">{replyError}</p>}
+      {actionError && <p role="alert" className="mt-2 text-sm text-red-600">{actionError}</p>}
+      <div className="mt-3 flex flex-wrap justify-between items-center gap-2">
+        <p className="min-w-0 text-xs text-slate-500">
           {isFullyAnonymous
             ? userDetails ? 'Posted Anonymously' : 'Anonymous User'
             : `${displayName || 'Guest User'}${displayLocation ? ' · ' + displayLocation : ''}`}
         </p>
 
-        <div className="ml-3 flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {!comment.ParentId && canReply && userDetails && (
             !openReply && (
               <button
                 type="button"
-                className="px-2 py-1 rounded text-sm border bg-white text-slate-700"
+                className="min-h-11 min-w-11 px-3 py-2 rounded text-sm border bg-white text-slate-700"
                 onClick={() => setOpenReply(true)}
               >
                 Reply
@@ -192,7 +200,7 @@ const CommentCard = ({
             !isEditing && (
               <button
                 type="button"
-                className="px-2 py-1 rounded text-sm border bg-white text-slate-700"
+                className="min-h-11 min-w-11 px-3 py-2 rounded text-sm border bg-white text-slate-700"
                 onClick={() => setIsEditing(true)}
               >
                 Edit
@@ -204,22 +212,22 @@ const CommentCard = ({
             <button
               type="button"
               disabled={deleting}
-              className="px-2 py-1 rounded text-sm border bg-white text-red-600"
+              className="min-h-11 min-w-11 px-3 py-2 rounded text-sm border bg-white text-red-600"
               onClick={async () => {
                 if (!window.confirm('Delete this comment and its replies?')) return;
                 setDeleting(true);
+                setActionError('');
                 try {
                   const resp = await networkAdapter.delete(`/api/comments/${comment.id}`);
                   if (resp && resp.ok) {
                     if (loadComments) loadComments({ page: 1, append: false, targetType: commentsTargetType });
-                  } else if (resp.status === 401) {
+                  } else if (resp?.status === 401) {
                     window.location.href = '/register';
                   } else {
-                    // ignore errors for now
-                    // could show toast
+                    setActionError(resp?.errors?.join(', ') || 'Unable to delete comment.');
                   }
                 } catch (e) {
-                  // ignore
+                  setActionError(e.message || 'Unable to delete comment.');
                 } finally {
                   setDeleting(false);
                 }
@@ -233,8 +241,7 @@ const CommentCard = ({
 
       {/* Inline reply form with smooth transition */}
       <div
-        className="mt-2 overflow-hidden transition-all duration-300 ease-in-out"
-        style={{ maxHeight: openReply ? '520px' : '0px', opacity: openReply ? 1 : 0 }}
+        className="mt-2 min-w-0"
       >
         <Suspense fallback={<div className="text-sm text-slate-500">Loading reply form…</div>}>
           {openReply && (

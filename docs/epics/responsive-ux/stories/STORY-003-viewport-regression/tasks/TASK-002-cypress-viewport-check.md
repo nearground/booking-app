@@ -44,9 +44,9 @@ STORY-003/TASK-001 matrix definitions.
 
 ## Definition of Done
 
-- [ ] Story acceptance criteria covered with recorded results.
-- [ ] Targeted checks pass; existing intended behavior is preserved.
-- [ ] Documentation updated; no unresolved contract conflicts.
+- [x] Story acceptance criteria covered with recorded results.
+- [x] Targeted checks pass; existing intended behavior is preserved.
+- [x] Documentation updated; no unresolved contract conflicts.
 
 ## Documentation updates
 
@@ -54,7 +54,7 @@ Reference matrix document for exact route list and expected visibility.
 
 ## Progress and completion evidence
 
-Completed: 80 Cypress checks passed across 8 viewports, covering 9 route entries, horizontal overflow, visible controls/touch sizing, and focus wrapping/restoration. Baseline on localhost:8080 had no horizontal overflow assertion failures but failed the 44px navigation-target assertion on the pre-change main checkout.
+Completed: 88 Cypress checks pass across 8 viewports and 10 route contexts, plus menu keyboard checks. Details use a real discovered seeded ID; carts are populated through the live booking UI; organizer profiles use an authenticated session; public profiles render their own branded navigation. Checkout/receipt use explicit layout-state fixtures rather than redirects. The matrix asserts overflow, visible controls/touch sizing, booking/cart/menu focus wrapping, Escape dismissal and restored scrolling. Comments have 11 additional dedicated checks.
 
 ## Git history
 

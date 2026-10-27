@@ -23,7 +23,7 @@ Align the Tailwind theme and shared page containers, improve the global navbar/m
 
 ## Acceptance criteria
 
-- [ ] Given I am using a narrow phone, tablet, laptop, or wide desktop, when I open the home, experience browse, login, or organizer profile route and use shared navigation, then content fits the viewport, primary controls remain visible and operable, and keyboard focus is visible.
+- [x] Given I am using a narrow phone, tablet, laptop, or wide desktop, when I open the home, experience browse, login, or organizer profile route and use shared navigation, then content fits the viewport, primary controls remain visible and operable, and keyboard focus is visible.
 - Epic acceptance coverage: Covers supported viewport matrix documentation, shared layout, navbar/footer, global focus/touch behavior, and image space reservation.
 
 ## Ownership and dependencies

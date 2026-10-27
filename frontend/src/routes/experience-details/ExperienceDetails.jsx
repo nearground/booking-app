@@ -9,7 +9,8 @@ import React, {
   useContext,
 } from 'react';
 import { AuthContext } from 'contexts/AuthContext';
-import { useParams, useLocation, useNavigate } from 'react-router-dom';
+import { Link, useParams, useLocation, useNavigate } from 'react-router-dom';
+import { isValidOrganizationSiteSlug } from '../organization-site/organizationSiteResolver';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faStar } from '@fortawesome/free-solid-svg-icons';
 import { faImages } from '@fortawesome/free-solid-svg-icons';
@@ -346,6 +347,15 @@ const ExperienceDetails = ({ previewData = null, isPreview = false }) => {
   const renderRightColumnContent = () => (
     <>
       <p className="text-base font-semibold text-slate-700">Hosted By</p>
+      {isValidOrganizationSiteSlug(experienceData.Organization?.slug) && (
+        <Link
+          to={`/o/${encodeURIComponent(experienceData.Organization.slug)}`}
+          className="mt-1 inline-block max-w-full break-words py-2 text-sm text-blue-600 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+          data-testid="experience-details__organization-link"
+        >
+          View {experienceData.Organization.name || 'organization'} profile
+        </Link>
+      )}
       {organizers.length > 0 ? (
         <div className="mt-3 grid grid-cols-2 sm:grid-cols-3 gap-3">
           {organizers.map((organizer) => (

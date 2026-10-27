@@ -23,7 +23,7 @@ Style the existing booking modal and cart drawer/modal, cart surface, and checko
 
 ## Acceptance criteria
 
-- [ ] Given I open the booking or cart overlay on a small device or desktop, when I scroll, use its controls, and dismiss it, then the overlay fits the visible viewport, content scrolls within it, touch controls are at least 44px where owned, and close/submit actions are not covered by system insets.
+- [x] Given I open the booking or cart overlay on a small device or desktop, when I scroll, use its controls, and dismiss it, then the overlay fits the visible viewport, content scrolls within it, touch controls are at least 44px where owned, and close/submit actions are not covered by system insets.
 - Epic acceptance coverage: Covers the cart and booking surfaces fitting dynamic viewport height, safe-area support, usable controls, and no horizontal overflow.
 
 ## Ownership and dependencies

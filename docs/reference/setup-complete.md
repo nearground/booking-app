@@ -5,6 +5,26 @@ sidebar_position: 3
 
 # PUERTO VALLARTA TODAY - Docker Setup Summary
 
+## Wave 1 release completion
+
+The six scoped Wave 1 Epics are implemented/verified on `main`: guest checkout and cart continuity, comment privacy/photo editing, correlated seed-factory research/spike, MCP API research, branded organization sites, and responsive UX. The live development work dashboard shows all 6 Epics, 17 Stories and 33 Tasks as done.
+
+Release validation:
+
+| Check | Result |
+|---|---|
+| Backend Jest | 357 application tests plus 3 separately run database-free OpenAPI checks passed |
+| Frontend Vitest | 283 tests passed |
+| Booking and password-reset Cypress | 39 booking checks and 3 real-API password-reset checks passed |
+| Responsive Cypress | 88 route/dialog matrix checks plus 11 comment/editor checks passed |
+| Planning / Git index utilities | 14 tests passed; all 61 planning documents validate |
+| Production builds | Frontend and Docusaurus builds passed |
+| Changed frontend files | ESLint: no errors; existing warnings remain |
+
+Browser totals represent the latest relevant passing runs, not a single combined command: after the original combined regression passed, the strengthened matrix and affected booking/cart/guest/comments suites were rerun successfully. Matrix checkout/receipt use explicit router-state layout fixtures; the separate booking suite creates real orders. Comments layout uses controlled API fixtures; backend tests cover authorization and canonical media handling. Password-reset E2E reads a dedicated test token from the development database rather than inspecting an email inbox.
+
+Completion does not activate production wildcard DNS/tunnel ingress; that remains deferred to launch. Physical-phone virtual keyboard/notch/LAN checks remain manual. The seed Epic delivers the agreed research/spike and rewrite plan, not the later durable SQL-store/seeder rewrite. The MCP Epic delivers API research/contracts, not an MCP server. Later hero/video, pinned-comments, single-date and Spanish-localization Epics are not pulled into Wave 1.
+
 ## ✅ What Has Been Completed
 
 Your PUERTO VALLARTA TODAY application is now fully dockerized with a complete container orchestration setup.
@@ -163,6 +183,41 @@ status remain enabled. Orders created before this flag was added have unknown
 email status. No automatic retry or resend is performed.
 
 ## 🐳 Services
+
+### Account email identity and password-reset testing
+
+Guest checkout includes a checked-by-default "Save this booking to my email for
+later registration" option. Checkout accepts the boolean `saveBookingForLater`
+(defaults to true when omitted) and stores it in order metadata. Unchecking
+does not cancel the receipt or confirmation email; it prevents later verified
+email registration from claiming that booking. Existing bookings without the
+flag retain their previous claim behavior. The confirmation page offers optional
+account creation with the receipt email prefilled whether or not linking was
+selected; opting out does not prevent registering for future purchases.
+
+Each user has one unique email address. Account writes normalize email casing and
+surrounding whitespace; registration and organizer onboarding reject duplicates,
+and the database unique index protects concurrent registrations. Usernames remain
+unique as well. The original username schema change preserves the baseline email
+index; no additional migration is needed for a freshly recreated database.
+
+Password reset uses the account stored with the reset token. The reset page
+submits `{ token, newPassword }`; email is optional for clients that also supply
+it. Used and expired tokens cannot reset passwords.
+
+With the development stack seeded, run from `frontend`:
+
+```text
+npx cypress run --spec "cypress/e2e/auth/password-reset.cy.js"
+```
+
+The tests cover duplicate registration, database-level email uniqueness, a UI
+reset request, mismatched passwords, successful reset and login, rejection of the
+old password, and expired, unknown and reused tokens. They use the dedicated
+`reset-e2e@example.invalid` fixture and restore its seeded password afterwards.
+Only the fixture's database token is read by the Cypress Node task; no production
+API exposes reset tokens. The auth API is not stubbed. These tests do not inspect
+an external inbox or prove email delivery; SMTP acceptance is checked separately.
 
 ### 1. Database (MySQL)
 - **Image**: mysql:8.0

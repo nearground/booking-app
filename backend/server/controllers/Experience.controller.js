@@ -3,6 +3,7 @@ const require = createRequire(import.meta.url);
 
 import Experience from '../models/Experience.model.js';
 import Location from '../models/Location.model.js';
+import Organization from '../models/Organization.model.js';
 import { syncExperienceSchedule } from '../services/Scheduler.service.js';
 import Comment from '../models/Comment.model.js';
 import User from '../models/User.model.js';
@@ -226,6 +227,11 @@ const getExperienceByCode = async (req, res) => {
         const experience = await Experience.findOne({
             where: { id: parseInt(experienceCode) },
             include: [
+                {
+                    model: Organization,
+                    attributes: ['name', 'slug'],
+                    required: false,
+                },
                 {
                     model: Location,
                     attributes: ['name', 'city', 'country', 'state', 'street', 'zipCode', 'coordinates', 'timezone'],

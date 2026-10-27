@@ -1,4 +1,5 @@
 import React from 'react';
+import { vi } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import AddCommentForm from './AddCommentForm';
 import { networkAdapter } from 'services/NetworkAdapter';
@@ -37,6 +38,10 @@ describe('AddCommentForm', () => {
 
     expect(screen.getByRole('button', { name: 'Attach Photos' })).toBeInTheDocument();
     expect(screen.getByText('0 / 10 photos attached')).toBeInTheDocument();
+    expect(screen.getByLabelText('Rating')).toBeInTheDocument();
+    expect(screen.getByLabelText('Title (optional)')).toBeInTheDocument();
+    expect(screen.getByLabelText('Comment')).toBeInTheDocument();
+    expect(screen.getByRole('checkbox', { name: 'Post as anonymous' })).toBeInTheDocument();
   });
 
   test('shows selected image preview and supports removing it', () => {

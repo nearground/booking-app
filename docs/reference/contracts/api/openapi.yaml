@@ -23,6 +23,7 @@
             "application/json": {
               "schema": {
                 "type": "object",
+                "required": ["email"],
                 "properties": { "email": { "type": "string", "format": "email" } }
               }
             }
@@ -72,6 +73,7 @@
         "operationId": "getGuestOrder",
         "summary": "Read an unclaimed guest receipt using its private capability",
         "description": "No account or cart cookie required. Requires orderNumber plus receiptToken, not a reservation confirmation code. Checks a hashed token and 30-day expiry, and CustomerId must be null. No explicit route limiter. Global CSRF applies if _token is present. Never expose the capability to a model or public chat.",
+        "security": [],
         "requestBody": {
           "required": true,
           "content": {
@@ -109,7 +111,7 @@
         "tags": [
           "Authentication"
         ],
-        "description": "Public. Does not create a login session.",
+        "description": "Public. Email is trimmed, lowercased and unique across users. Starts email verification, but does not create a login session. Verified email ownership claims only eligible guest orders whose saveBookingForLater preference is not false.",
         "requestBody": {
           "required": true,
           "content": {
@@ -156,6 +158,61 @@
             "$ref": "#/components/responses/ErrorEnvelope"
           }
         }
+      }
+    },
+    "/api/users/forgot-password": {
+      "post": {
+        "operationId": "forgotPassword",
+        "summary": "Request a password reset email",
+        "description": "Public, forgot-password rate limiter. Returns generic success for existing and unknown emails; missing email returns 400. Link uses configured FRONTEND_BASE_URL (localhost:8080 in development).",
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/EmailRequest" } } } },
+        "responses": { "200": { "$ref": "#/components/responses/SuccessEnvelope" }, "default": { "$ref": "#/components/responses/ErrorEnvelope" } }
+      }
+    },
+    "/api/users/reset-password/{token}": {
+      "get": {
+        "operationId": "validateResetToken",
+        "summary": "Validate a password reset capability",
+        "description": "Public. Returns data.valid; does not change the password.",
+        "parameters": [{ "name": "token", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "responses": { "200": { "$ref": "#/components/responses/SuccessEnvelope" }, "default": { "$ref": "#/components/responses/ErrorEnvelope" } }
+      }
+    },
+    "/api/users/reset-password": {
+      "post": {
+        "operationId": "resetPassword",
+        "summary": "Consume a password reset token",
+        "description": "Public, single-use token. Email is optional; when supplied it must match the token account after normalization. Unknown, expired and reused tokens are rejected.",
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "object", "required": ["token", "newPassword"], "properties": {
+          "token": { "type": "string" }, "newPassword": { "type": "string", "minLength": 6 }, "email": { "type": "string", "format": "email" }
+        } } } } },
+        "responses": { "200": { "$ref": "#/components/responses/SuccessEnvelope" }, "default": { "$ref": "#/components/responses/ErrorEnvelope" } }
+      }
+    },
+    "/api/organization-sites/{slug}": {
+      "get": {
+        "operationId": "getPublicOrganizationSite",
+        "summary": "Read public organization branding and upcoming experiences",
+        "description": "Public safe-field allow-list; includes branding, contact/social links intentionally published by admins, and experiences with scheduled upcoming sessions. Empty branded sites are valid. Unknown/reserved slugs return 404. Experience links are relative /experience/{id}.",
+        "parameters": [{ "name": "slug", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "responses": { "200": { "$ref": "#/components/responses/SuccessEnvelope" }, "default": { "$ref": "#/components/responses/ErrorEnvelope" } }
+      }
+    },
+    "/api/organization-sites/admin/{organizationId}/branding": {
+      "parameters": [{ "name": "organizationId", "in": "path", "required": true, "schema": { "type": "integer" } }],
+      "get": {
+        "operationId": "getOrganizationBranding",
+        "summary": "Read organization branding as an admin",
+        "security": [{ "cookieAuth": [] }],
+        "responses": { "200": { "$ref": "#/components/responses/SuccessEnvelope" }, "default": { "$ref": "#/components/responses/ErrorEnvelope" } }
+      },
+      "patch": {
+        "operationId": "updateOrganizationBranding",
+        "summary": "Update validated organization branding",
+        "description": "Organization admin only, with CSRF. Unknown fields rejected. Media keys must be uploaded by the current admin. Unique slug conflicts return 409. See inventory for field validation.",
+        "security": [{ "cookieAuth": [] }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "object", "description": "Partial branding fields; see inventory. Nested validation remains authoritative on the server.", "additionalProperties": true } } } },
+        "responses": { "200": { "$ref": "#/components/responses/SuccessEnvelope" }, "default": { "$ref": "#/components/responses/ErrorEnvelope" } }
       }
     },
     "/api/organizers/onboarding/start": {
@@ -322,6 +379,103 @@
         "responses": {
           "200": {
             "$ref": "#/components/responses/SuccessEnvelope"
+          },
+          "default": {
+            "$ref": "#/components/responses/ErrorEnvelope"
+          }
+        }
+      }
+    },
+    "/api/organizers/sessions/{sessionId}/reservations": {
+      "post": {
+        "operationId": "createManualOrganizerBooking",
+        "summary": "Register an attendee for an organizer session",
+        "tags": [
+          "Organizations"
+        ],
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "sessionId",
+            "required": true,
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "fullName",
+                  "contactMethod",
+                  "paymentMethod",
+                  "ticketSelections"
+                ],
+                "properties": {
+                  "fullName": {
+                    "type": "string",
+                    "maxLength": 120
+                  },
+                  "email": {
+                    "type": "string",
+                    "format": "email"
+                  },
+                  "phone": {
+                    "type": "string"
+                  },
+                  "contactMethod": {
+                    "type": "string",
+                    "enum": [
+                      "email",
+                      "sms",
+                      "whatsapp"
+                    ]
+                  },
+                  "paymentMethod": {
+                    "type": "string",
+                    "enum": [
+                      "online",
+                      "in_person"
+                    ]
+                  },
+                  "ticketSelections": {
+                    "type": "array",
+                    "minItems": 1,
+                    "maxItems": 20,
+                    "items": {
+                      "type": "object",
+                      "required": [
+                        "quantity"
+                      ],
+                      "properties": {
+                        "ticketTierId": {
+                          "type": "integer",
+                          "nullable": true
+                        },
+                        "quantity": {
+                          "type": "integer",
+                          "minimum": 1
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "$ref": "#/components/responses/CreatedEnvelope"
           },
           "default": {
             "$ref": "#/components/responses/ErrorEnvelope"
@@ -1185,8 +1339,9 @@
         "tags": [
           "Cart"
         ],
-        "description": "Optional customer auth, otherwise requires the owning _cart_session cookie. Experience tickets only. No client idempotency key is accepted; never retry blindly. Global CSRF applies when _token is present.",
+        "description": "Optional customer authentication; guests must own the _cart_session cookie. Experience tickets only. No client idempotency key is accepted; never retry blindly. Guest responses include a one-time guestReceiptToken (30-day capability) and saveBookingForLater; all responses include confirmationEmail status when available. Email failure does not invalidate the pending booking. Global CSRF applies when _token is present.",
         "security": [
+          {},
           {
             "cartSession": []
           },
@@ -1687,7 +1842,7 @@
         "tags": [
           "Media"
         ],
-        "description": "Raw image bytes; body limit 6 MB; only the authenticated user may upload for their own user ID.",
+        "description": "Raw image or MP4 bytes; body limit 6 MB; only the authenticated user may upload for their own user ID.",
         "security": [
           {
             "cookieAuth": []
@@ -1724,7 +1879,9 @@
                 "profile",
                 "experience-thumbnail",
                 "experience-gallery",
-                "review-image"
+                "review-image",
+                "organization-logo",
+                "organization-cover"
               ],
               "default": "asset"
             }
@@ -1752,6 +1909,12 @@
               }
             },
             "image/gif": {
+              "schema": {
+                "type": "string",
+                "format": "binary"
+              }
+            },
+            "video/mp4": {
               "schema": {
                 "type": "string",
                 "format": "binary"
@@ -2281,6 +2444,16 @@
           }
         }
       },
+      "EmailRequest": {
+        "type": "object",
+        "required": ["email"],
+        "properties": { "email": { "type": "string", "format": "email" } }
+      },
+      "GuestReceiptRequest": {
+        "type": "object",
+        "required": ["orderNumber", "receiptToken"],
+        "properties": { "orderNumber": { "type": "string" }, "receiptToken": { "type": "string" } }
+      },
       "CartItemRequest": {
         "type": "object",
         "required": [
@@ -2377,6 +2550,11 @@
           "contact": {
             "type": "object",
             "additionalProperties": true
+          },
+          "saveBookingForLater": {
+            "type": "boolean",
+            "default": true,
+            "description": "Guest-only consent to associate this booking with a later verified account. False prevents future claiming while retaining receipt access and confirmation email."
           }
         },
         "description": "No idempotency key is currently consumed."
@@ -2397,13 +2575,13 @@
             "type": "integer"
           },
           "anonymity": {
-            "type": "boolean"
+            "type": "integer",
+            "enum": [0, 1, 2]
           },
           "images": {
             "type": "array",
-            "items": {
-              "type": "string"
-            }
+            "maxItems": 10,
+            "items": { "$ref": "#/components/schemas/ReviewImageRequest" }
           }
         },
         "additionalProperties": true
@@ -2421,16 +2599,24 @@
             "type": "integer"
           },
           "anonymity": {
-            "type": "boolean"
+            "type": "integer",
+            "enum": [0, 1, 2]
           },
           "images": {
             "type": "array",
-            "items": {
-              "type": "string"
-            }
+            "maxItems": 10,
+            "items": { "$ref": "#/components/schemas/ReviewImageRequest" }
           }
         },
         "additionalProperties": true
+      },
+      "ReviewImageRequest": {
+        "type": "object",
+        "required": ["imageUrl"],
+        "properties": {
+          "imageUrl": { "type": "string", "description": "Canonical allowed media object key, or a supported configured media URL. Responses expose imageKey for retained-image updates." },
+          "accessibleText": { "type": "string", "maxLength": 200 }
+        }
       },
       "MediaUploadResponse": {
         "type": "object",

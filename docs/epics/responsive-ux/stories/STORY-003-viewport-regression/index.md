@@ -23,7 +23,7 @@ Document the target viewport matrix and add Cypress e2e assertions for horizonta
 
 ## Acceptance criteria
 
-- [ ] Given I run the responsive e2e spec against an available app server, when the spec visits customer routes across the documented viewport matrix, then every route has no document-level horizontal overflow and its primary route controls are visible.
+- [x] Given I run the responsive e2e spec against an available app server, when the spec visits customer routes across the documented viewport matrix, then every route has no document-level horizontal overflow and its primary route controls are visible.
 - Epic acceptance coverage: Covers device matrix documentation and automated checks for home, browse, details, cart, checkout, receipt, login/register, and organizer profile.
 
 ## Ownership and dependencies

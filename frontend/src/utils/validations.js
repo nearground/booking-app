@@ -13,7 +13,7 @@ const validations = {
   fields: {
     email: {
       required: true,
-      pattern: /^[^\s-]\w+@[a-zA-Z_]+?\.[a-zA-Z]{2,3}[^\s-]$/i,
+      pattern: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
     },
   },
 

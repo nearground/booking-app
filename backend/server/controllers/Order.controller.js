@@ -54,7 +54,11 @@ const RESERVATION_INCLUDES = [
 
 const initiateCheckout = async (req, res) => {
     try {
-        const { cartId, billingInfo, contact } = req.body;
+        const { cartId, billingInfo, contact, saveBookingForLater } = req.body;
+
+        if (saveBookingForLater !== undefined && typeof saveBookingForLater !== 'boolean') {
+            return sendError(res, { status: 400, message: 'saveBookingForLater must be a boolean' });
+        }
 
         if (!cartId) {
             return sendError(res, { status: 400, message: 'cartId is required' });
@@ -73,6 +77,7 @@ const initiateCheckout = async (req, res) => {
         const guestReceipt = guestReceiptToken ? {
             tokenHash: crypto.createHash('sha256').update(guestReceiptToken).digest('hex'),
             expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+            saveBookingForLater: saveBookingForLater !== false,
         } : null;
         const order = await checkoutCart(cartId, req.user?.id || null, billingInfo, contact || {}, sessionToken, guestReceipt);
 
@@ -87,6 +92,7 @@ const initiateCheckout = async (req, res) => {
                 mainContactPhone: order.mainContactPhone,
                 mainContactEmail: order.mainContactEmail,
                 confirmationEmail: order.metadata?.confirmationEmail || null,
+                ...(isGuest ? { saveBookingForLater: guestReceipt.saveBookingForLater } : {}),
                 items: order.Items,
                 ...(guestReceiptToken ? { guestReceiptToken } : {}),
             },
@@ -128,6 +134,7 @@ const getGuestOrder = async (req, res) => {
             return sendError(res, { status: 404, message: 'Receipt not found' });
         }
         order.setDataValue('confirmationEmail', order.metadata?.confirmationEmail || null);
+        order.setDataValue('saveBookingForLater', order.metadata?.saveBookingForLater !== false);
         order.setDataValue('metadata', null);
         return res.status(200).json({ errors: [], data: { order } });
     } catch (error) {

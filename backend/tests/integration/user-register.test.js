@@ -88,6 +88,7 @@ jest.mock('../../server/services/User.service.js', () => ({
     getUserBookings: jest.fn(),
     getUserPaymentMethods: jest.fn(),
     resetPassword: jest.fn(),
+    completePasswordReset: jest.fn(),
   },
 }));
 
@@ -144,6 +145,16 @@ describe('PUT /api/users/register', () => {
     expect(res.body.errors.length).toBeGreaterThan(0);
   });
 
+  test('returns an email conflict if a concurrent registration hits the unique index', async () => {
+    UserService.createUser.mockRejectedValue(Object.assign(new Error('Unique constraint'), {
+      name: 'SequelizeUniqueConstraintError',
+      fields: { email: 'alice@example.com' },
+    }));
+    const res = await request(app).put('/api/users/register').send(VALID_BODY);
+    expect(res.status).toBe(409);
+    expect(res.body.errors).toEqual(['A user with this email already exists']);
+  });
+
   test('returns 400 when body is empty and validation fails', async () => {
     validateUserInputs.mockResolvedValue([
       'first name is required',
@@ -156,5 +167,19 @@ describe('PUT /api/users/register', () => {
     const res = await request(app).put('/api/users/register').send({});
     expect(res.status).toBe(400);
     expect(res.body.errors.length).toBeGreaterThanOrEqual(1);
+  });
+
+  describe('POST /api/users/reset-password', () => {
+    test('accepts the token and new password sent by the reset page without requiring email', async () => {
+      const res = await request(app).post('/api/users/reset-password').send({ token: 'valid-reset-token', newPassword: 'UpdatedPass1!' });
+      expect(res.status).toBe(200);
+      expect(UserService.completePasswordReset).toHaveBeenCalledWith('valid-reset-token', undefined, 'UpdatedPass1!');
+    });
+
+    test('rejects missing tokens and short passwords', async () => {
+      const res = await request(app).post('/api/users/reset-password').send({ newPassword: 'short' });
+      expect(res.status).toBe(400);
+      expect(UserService.completePasswordReset).not.toHaveBeenCalled();
+    });
   });
 });

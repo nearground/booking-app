@@ -10,6 +10,124 @@ const docsUrl = (filePath) => {
   return `/${withoutExtension.replace(/^docs\//, '')}/`;
 };
 const formatDate = (date) => new Date(date).toLocaleString();
+const dateKey = (date) => `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
+
+function getRecentActivity(commits, workItems, now = new Date()) {
+  const firstDay = new Date(now);
+  firstDay.setHours(0, 0, 0, 0);
+  firstDay.setDate(firstDay.getDate() - 6);
+
+  const days = Array.from({ length: 7 }, (_, index) => {
+    const date = new Date(firstDay);
+    date.setDate(firstDay.getDate() + index);
+    return {
+      key: dateKey(date),
+      label: date.toLocaleDateString(undefined, { weekday: 'short', month: 'numeric', day: 'numeric' }),
+      linked: 0,
+      unlinked: 0,
+    };
+  });
+  const dayCounts = new Map(days.map((day) => [day.key, day]));
+  const workItemTitles = new Map(workItems.map((item) => [item.id, item.title]));
+  const workItemCounts = new Map();
+
+  commits.forEach((commit) => {
+    const date = new Date(commit.date);
+    if (Number.isNaN(date.getTime())) return;
+    const day = dayCounts.get(dateKey(date));
+    if (!day) return;
+
+    const linkedItems = [...new Set(commit.workItems || [])];
+    if (linkedItems.length) {
+      day.linked += 1;
+      linkedItems.forEach((id) => {
+        const current = workItemCounts.get(id) || { id, title: workItemTitles.get(id) || id, count: 0 };
+        current.count += 1;
+        workItemCounts.set(id, current);
+      });
+    } else {
+      day.unlinked += 1;
+    }
+  });
+
+  return {
+    days,
+    workItems: [...workItemCounts.values()]
+      .sort((a, b) => b.count - a.count || a.title.localeCompare(b.title))
+      .slice(0, 5),
+  };
+}
+
+function RecentActivity({ commits, workItems }) {
+  const activity = getRecentActivity(commits, workItems);
+  const maxDailyCommits = Math.max(1, ...activity.days.map((day) => day.linked + day.unlinked));
+  const maxWorkItemCommits = Math.max(1, ...activity.workItems.map((item) => item.count));
+  const recentCommitCount = activity.days.reduce((total, day) => total + day.linked + day.unlinked, 0);
+
+  return (
+    <section className={styles.activity} aria-labelledby="recent-activity-heading">
+      <h2 id="recent-activity-heading">Git activity · last 7 days</h2>
+      <p className={styles.muted}>Daily commit volume and the most active linked work items.</p>
+      {!recentCommitCount && <p className={styles.muted}>No commits found in the last seven days.</p>}
+      <div className={styles.chartGrid}>
+        <article className={styles.chartCard} aria-labelledby="daily-commits-heading">
+          <h3 id="daily-commits-heading">Commits per day</h3>
+          <div className={styles.legend}>
+            <span><i className={styles.linkedKey} /> Work-item linked</span>
+            <span><i className={styles.unlinkedKey} /> Unlinked</span>
+          </div>
+          <div className={styles.dailyChart} role="list" aria-label="Daily commit totals, split by work-item attribution">
+            {activity.days.map((day) => {
+              const total = day.linked + day.unlinked;
+              return (
+                <div
+                  className={styles.dayColumn}
+                  key={day.key}
+                  role="listitem"
+                  aria-label={`${day.label}: ${total} commits, ${day.linked} linked and ${day.unlinked} unlinked`}
+                >
+                  <span className={styles.barCount}>{total}</span>
+                  <div className={styles.barTrack}>
+                    <div className={styles.stackedBar} style={{ height: `${(total / maxDailyCommits) * 100}%` }}>
+                      {day.linked > 0 && (
+                        <span
+                          className={styles.linkedBar}
+                          style={{ height: `${(day.linked / total) * 100}%` }}
+                        />
+                      )}
+                      {day.unlinked > 0 && (
+                        <span
+                          className={styles.unlinkedBar}
+                          style={{ height: `${(day.unlinked / total) * 100}%` }}
+                        />
+                      )}
+                    </div>
+                  </div>
+                  <span className={styles.dayLabel}>{day.label}</span>
+                </div>
+              );
+            })}
+          </div>
+        </article>
+        <article className={styles.chartCard} aria-labelledby="work-item-activity-heading">
+          <h3 id="work-item-activity-heading">Most active work items</h3>
+          {!activity.workItems.length && <p className={styles.muted}>No linked commits in the last seven days.</p>}
+          <ul className={styles.horizontalChart}>
+            {activity.workItems.map((item) => (
+              <li key={item.id} aria-label={`${item.title}: ${item.count} commits`}>
+                <span className={styles.activityItemTitle} title={item.id}>{item.title}</span>
+                <span className={styles.horizontalTrack}>
+                  <span className={styles.horizontalBar} style={{ width: `${(item.count / maxWorkItemCommits) * 100}%` }} />
+                </span>
+                <span className={styles.barCount}>{item.count}</span>
+              </li>
+            ))}
+          </ul>
+        </article>
+      </div>
+    </section>
+  );
+}
 
 function CommitList({ commits }) {
   const [expanded, setExpanded] = useState({});
@@ -98,6 +216,8 @@ function WorkDashboard() {
           <>
             {!data.git.available && <p className={styles.warning} role="status">{data.git.message}</p>}
             <p className={styles.updated}>Refreshed {formatDate(data.generatedAt)} · {data.commits.length} recent commits</p>
+
+            <RecentActivity commits={data.commits} workItems={data.workItems} />
 
             <section aria-labelledby="work-items-heading">
               <h2 id="work-items-heading">Epics, stories and tasks</h2>

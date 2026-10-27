@@ -13,7 +13,7 @@ vi.mock('services/NetworkAdapter', () => ({
 afterEach(() => cleanup());
 
 describe('CartModal guest checkout', () => {
-  it('submits a guest order without collecting payment card data', async () => {
+  it.each([true, false])('submits guest checkout with save-for-later=%s without collecting payment card data', async (saveForLater) => {
     const refreshCart = vi.fn().mockResolvedValue();
     const closeCart = vi.fn();
     networkAdapter.post.mockResolvedValue({
@@ -45,6 +45,8 @@ describe('CartModal guest checkout', () => {
     );
 
     expect(screen.queryByTestId('cart-modal__payment-card')).not.toBeInTheDocument();
+    expect(screen.getByTestId('cart-modal__save-booking')).toBeChecked();
+    if (!saveForLater) fireEvent.click(screen.getByTestId('cart-modal__save-booking'));
     fireEvent.change(screen.getByTestId('cart-modal__contact-name'), { target: { value: 'Guest Buyer' } });
     fireEvent.change(screen.getByTestId('cart-modal__contact-phone'), { target: { value: '5551234' } });
     fireEvent.change(screen.getByTestId('cart-modal__contact-email'), { target: { value: 'guest@example.com' } });
@@ -55,7 +57,7 @@ describe('CartModal guest checkout', () => {
     fireEvent.click(screen.getByTestId('cart-modal__checkout-btn'));
 
     await waitFor(() => expect(screen.getByText('Guest receipt')).toBeInTheDocument());
-    expect(networkAdapter.post).toHaveBeenCalledWith('/api/cart/checkout', expect.objectContaining({ cartId: 7 }));
+    expect(networkAdapter.post).toHaveBeenCalledWith('/api/cart/checkout', expect.objectContaining({ cartId: 7, saveBookingForLater: saveForLater }));
     expect(networkAdapter.post.mock.calls[0][1]).not.toHaveProperty('payment');
     expect(refreshCart).toHaveBeenCalledOnce();
     expect(closeCart).toHaveBeenCalledOnce();

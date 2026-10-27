@@ -72,9 +72,14 @@ describe('UserExists', () => {
     expect(await UserExists('free@example.com')).toBe(false);
   });
 
-  test('returns false when User.findOne rejects', async () => {
+  test('propagates database failures instead of treating an email as available', async () => {
     User.findOne.mockRejectedValue(new Error('DB error'));
-    expect(await UserExists('error@example.com')).toBe(false);
+    await expect(UserExists('error@example.com')).rejects.toThrow('DB error');
+  });
+
+  test('normalizes email before checking availability', async () => {
+    await UserExists('  Alice@Example.COM  ');
+    expect(User.findOne).toHaveBeenCalledWith({ where: { email: 'alice@example.com' } });
   });
 });
 
@@ -110,13 +115,10 @@ describe('validateUserInputs', () => {
     );
   });
 
-  test('error when email is already taken — no longer blocked (email uniqueness relaxed)', async () => {
-    User.findOne.mockResolvedValue({ id: 99 });
+  test('rejects a registered email even when the new username is available', async () => {
+    User.findOne.mockImplementation(async ({ where }) => where.email ? { id: 99 } : null);
     const errors = await validateUserInputs(validInput);
-    // Email uniqueness is no longer checked, but username may trigger
-    // Since findOne is used for both username and email lookups,
-    // reset it to distinguish. Only username uniqueness matters now.
-    expect(errors).toEqual(expect.arrayContaining(['This username is taken']));
+    expect(errors).toEqual(['A user with this email already exists']);
   });
 
   test('error when password lacks required complexity', async () => {

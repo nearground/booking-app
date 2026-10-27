@@ -140,7 +140,9 @@ const BookingConfirmation = () => {
           <Card className="print:hidden">
             <h2 className="text-base font-semibold text-slate-800">Keep your bookings together</h2>
             <p className="mt-2 text-sm text-slate-600">
-              Your purchase is complete. Creating an account is optional; verify the receipt email to see this booking in your account.
+              {confirmationData.saveBookingForLater === false
+                ? 'Your purchase is complete. You chose not to link this booking to a future account. You can still create an account for future bookings; keep this receipt for your records.'
+                : 'Your purchase is complete and saved to your receipt email for later registration. Create an account now or later and verify that email to see this booking in your account.'}
             </p>
             <Link
               to="/register"

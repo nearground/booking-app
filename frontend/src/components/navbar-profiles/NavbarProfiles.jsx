@@ -26,21 +26,21 @@ const NavbarProfiles = (props) => {
     <div>    
         {canShowUserProfile && (
         <li className="flex items-center ml-2">
-            <Link to={hasOrganizerProfile? "/organizer-profile": "/user-profile"} className="flex items-center group">
+            <Link to={hasOrganizerProfile? "/organizer-profile": "/user-profile"} aria-label={hasOrganizerProfile ? 'View organizer profile' : 'View user profile'} className="flex items-center group">
             {/* Profile picture */}
             {userDetails.profilePicture ? (
               <img
                 src={userDetails.profilePicture}
                 alt="Profile"
-                className="w-8 h-8 rounded-full border border-slate-300 group-hover:border-brand"
+                className="shrink-0 w-8 h-8 rounded-full border border-slate-300 group-hover:border-brand"
               />
             ) : (
-              <span className="w-8 h-8 rounded-full bg-slate-400 flex items-center justify-center text-white text-sm font-bold">
+              <span className="shrink-0 w-8 h-8 rounded-full bg-slate-400 flex items-center justify-center text-white text-sm font-bold">
                 {userDetails.firstName ? userDetails.firstName.charAt(0) : '?'}
               </span>
             )}
             {/* First name */}
-            <span className="font-medium text-slate-100 group-hover:text-brand">
+            <span className="hidden sm:inline-block max-w-24 truncate font-medium text-slate-100 group-hover:text-brand">
               {userDetails.firstName || 'User'}
             </span>
           </Link>

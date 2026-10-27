@@ -1,6 +1,8 @@
 import React from 'react';
+import { vi } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import CommentCard from './CommentCard';
+import { networkAdapter } from 'services/NetworkAdapter';
 
 vi.mock('services/NetworkAdapter', () => ({
   networkAdapter: {
@@ -40,6 +42,13 @@ const renderCard = (commentOverrides = {}) =>
   );
 
 describe('CommentCard review images', () => {
+  test('surfaces reply loading failures without presenting a false empty thread', async () => {
+    networkAdapter.get.mockResolvedValueOnce({ errors: ['Replies unavailable'] });
+    renderCard({ repliesCount: 2 });
+    expect(await screen.findByRole('alert')).toHaveTextContent('Replies unavailable');
+    expect(screen.getByRole('button', { name: 'Load all replies (2)' })).toBeInTheDocument();
+  });
+
   test('renders no thumbnails when images are empty', () => {
     renderCard({ images: [] });
     expect(screen.queryByAltText(/Review image/i)).not.toBeInTheDocument();

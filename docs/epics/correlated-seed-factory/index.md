@@ -3,7 +3,7 @@ title: "Correlated seed factory spike and seeder rewrite plan"
 work_id: "EPIC-correlated-seed-factory"
 work_type: epic
 template_version: 1
-status: in-progress
+status: done
 parent: null
 branch: "epic/correlated-seed-factory"
 depends_on: []
@@ -55,7 +55,7 @@ Expansion was explicitly requested. Both Stories and their implementation Tasks 
 
 - Factories should serve dev/demo seeds, backend tests and Cypress; confirm whether Cypress resets the DB between specs.
 - Is a new package acceptable (e.g. `@faker-js/faker` MIT plus an in-house graph builder)? Recommendation: yes for faker; build the correlation layer in-house on Sequelize models.
-- Risk: actual media upload requires r2-local and an authenticated `_token` cookie; current route only accepts images, and the app has no standalone Media model/table. The contract stores object-key references in `Experience.images`; MP4 needs a separate API/schema decision.
+- Actual media upload requires r2-local and an authenticated `_token` cookie. The merged organization-site media route now accepts MP4 as well as images; the app still has no standalone Media table. The spike stores object-key references in `Experience.images`; durable SQL/media materialization remains follow-on work, not part of this research release.
 
 ## Verification and completion evidence
 
@@ -64,5 +64,5 @@ Spike reproducibility and schema-reference checks grounded in `backend/server/mo
 ## Progress and decisions
 
 - 2026-10-26: User broadened scope to a full seeder rewrite plan based on a concept spike.
-- 2026-10-26: Completed Stories and spike; Epic remains `in-progress` because the full rewrite is intentionally a follow-on and not implemented here.
+- Wave 1 closeout: all scoped research/spike deliverables are complete and merged. The full seeder rewrite and durable SQL adapter are explicitly non-goals of this Epic, not unfinished Wave 1 implementation; they remain follow-on work under the published plan.
 - Spike verification: `backend/tests/seed-factory/seed-factory.test.js` passes (5 tests). Actual media upload and SQL materialization are not run; see contract limitations.
