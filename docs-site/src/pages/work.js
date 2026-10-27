@@ -7,7 +7,7 @@ const endpoint = '/internal/docs/__internal/work-index';
 const commitEndpoint = '/internal/docs/__internal/commit/';
 const docsUrl = (filePath) => {
   const withoutExtension = filePath.replace(/\.md$/i, '').replace(/\/index$/i, '');
-  return `/guides/${withoutExtension}/`;
+  return `/${withoutExtension.replace(/^docs\//, '')}/`;
 };
 const formatDate = (date) => new Date(date).toLocaleString();
 
@@ -87,7 +87,7 @@ function WorkDashboard() {
           </div>
           <div className={styles.actions}>
             <button type="button" onClick={load}>Refresh from docs + Git</button>
-            <Link to="/guides/docs/epics/">Browse work documents</Link>
+            <Link to="/epics/">Browse work documents</Link>
           </div>
         </header>
 
@@ -101,7 +101,7 @@ function WorkDashboard() {
 
             <section aria-labelledby="work-items-heading">
               <h2 id="work-items-heading">Epics, stories and tasks</h2>
-              {activeItems.length === 0 && <p>No new work documents yet. Start with the <Link to="/guides/docs/planning/workflow/">MVP planning workflow</Link>.</p>}
+              {activeItems.length === 0 && <p>No new work documents yet. Start with the <Link to="/planning/workflow/">MVP planning workflow</Link>.</p>}
               <div className={styles.workGrid}>
                 {activeItems.map((item) => (
                   <article className={styles.card} key={item.id}>
@@ -134,7 +134,7 @@ function WorkDashboard() {
               Task scope/status: committed work documents. Implementation history: Git.
               Add one exact <code>Work-Item: EPIC-slug/STORY-001/TASK-001</code>
               trailer per Task to a commit message.
-              <Link to="/guides/docs/planning/workflow/">Workflow and conventions</Link>
+              <Link to="/planning/workflow/">Workflow and conventions</Link>
             </footer>
           </>
         )}

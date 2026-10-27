@@ -1,3 +1,8 @@
+---
+sidebar_label: R2 storage plan
+sidebar_position: 2
+---
+
 # R2 Storage Plan and API Contract
 
 ## Scope

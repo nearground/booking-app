@@ -42,7 +42,7 @@ docs/
   epics/<epic-slug>/stories/STORY-001-<story-slug>/index.md
   epics/<epic-slug>/stories/STORY-001-<story-slug>/tasks/TASK-001-<task-slug>.md
   reference/
-  legacy/tasks/
+  legacy/tasks/        # archived; not published on the docs site
 ```
 
 Each Epic owns its complete document subtree. IDs are scoped:
@@ -79,7 +79,8 @@ cannot determine whether the plan is substantively correct.
   claiming full independence.
 - Keep dependencies acyclic. Children inherit branch boundaries and contracts;
   coordination must be explicitly agreed.
-- Avoid shared registries or hand-maintained sidebars. Docusaurus discovers docs.
+- Avoid shared registries or hand-maintained sidebars. Docusaurus discovers docs,
+  and the [Epics index](../epics/index.mdx) is generated from Epic front matter.
 
 ## Tracking
 
@@ -116,15 +117,17 @@ does not by itself mark a Task done.
 
 During development use the **Work dashboard** at
 `http://localhost:8080/internal/docs/work/` to browse current work and recent
-Git history; **Planning** and **Reference/Legacy** preserve document navigation.
+Git history; the **Planning** menu (Workflow, Epics, Templates) and **Reference**
+provide document navigation.
 Commit history refreshes when the dashboard is refreshed. If repository Git
 metadata is missing/unavailable, the dashboard reports that clearly rather than
 showing an empty history as if no work exists. GitHub links are shown only for
 commits present on a remote branch; local-only commits still display their SHA
 and subject.
 
-Historical plans stay in Legacy and reference material in Reference. Preserve
-their completion claims; do not invent parent Epics or Stories retroactively.
+Historical plans stay archived in `docs/legacy/` (not published on the docs
+site) and reference material in Reference. Preserve their completion claims;
+do not invent parent Epics or Stories retroactively.
 
 ## Browse during development
 
