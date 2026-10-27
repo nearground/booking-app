@@ -1,0 +1,13 @@
+FROM node:22-alpine
+
+# Git powers the work dashboard's commit history; the repo is bind-mounted with a host owner.
+RUN apk add --no-cache git \
+  && git config --system --add safe.directory /workspace
+
+WORKDIR /workspace/docs-site
+
+COPY package*.json ./
+RUN npm ci
+
+EXPOSE 3100
+CMD ["npm", "start"]

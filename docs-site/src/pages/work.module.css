@@ -1,0 +1,124 @@
+.page {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem 4rem;
+}
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.header h1 {
+  margin-bottom: 0.4rem;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.actions button,
+.commitButton {
+  cursor: pointer;
+  color: var(--ifm-font-color-base);
+}
+
+.workGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1rem;
+  margin: 1rem 0 2.5rem;
+}
+
+.card {
+  min-width: 0;
+  padding: 1rem;
+  border: 1px solid var(--ifm-color-emphasis-300);
+  border-radius: var(--ifm-card-border-radius);
+}
+
+.card h3 {
+  margin: 0.8rem 0 0.4rem;
+}
+
+.card p {
+  margin: 0.6rem 0;
+}
+
+.cardTitle,
+.commitRow {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
+.type,
+.status {
+  border-radius: 999px;
+  background: var(--ifm-color-emphasis-200);
+  padding: 0.15rem 0.6rem;
+  font-size: 0.8rem;
+  text-transform: capitalize;
+}
+
+.commitList {
+  list-style: none;
+  margin: 0.75rem 0;
+  padding: 0;
+}
+
+.commitList li {
+  border-top: 1px solid var(--ifm-color-emphasis-200);
+  padding: 0.6rem 0;
+}
+
+.commitButton {
+  border: 0;
+  background: transparent;
+  text-align: left;
+}
+
+.commitRow time,
+.updated,
+.muted {
+  color: var(--ifm-color-emphasis-700);
+  font-size: 0.85rem;
+}
+
+.changedFiles {
+  display: grid;
+  gap: 0.25rem;
+  margin: 0.5rem 0 0 1.2rem;
+}
+
+.warning,
+.error {
+  border-left: 4px solid var(--ifm-color-warning);
+  background: var(--ifm-color-warning-contrast-background);
+  padding: 0.8rem 1rem;
+}
+
+.error {
+  border-color: var(--ifm-color-danger);
+  background: var(--ifm-color-danger-contrast-background);
+}
+
+.footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  border-top: 1px solid var(--ifm-color-emphasis-300);
+  padding-top: 1rem;
+}
+
+@media (max-width: 700px) {
+  .header {
+    flex-direction: column;
+  }
+}

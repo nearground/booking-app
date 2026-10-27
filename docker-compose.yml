@@ -1,0 +1,251 @@
+services:
+
+  # React Frontend (nginx)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    container_name: pv-today-frontend
+    restart: unless-stopped
+    environment:
+      # Enable polling for file watching in Docker (required for Windows)
+      CHOKIDAR_USEPOLLING: "true"
+      WATCHPACK_POLLING: "true"
+      # Disable React's browser opening
+      BROWSER: "none"
+      # Enable Fast Refresh
+      FAST_REFRESH: "true"
+      # Proxy API and internal documentation through the frontend host.
+      API_PROXY_TARGET: http://backend:4000
+      DOCS_PROXY_TARGET: http://internal-docs:3100
+      DOCS_API_TARGET: http://internal-docs:3101
+    ports:
+      - "8080:3000"
+    volumes:
+      # Mount source code for hot reload
+      - ./frontend:/app
+      # Use anonymous volume for node_modules to prevent overwriting
+      - /app/node_modules
+    depends_on:
+      backend:
+        condition: service_healthy
+      internal-docs:
+        condition: service_healthy
+    networks:
+      - pv-today-network
+    stdin_open: true
+    tty: true
+
+  # Docusaurus project documentation, available only in the development stack
+  internal-docs:
+    build:
+      context: ./docs-site
+      dockerfile: Dockerfile.dev
+    container_name: pv-today-internal-docs
+    restart: unless-stopped
+    working_dir: /workspace/docs-site
+    volumes:
+      - ./:/workspace
+      - /workspace/docs-site/node_modules
+    networks:
+      - pv-today-network
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:3100/internal/docs/').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      timeout: 10s
+      retries: 12
+      interval: 10s
+
+  # Express API Backend
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    container_name: pv-today-api
+    restart: unless-stopped
+    environment:
+      NODE_ENV: development
+      PORT: 4000
+      # Development configuration
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-staybooker}
+      MYSQL_USER: ${MYSQL_USER:-staybooker}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?Set MYSQL_PASSWORD in .env}
+      MYSQL_HOST: ${MYSQL_HOST:-database}
+      MEDIA_PUBLIC_BASE_URL: ${MEDIA_PUBLIC_BASE_URL:-/api/media/object}
+
+      JWT_SECRET: ${JWT_SECRET:?Set a unique randomly generated JWT_SECRET in .env}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-24h}
+      R2_WORKER_BASE_URL: ${R2_WORKER_BASE_URL:-http://r2-local:8787}
+      R2_DEV_TOKEN: ${R2_DEV_TOKEN:-}
+      FRONTEND_BASE_URL: ${FRONTEND_BASE_URL:-http://localhost:3000}
+      NOTIFICATIONS_PROVIDER: ${NOTIFICATIONS_PROVIDER:-console}
+      NOTIFICATIONS_FROM_EMAIL: ${NOTIFICATIONS_FROM_EMAIL:-no-reply@example.com}
+      # Spacemail (SMTP) settings — set these in your environment or .env
+      SPACEMAIL_HOST: ${SPACEMAIL_HOST:-}
+      SPACEMAIL_PORT: ${SPACEMAIL_PORT:-587}
+      SPACEMAIL_SECURE: ${SPACEMAIL_SECURE:-false}
+      SPACEMAIL_USER: ${SPACEMAIL_USER:-}
+      SPACEMAIL_PASS: ${SPACEMAIL_PASS:-}
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      ORGANIZER_INVITE_RATE_LIMIT_MAX: ${ORGANIZER_INVITE_RATE_LIMIT_MAX:-20}
+      ORGANIZER_INVITE_RATE_LIMIT_WINDOW_MS: ${ORGANIZER_INVITE_RATE_LIMIT_WINDOW_MS:-900000}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:3000,http://localhost}
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
+      COOKIE_SAME_SITE: ${COOKIE_SAME_SITE:-lax}
+      COOKIE_DOMAIN: ${COOKIE_DOMAIN:-}
+      TRUST_PROXY: ${TRUST_PROXY:-true}
+      JSON_BODY_LIMIT: ${JSON_BODY_LIMIT:-2mb}
+      URLENCODED_BODY_LIMIT: ${URLENCODED_BODY_LIMIT:-2mb}
+      DB_SYNC_ON_STARTUP: ${DB_SYNC_ON_STARTUP:-false}
+      DB_SYNC_FORCE: ${DB_SYNC_FORCE:-false}
+      SCHEDULER_SYNC_ENABLED: ${SCHEDULER_SYNC_ENABLED:-true}
+      SCHEDULER_SYNC_CRON: ${SCHEDULER_SYNC_CRON:-0 3 * * 0}  # Every Sunday at midnight
+      AUTH_LOGIN_RATE_LIMIT_MAX: ${AUTH_LOGIN_RATE_LIMIT_MAX:-10}
+      AUTH_LOGIN_RATE_LIMIT_WINDOW_MS: ${AUTH_LOGIN_RATE_LIMIT_WINDOW_MS:-900000}
+      AUTH_REGISTER_RATE_LIMIT_MAX: ${AUTH_REGISTER_RATE_LIMIT_MAX:-10}
+      AUTH_REGISTER_RATE_LIMIT_WINDOW_MS: ${AUTH_REGISTER_RATE_LIMIT_WINDOW_MS:-3600000}
+      AUTH_FORGOT_RATE_LIMIT_MAX: ${AUTH_FORGOT_RATE_LIMIT_MAX:-8}
+      AUTH_FORGOT_RATE_LIMIT_WINDOW_MS: ${AUTH_FORGOT_RATE_LIMIT_WINDOW_MS:-3600000}
+      ORGANIZER_ONBOARDING_RATE_LIMIT_MAX: ${ORGANIZER_ONBOARDING_RATE_LIMIT_MAX:-8}
+      ORGANIZER_ONBOARDING_RATE_LIMIT_WINDOW_MS: ${ORGANIZER_ONBOARDING_RATE_LIMIT_WINDOW_MS:-3600000}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379}
+    ports:
+      - "127.0.0.1:4000:4000"
+    volumes:
+      # Mount source code for hot reload
+      - ./backend:/app
+      # Use anonymous volume for node_modules to prevent overwriting
+      - /app/node_modules
+    depends_on:
+      database:
+        condition: service_healthy
+      r2-local:
+        condition: service_healthy
+    networks:
+      - pv-today-network
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:4000/"]
+      timeout: 10s
+      retries: 5
+      interval: 10s
+
+  #Caching
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+    networks:
+      - pv-today-network
+
+  # MySQL Database
+  database:
+    image: mysql:8.0
+    container_name: pv-today-db
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?Set MYSQL_ROOT_PASSWORD in .env}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-staybooker}
+      MYSQL_USER: ${MYSQL_USER:-staybooker}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?Set MYSQL_PASSWORD in .env}
+    ports:
+      - "127.0.0.1:3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      # - ./init-db:/docker-entrypoint-initdb.d
+    networks:
+      - pv-today-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 20s
+      retries: 10
+      interval: 10s
+  # Local R2 worker for development media uploads
+  r2-local:
+    image: node:20
+    container_name: pv-today-r2-local
+    restart: unless-stopped
+    working_dir: /app
+    command: sh -c "npm install --include=optional && [ -f .dev.vars ] || cp .dev.vars.example .dev.vars && npm run dev -- --ip 0.0.0.0 --port 8787"
+    environment:
+      NODE_ENV: development
+      R2_DEV_TOKEN: ${R2_DEV_TOKEN:-}
+    ports:
+      - "127.0.0.1:8787:8787"
+    volumes:
+      - ./r2-local:/app
+      - /app/node_modules
+    networks:
+      - pv-today-network
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:8787/health').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      timeout: 10s
+      retries: 8
+      interval: 10s
+  phpmyadmin:
+    image: phpmyadmin
+    restart: always
+    container_name: phpmyadmin
+    ports:
+      - "127.0.0.1:8081:80"
+    environment:
+      PMA_HOST: database
+      PMA_PASSWORD: ${MYSQL_ROOT_PASSWORD:?Set MYSQL_ROOT_PASSWORD in .env}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-staybooker}
+      MYSQL_USER: ${MYSQL_USER:-staybooker}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?Set MYSQL_PASSWORD in .env}
+    depends_on:
+      - database
+    networks:
+      - pv-today-network
+  #PostGRES db for Umami
+  # umami-db:
+  #   container_name: "db.umami.puertovallarta.today"
+  #   image: postgres:15-alpine
+  #   environment:
+  #     POSTGRES_DB: umami
+  #     POSTGRES_USER: umami
+  #     POSTGRES_PASSWORD: umami
+  #   volumes:
+  #     - umami-db-data:/var/lib/postgresql/data
+  #   restart: always
+  #   healthcheck:
+  #     test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+  #     interval: 5s
+  #     timeout: 5s
+  #     retries: 5
+  #   networks:
+  #     - pv-today-network
+  # umami:
+  #     build:
+  #           context: ./umami
+  #           dockerfile: Dockerfile
+  #     healthcheck:
+  #       test: ["CMD-SHELL", "curl http://localhost:3030/api/heartbeat"]
+  #       interval: 5s
+  #       timeout: 5s
+  #       retries: 5
+  #     init: true
+  #     restart: always
+  #     ports:
+  #       - "3030:3000"
+  #     environment:
+  #       DATABASE_URL: "postgresql://umami:umami@umami-db:5432/umami"
+  #       APP_SECRET: 1394c438-33de-427b-8b7b-575ccb0a2152
+  #       ADMIN_PASSWORD: 'mysteryyy'
+  #     volumes:
+  #       - ./config/change-password.js:/app/scripts/change-password.js
+  #     command: ["pnpm", "npm-run-all", "check-db", "update-tracker", "change-password", "start-server"]
+  #     networks:
+  #       - pv-today-network
+  #     depends_on:
+  #       umami-db:
+  #         condition: service_healthy
+networks:
+  pv-today-network:
+    driver: bridge
+
+volumes:
+  mysql_data:
+    driver: local
+  redis_data:
+    driver: local

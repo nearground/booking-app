@@ -1,0 +1,3 @@
+# Copy to .dev.vars and set a strong local token.
+# Wrangler will expose this as env.R2_DEV_TOKEN to the worker.
+R2_DEV_TOKEN=change-me-local-r2-token

@@ -1,0 +1,24 @@
+{
+  "contact": {
+    "fullName": "Test Booker",
+    "phone": "5551234567",
+    "email": "testbooker@example.com"
+  },
+  "billing": {
+    "address": "123 Test Street",
+    "city": "Puerto Vallarta",
+    "state": "Jalisco",
+    "postalCode": "48380"
+  },
+  "payment": {
+    "nameOnCard": "Test Booker",
+    "cardNumber": "4242424242424242",
+    "expiry": "12/28",
+    "cvc": "123"
+  },
+  "dayOfContact": {
+    "phone": "5559876543",
+    "hotelName": "Hotel Rosita",
+    "comments": "Arriving from downtown"
+  }
+}

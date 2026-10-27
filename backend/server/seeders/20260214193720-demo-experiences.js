@@ -1,0 +1,1111 @@
+'use strict';
+
+const { CronExpressionParser } = require('cron-parser');
+
+/** @type {import('sequelize-cli').Migration} */
+
+module.exports = {
+  async up (queryInterface, Sequelize) {
+    //Creating users without organizations for testing purposes
+    const maleFirstNames = ['Diego', 'Luis', 'Carlos', 'Mateo', 'Jorge', 'Rafael', 'Andres', 'Pablo'];
+    const femaleFirstNames = ['Sofia', 'Valeria', 'Camila', 'Isabella', 'Fernanda', 'Gabriela', 'Daniela', 'Lucia'];
+    const maleProfilePictures = ['/images/users/guy1.webp', '/images/users/guy2.webp'];
+    const femaleProfilePictures = ['/images/users/gal1.webp', '/images/users/gal2.jpg'];
+
+    const pickRandom = (array) => array[Math.floor(Math.random() * array.length)];
+
+    var testUsers = [];
+    for (let i = 1; i <= 24; i++) {
+      const gender = Math.random() < 0.5 ? 'male' : 'female';
+      const firstName = gender === 'male' ? pickRandom(maleFirstNames) : pickRandom(femaleFirstNames);
+      const profilePicture = gender === 'male' ? pickRandom(maleProfilePictures) : pickRandom(femaleProfilePictures);
+
+      testUsers.push({
+        firstName,
+        lastName: 'Test',
+        username: `user${i}`,
+        email: `user${i}@test.com`,
+        password: '$2a$10$kP2Tt1azPi7WRtxqkSmajeSQuDJLhrcFXEyrNMzbI4q3H/IdXIyxy', // hash for "testpassword"
+        phoneNumber: '1234567890',
+        city: `Test City ${i}`,
+        country: 'Mexico',
+        isEmailVerified: true,
+        isRegistered: true,
+        profilePicture,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      });
+    }
+    const [existingUsers] = await queryInterface.sequelize.query(
+      'SELECT email FROM Users WHERE email IN (:emails)',
+      { replacements: { emails: testUsers.map((user) => user.email) } }
+    );
+    const existingUserEmails = new Set(existingUsers.map((user) => user.email));
+    const usersToInsert = testUsers.filter((user) => !existingUserEmails.has(user.email));
+    if (usersToInsert.length > 0) {
+      await queryInterface.bulkInsert('Users', usersToInsert, {});
+    }
+
+    // Keep seeded users consistent even when they already exist
+    for (const user of testUsers) {
+      await queryInterface.bulkUpdate(
+        'Users',
+        {
+          firstName: user.firstName,
+          lastName: user.lastName,
+          username: user.username,
+          password: user.password,
+          phoneNumber: user.phoneNumber,
+          city: user.city,
+          country: user.country,
+          isEmailVerified: user.isEmailVerified,
+          isRegistered: user.isRegistered,
+          profilePicture: user.profilePicture,
+          updatedAt: new Date(),
+        },
+        { email: user.email },
+        {}
+      );
+    }
+    //It would be COOL if I could get the actual address of these Geopoints from OpenStreets
+    function randomCoordinates(center, distance){
+      return `POINT(${center[0] + (Math.random() - 0.5) * distance[0]} ${center[1] + (Math.random() - 0.5) * distance[1]})`;
+    }
+    var testLocations = [];
+    for (let i = 1; i <= 7; i++) {
+      testLocations.push({
+        name: `Test Location ${i}`,
+        coordinates: Sequelize.fn('ST_GeomFromText', randomCoordinates([-105.21986, 20.64453], [0.01236 , 0.01236])),
+        country: 'Mexico',
+        state: 'Jalisco',
+        city: 'Puerto Vallarta',
+        street: `Test Street ${i}`,
+        zipCode: '11111',
+        timezone: 'America/Mexico_City',
+        createdAt: new Date(),
+        updatedAt: new Date()
+      });
+    }
+    const [existingLocations] = await queryInterface.sequelize.query(
+      'SELECT name FROM Locations WHERE name IN (:names)',
+      { replacements: { names: testLocations.map((location) => location.name) } }
+    );
+    const existingLocationNames = new Set(existingLocations.map((location) => location.name));
+    const locationsToInsert = testLocations.filter((location) => !existingLocationNames.has(location.name));
+    if (locationsToInsert.length > 0) {
+      await queryInterface.bulkInsert('Locations', locationsToInsert, {});
+    }
+
+    const [locations] = await queryInterface.sequelize.query(
+      "SELECT id, name FROM Locations WHERE name LIKE 'Test Location %' ORDER BY id ASC"
+    );
+    var testOrganizations = [];
+    for (let i = 1; i <= 3; i++) {
+      testOrganizations.push({
+        name: `Test Company ${i}`,
+        organizationUsername: `testcompany${i}`,
+        email: `contact@testcompany${i}.com`,
+        LocationId: locations[i-1].id,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      });
+    }
+    await queryInterface.bulkInsert('Organizations', testOrganizations, { ignoreDuplicates: true });
+
+
+    const [orgs] = await queryInterface.sequelize.query(
+      "SELECT id FROM Organizations WHERE name LIKE 'Test Company %' ORDER BY id ASC"
+    );
+    const [users] = await queryInterface.sequelize.query(
+      "SELECT id FROM Users WHERE email LIKE 'user%@test.com'"
+    );
+
+    var orgMembers = [];
+    for (let i = 0; i < users.length-2; i++) {
+      orgMembers.push({
+      UserId: users[i].id,
+      OrganizationId: orgs[i % orgs.length].id,
+      isAdmin: i < 3 ? true : false,   // First 3 users are admins, the rest are regular members
+      createdAt: new Date(),
+      updatedAt: new Date()
+      });
+    }
+    if (orgMembers.length > 0) {
+      await queryInterface.bulkInsert('OrganizationMembers', orgMembers, { ignoreDuplicates: true });
+
+      const organizerUserIds = Array.from(new Set(orgMembers.map((member) => member.UserId)));
+
+      const [organizerUsers] = await queryInterface.sequelize.query(
+        'SELECT id, firstName, lastName, email FROM Users WHERE id IN (:userIds)',
+        { replacements: { userIds: organizerUserIds } }
+      );
+
+      const organizerTemplates = [
+        'I specialize in guest onboarding, experience timing, and smooth day-of coordination for local experiences.',
+        'I focus on logistics planning, vendor communication, and reliable schedule execution for every experience.',
+        'I lead attendee support, check-in flow, and on-site problem solving to keep experiences running seamlessly.',
+        'I coordinate staffing, session transitions, and quality checks to deliver consistently great guest experiences.',
+        'I manage experience operations, timeline adherence, and participant communication from setup through wrap-up.',
+      ];
+
+      const organizerProfiles = organizerUsers.map((organizerUser, index) => ({
+        UserId: organizerUser.id,
+        description: organizerTemplates[index % organizerTemplates.length],
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      }));
+
+      await queryInterface.bulkInsert('Organizers', organizerProfiles, { ignoreDuplicates: true });
+
+      for (const organizerProfile of organizerProfiles) {
+        await queryInterface.bulkUpdate(
+          'Organizers',
+          {
+            description: organizerProfile.description,
+            updatedAt: new Date(),
+          },
+          { UserId: organizerProfile.UserId },
+          {}
+        );
+      }
+    }
+
+    const testLocationMap = locations.reduce((accumulator, location) => {
+      accumulator[location.name] = location.id;
+      return accumulator;
+    }, {});
+
+    const locationOwnershipByName = {
+      'Test Location 1': orgs[0]?.id,
+      'Test Location 2': orgs[1]?.id,
+      'Test Location 3': orgs[2]?.id,
+      'Test Location 4': orgs[0]?.id,
+      'Test Location 5': orgs[0]?.id,
+      'Test Location 6': orgs[1]?.id,
+      'Test Location 7': orgs[2]?.id,
+    };
+
+    for (const [locationName, ownerOrganizationId] of Object.entries(locationOwnershipByName)) {
+      const locationId = testLocationMap[locationName];
+
+      if (locationId && ownerOrganizationId) {
+        await queryInterface.bulkUpdate(
+          'Locations',
+          {
+            OrganizationId: ownerOrganizationId,
+            updatedAt: new Date(),
+          },
+          { id: locationId },
+          {}
+        );
+      }
+    }
+
+    // Backward compatibility: seeded demo image files currently live under /images/events/.
+    const rawTestExperiences = [
+      {
+        OrganizationId: orgs[0].id,
+        LocationId: testLocationMap['Test Location 4'],
+        capacity: 14,
+        duration: 150,
+        title: 'Sierra Ridge Sunrise Hike',
+        subtitle: 'Guided morning trail adventure with panoramic bay views',
+        description: `Begin before dawn with a brief safety orientation, hydration check, and route comment, then climb a sequence of moderate switchbacks that open into ridge viewpoints overlooking the bay.
+
+      Along the way, your guide shares practical trail techniques for uneven terrain, local ecology insights about dry-forest plants and seasonal birdlife, and short photo pauses timed for changing light conditions.
+
+      The final segment reaches a high lookout where the group has time for sunrise photos, quiet observation, and a relaxed cool-down before descending at a steady pace.`,
+        ratings: 4.68,
+        commentsCount: 10,
+        thumbnail: '/images/events/hiking/1.jpg',
+        userQuestionnary: [
+          {
+            questionKey: 'ready_to_have_fun',
+            prompt: 'Ready to have fun???',
+            required: false,
+          },
+        ],
+        images: [
+          '/images/events/hiking/Colorado-Dirt-Bike-Trails-1-2802882796.jpg',
+          '/images/events/hiking/Snapseed8-min-2242294099.jpg'
+        ],
+        createdAt: new Date(),
+        updatedAt: new Date()
+      },
+      {
+        OrganizationId: orgs[0].id,
+        LocationId: testLocationMap['Test Location 5'],
+        capacity: 12,
+        duration: 120,
+        title: 'Rooftop Craft Mixology Session',
+        subtitle: 'Hands-on cocktail workshop with tropical ingredients',
+        description: `This workshop starts with a guided tasting of key ingredients and flavor families, followed by a step-by-step demonstration of balance, dilution, and aroma layering for tropical cocktails.
+
+      Participants rotate through practical stations to build three different drinks using professional tools, fresh citrus, house infusions, and local spirits, while learning why technique changes texture and finish.
+
+      The final segment is a structured tasting with feedback on garnish choices, glassware pairing, and presentation details so each guest leaves with repeatable recipes and confident fundamentals.`,
+        ratings: 4.31,
+        commentsCount: 10,
+        thumbnail: '/images/events/mixology/Adobe_Stock_591027595_46a5f4e8da-3040219346.jpeg',
+        userQuestionnary: [
+          {
+            questionKey: 'where_will_youprompt_be_staying',
+            prompt: 'Ready to have fun???',
+            required: false,
+          },
+        ],
+        images: [
+          '/images/events/mixology/16185020296_6bef8f6155_z-2290716816.jpg',
+          '/images/events/mixology/Pacifico-beer-1345129699.jpeg'
+        ],
+        createdAt: new Date(),
+        updatedAt: new Date()
+      },
+      {
+        OrganizationId: orgs[1].id,
+        LocationId: testLocationMap['Test Location 6'],
+        capacity: 20,
+        duration: 180,
+        title: 'Los Arcos Coastal Sightseeing Tour',
+        subtitle: 'Scenic highlights and cultural landmarks in one route',
+        description: `Travel through a curated route of signature waterfront landmarks, old-town streets, and elevated overlooks, with guided stops that combine cultural context, architecture notes, and practical photo timing tips.
+
+      The experience blends walking segments with short transfers, allowing guests to cover diverse viewpoints without rushing, and includes dedicated time for observation at key stops near Los Arcos and the Malecón.
+
+      Throughout the tour, your guide connects each location to local traditions, public art, and neighborhood changes that shaped modern Puerto Vallarta.`,
+        ratings: 3.94,
+        commentsCount: 10,
+        thumbnail: '/images/events/sightseeing/los-arcos-malecón-3-1536x864-3329920682.jpg',
+        userQuestionnary: [
+          {
+            questionKey: 'ready_to_have_fun',
+            prompt: 'Ready to have fun???',
+            required: false,
+          },
+        ],
+        images: [
+          '/images/events/sightseeing/3979126-1490623130.jpg',
+          '/images/events/sightseeing/caballito-de-puerto-vallarta-3841453848.jpg',
+          '/images/events/sightseeing/optimizada_Discovering_the_Arts_of_Puerto_Vallarta-1608480040.jpg',
+          '/images/events/sightseeing/optimizada_puerto-vallarta-travel-guide-1246512186.jpg',
+          '/images/events/sightseeing/Puerto-Vallarta-Airport-Transfers-Old-Town-Romantic-Zone-2260430990.jpg',
+          '/images/events/sightseeing/Puerto-Vallarta-Ultimate-Guide-1-819x1024-2881566776.png',
+          '/images/events/sightseeing/visit-puerto-vallarta-2023-los-arcos-972559352.jpg'
+        ],
+        createdAt: new Date(),
+        updatedAt: new Date()
+      },
+      {
+        OrganizationId: orgs[2].id,
+        LocationId: testLocationMap['Test Location 7'],
+        capacity: 16,
+        duration: 120,
+        title: 'Old Town Taco Tour',
+        subtitle: 'Street taco crawl through neighborhood favorites',
+        description: `Move through a handpicked lineup of neighborhood taquerias and street stands, sampling distinct styles that highlight preparation methods, regional sauces, and ingredient variations from stop to stop.
+
+      Your host explains how each taco is built, why specific cuts and marinades are used, and how local preferences shape toppings, heat levels, and serving rhythm during peak hours.
+
+      Between tastings, guests hear stories from vendors and receive practical recommendations for ordering confidently, pairing beverages, and identifying specialty menus beyond the standard tourist route.`,
+        ratings: 4.82,
+        commentsCount: 10,
+        thumbnail: '/images/events/taco-tour/AdobeStock_205566472-3914830821.jpeg',
+        userQuestionnary: [
+          {
+            questionKey: 'ready_to_have_fun',
+            prompt: 'Ready to have fun???',
+            required: false,
+          },
+        ],
+        images: [
+
+          '/images/events/taco-tour/ArdHgW3PYzfXi8kZ6Pbxv7K6NphtB9Pb8cAB7UJjIxU-3713760731.jpg',
+          '/images/events/taco-tour/tacos-culture-in-puerto-vallarta-441282808.jpg'
+        ],
+        createdAt: new Date(),
+        updatedAt: new Date()
+      }
+    ];
+
+    const testExperiences = rawTestExperiences.map((experience) => ({
+      ...experience,
+      images: JSON.stringify(experience.images),
+      userQuestionnary: JSON.stringify(experience.userQuestionnary || [])
+    }));
+
+    const [existingExperiences] = await queryInterface.sequelize.query(
+      'SELECT title FROM Experiences WHERE title IN (:titles)',
+      { replacements: { titles: testExperiences.map((experience) => experience.title) } }
+    );
+    const existingExperienceTitles = new Set(existingExperiences.map((experience) => experience.title));
+    const experiencesToInsert = testExperiences.filter((experience) => !existingExperienceTitles.has(experience.title));
+    if (experiencesToInsert.length > 0) {
+      await queryInterface.bulkInsert('Experiences', experiencesToInsert, {});
+    }
+
+    for (const experience of testExperiences) {
+      await queryInterface.bulkUpdate(
+        'Experiences',
+        {
+          OrganizationId: experience.OrganizationId,
+          LocationId: experience.LocationId,
+          capacity: experience.capacity,
+          title: experience.title,
+          subtitle: experience.subtitle,
+          description: experience.description,
+          commentsCount: experience.commentsCount,
+          ratings: experience.ratings,
+          userQuestionnary: experience.userQuestionnary,
+          images: experience.images,
+          scheduling: null,
+          updatedAt: new Date(),
+        },
+        { title: experience.title },
+        {}
+      );
+    }
+
+    const [seededExperiences] = await queryInterface.sequelize.query(
+      'SELECT id, OrganizationId, title FROM Experiences WHERE title IN (:titles) ORDER BY id ASC',
+      { replacements: { titles: testExperiences.map((experience) => experience.title) } }
+    );
+
+    const [seededExperiencesWithScheduleData] = await queryInterface.sequelize.query(
+      'SELECT id, title, capacity, duration FROM Experiences WHERE id IN (:experienceIds) ORDER BY id ASC',
+      { replacements: { experienceIds: seededExperiences.map((experience) => experience.id) } }
+    );
+
+    // Cron schedules for seeded experiences (formerly stored in Experience.scheduling, now only in ScheduleTemplates)
+    const cronByTitle = {
+      'Sierra Ridge Sunrise Hike': '0 6 * * *',
+      'Los Arcos Coastal Sightseeing Tour': '0 9,13,17 * * 1,3,5',
+      'Old Town Taco Tour': '0 9,13,17 * * 1,3,5',
+    };
+
+    const now = new Date();
+    const syncWindowEnd = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000);
+
+    // We'll create ScheduleTemplate rows for experiences that have a cron 'scheduling' field,
+    // and PickedOccurrences for fallback one-off occurrences. Then materialize ScheduledExperiences
+    // that reference the corresponding source ids so the new scheduling schema is populated.
+    const scheduleTemplatesToInsert = [];
+    const pickedOccurrencesToInsert = [];
+    const materializedScheduled = [];
+
+    seededExperiencesWithScheduleData.forEach((experience) => {
+      const durationInMinutes = Number(experience.duration || 60);
+      const capacity = Number(experience.capacity || 0);
+      const cronExpression = cronByTitle[experience.title] || null;
+
+      if (!cronExpression) {
+        const fallbackStart = new Date(now);
+        fallbackStart.setDate(fallbackStart.getDate() + 7);
+        fallbackStart.setHours(10, 0, 0, 0);
+
+        [0, 7, 14].forEach((offsetDays) => {
+          const dateTime = new Date(fallbackStart);
+          dateTime.setDate(fallbackStart.getDate() + offsetDays);
+          const endDateTime = new Date(dateTime.getTime() + durationInMinutes * 60000);
+
+          // create a picked occurrence and materialized scheduled row referencing it later
+          pickedOccurrencesToInsert.push({
+            ExperienceId: experience.id,
+            dateTime,
+            endDateTime,
+            capacity,
+            status: 'active',
+            source: 'seed',
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          });
+
+          materializedScheduled.push({
+            ExperienceId: experience.id,
+            dateTime,
+            endDateTime,
+            capacity,
+            availableSpots: capacity,
+            status: 'scheduled',
+            // PickedOccurrenceId will be filled after inserting picked occurrences
+            _sourceType: 'picked',
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          });
+        });
+
+        return;
+      }
+
+      // Use Mexico City timezone for seeded experiences (Central Standard Time - Mexico)
+      const seederTimezone = 'America/Mexico_City';
+      const options = {
+        currentDate: now,
+        endDate: syncWindowEnd,
+        iterator: true,
+        tz: seederTimezone,
+      };
+
+      // create a schedule template for this experience; expansion will be materialized now
+      scheduleTemplatesToInsert.push({
+        ExperienceId: experience.id,
+        name: `${experience.title} template`,
+        ruleType: 'cron',
+        ruleCron: cronExpression,
+        durationMinutes: Number(experience.duration || 60),
+        capacity: Number(experience.capacity || 0),
+        timezone: seederTimezone,
+        active: true,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+
+      // Expand the cron now to provide demo sessions and attach to template later
+      const interval = CronExpressionParser.parse(cronExpression, options);
+      let createdCount = 0;
+
+      for (const item of interval) {
+        const dateTime = item.toDate();
+        const endDateTime = new Date(dateTime.getTime() + durationInMinutes * 60000);
+
+        materializedScheduled.push({
+          ExperienceId: experience.id,
+          dateTime,
+          endDateTime,
+          capacity,
+          availableSpots: capacity,
+          status: 'scheduled',
+          _sourceType: 'template',
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        });
+
+        createdCount += 1;
+        if (createdCount >= 24) {
+          break;
+        }
+      }
+    });
+
+    // Insert templates and picks, then resolve their generated IDs to materialize scheduled rows
+    if (scheduleTemplatesToInsert.length > 0) {
+      await queryInterface.bulkInsert('ScheduleTemplates', scheduleTemplatesToInsert, {});
+    }
+
+    if (pickedOccurrencesToInsert.length > 0) {
+      await queryInterface.bulkInsert('PickedOccurrences', pickedOccurrencesToInsert, {});
+    }
+
+    // Query back inserted templates and picks to obtain their ids
+    const [insertedTemplates] = await queryInterface.sequelize.query(
+      'SELECT id, ExperienceId FROM ScheduleTemplates WHERE ExperienceId IN (:experienceIds)',
+      { replacements: { experienceIds: seededExperiences.map((e) => e.id) } }
+    );
+
+    const templateByExperience = insertedTemplates.reduce((acc, t) => { acc[t.ExperienceId] = t.id; return acc; }, {});
+
+    const [insertedPicks] = await queryInterface.sequelize.query(
+      'SELECT id, ExperienceId, dateTime FROM PickedOccurrences WHERE ExperienceId IN (:experienceIds)',
+      { replacements: { experienceIds: seededExperiences.map((e) => e.id) } }
+    );
+
+    // Map picks by ExperienceId+dateTime string for lookup
+    const pickIndex = {};
+    insertedPicks.forEach((p) => {
+      const key = `${p.ExperienceId}::${new Date(p.dateTime).toISOString()}`;
+      pickIndex[key] = p.id;
+    });
+
+    // Build final scheduled rows with source ids
+    const finalScheduled = materializedScheduled.map((row) => {
+      if (row._sourceType === 'template') {
+        return {
+          ExperienceId: row.ExperienceId,
+          dateTime: row.dateTime,
+          endDateTime: row.endDateTime,
+          capacity: row.capacity,
+          availableSpots: row.availableSpots,
+          status: row.status,
+          ScheduleTemplateId: templateByExperience[row.ExperienceId] || null,
+          PickedOccurrenceId: null,
+          createdAt: row.createdAt,
+          updatedAt: row.updatedAt,
+        };
+      }
+
+      // picked
+      const pickKey = `${row.ExperienceId}::${new Date(row.dateTime).toISOString()}`;
+      return {
+        ExperienceId: row.ExperienceId,
+        dateTime: row.dateTime,
+        endDateTime: row.endDateTime,
+        capacity: row.capacity,
+        availableSpots: row.availableSpots,
+        status: row.status,
+        ScheduleTemplateId: null,
+        PickedOccurrenceId: pickIndex[pickKey] || null,
+        createdAt: row.createdAt,
+        updatedAt: row.updatedAt,
+      };
+    });
+
+    await queryInterface.bulkDelete('ScheduledExperiences', {
+      ExperienceId: {
+        [Sequelize.Op.in]: seededExperiences.map((experience) => experience.id),
+      },
+    }, {});
+
+    if (finalScheduled.length > 0) {
+      await queryInterface.bulkInsert('ScheduledExperiences', finalScheduled, {});
+    }
+
+    const ticketPricesByExperienceTitle = {
+      'Sierra Ridge Sunrise Hike': {
+        adultDrinksIncluded: 69.99,
+        adult: 54.99,
+        student: 39.99,
+        child: 24.99,
+      },
+      'Rooftop Craft Mixology Session': {
+        adultDrinksIncluded: 74.99,
+        adult: 59.99,
+        student: 44.99,
+        child: 29.99,
+      },
+      'Los Arcos Coastal Sightseeing Tour': {
+        adultDrinksIncluded: 64.99,
+        adult: 49.99,
+        student: 34.99,
+        child: 19.99,
+      },
+      'Old Town Taco Tour': {
+        adultDrinksIncluded: 59.99,
+        adult: 44.99,
+        student: 32.99,
+        child: 17.99,
+      },
+    };
+
+    const ticketTiers = [];
+    const timestamp = new Date();
+
+    seededExperiences.forEach((experience) => {
+      const prices = ticketPricesByExperienceTitle[experience.title] || {
+        adultDrinksIncluded: 59.99,
+        adult: 44.99,
+        student: 34.99,
+        child: 19.99,
+      };
+
+      const baseTiers = [
+        {
+          title: 'Adult',
+          description: 'Drinks included',
+          minAge: 18,
+          maxAge: null,
+          idType: 'passport',
+          price: prices.adultDrinksIncluded,
+          userQuestionnary: JSON.stringify([
+            { questionKey: 'confirm_18_plus', prompt: 'I confirm I am 18 years of age or older', required: true, type: 'boolean' },
+          ]),
+        },
+        {
+          title: 'Adult',
+          description: null,
+          minAge: 15,
+          maxAge: null,
+          idType: null,
+          price: prices.adult,
+        },
+        {
+          title: 'Student',
+          description: null,
+          minAge: 15,
+          maxAge: null,
+          idType: 'student ID',
+          price: prices.student,
+        },
+        {
+          title: 'Child',
+          description: null,
+          minAge: 2,
+          maxAge: 15,
+          idType: null,
+          price: prices.child,
+        },
+      ];
+
+      baseTiers.forEach((tier) => {
+        const tierRow = {
+          ExperienceId: experience.id,
+          title: tier.title,
+          description: tier.description,
+          minAge: tier.minAge,
+          maxAge: tier.maxAge,
+          maxTickets: 10,
+          idType: tier.idType,
+          price: tier.price,
+          userQuestionnary: tier.userQuestionnary || null,
+          createdAt: timestamp,
+          updatedAt: timestamp,
+        };
+
+        ticketTiers.push(tierRow);
+      });
+    });
+
+    await queryInterface.bulkDelete('TicketTiers', {
+      ExperienceId: {
+        [Sequelize.Op.in]: seededExperiences.map((experience) => experience.id),
+      },
+    }, {});
+
+    if (ticketTiers.length > 0) {
+      await queryInterface.bulkInsert('TicketTiers', ticketTiers, {});
+    }
+
+    const [organizationMembers] = await queryInterface.sequelize.query(
+      'SELECT UserId, OrganizationId FROM OrganizationMembers WHERE OrganizationId IN (:orgIds) ORDER BY UserId ASC',
+      { replacements: { orgIds: orgs.map((organization) => organization.id) } }
+    );
+
+    const membersByOrganization = organizationMembers.reduce((accumulator, member) => {
+      if (!accumulator[member.OrganizationId]) {
+        accumulator[member.OrganizationId] = [];
+      }
+      accumulator[member.OrganizationId].push(member.UserId);
+      return accumulator;
+    }, {});
+    const experienceOrganizers = [];
+    seededExperiences.forEach((experience) => {
+      const memberIds = membersByOrganization[experience.OrganizationId] || [];
+      const selectedMemberIds = memberIds.slice(0, Math.min(2, memberIds.length));
+
+      selectedMemberIds.forEach((userId) => {
+        const organizerRow = {
+          ExperienceId: experience.id,
+          UserId: userId,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        };
+        experienceOrganizers.push(organizerRow);
+      });
+    });
+
+    if (experienceOrganizers.length > 0) {
+      await queryInterface.bulkInsert('ExperienceOrganizers', experienceOrganizers, { ignoreDuplicates: true });
+    }
+
+    const organizerUserIds = Array.from(new Set(experienceOrganizers.map((organizer) => organizer.UserId)));
+
+    const [existingOrganizers] = await queryInterface.sequelize.query(
+      'SELECT id, UserId FROM Organizers WHERE UserId IN (:userIds) ORDER BY UserId ASC, id ASC',
+      { replacements: { userIds: organizerUserIds } }
+    );
+
+    const organizerIdsToDelete = [];
+    const seenOrganizerUserIds = new Set();
+    existingOrganizers.forEach((organizer) => {
+      if (seenOrganizerUserIds.has(organizer.UserId)) {
+        organizerIdsToDelete.push(organizer.id);
+        return;
+      }
+
+      seenOrganizerUserIds.add(organizer.UserId);
+    });
+
+    if (organizerIdsToDelete.length > 0) {
+      await queryInterface.bulkDelete('Comments', {
+        CommentableType: 'Organizer',
+        CommentableId: {
+          [Sequelize.Op.in]: organizerIdsToDelete,
+        },
+      }, {});
+
+      await queryInterface.bulkDelete('Organizers', {
+        id: {
+          [Sequelize.Op.in]: organizerIdsToDelete,
+        },
+      }, {});
+    }
+
+    const [seededOrganizers] = await queryInterface.sequelize.query(
+      'SELECT id, UserId FROM Organizers WHERE UserId IN (:userIds) ORDER BY id ASC',
+      { replacements: { userIds: organizerUserIds } }
+    );
+
+    const sentimentPool = ['positive', 'positive', 'positive', 'mixed', 'neutral'];
+    const anonymityLevels = [0, 1, 2];
+    const reviewImagePoolByTitle = rawTestExperiences.reduce((accumulator, experience) => {
+      accumulator[experience.title] = [
+        experience.thumbnail,
+        ...(Array.isArray(experience.images) ? experience.images : []),
+      ].filter(Boolean);
+      return accumulator;
+    }, {});
+
+    const buildSeededReviewImages = (experienceTitle, reviewIndex) => {
+      const pool = reviewImagePoolByTitle[experienceTitle] || [];
+
+      if (pool.length === 0 || reviewIndex % 3 !== 0) {
+        return [];
+      }
+
+      const maxImages = Math.min(3, pool.length);
+      const imageCount = reviewIndex % 2 === 0 ? maxImages : Math.min(2, maxImages);
+
+      return Array.from({ length: imageCount }, (_, offset) => {
+        const imageUrl = pool[(reviewIndex + offset) % pool.length];
+
+        return {
+          imageUrl,
+          accessibleText: `${experienceTitle} guest photo ${offset + 1}`,
+        };
+      });
+    };
+
+    const buildCommentByTitle = (experienceTitle, sentiment) => {
+      if (experienceTitle.toLowerCase().includes('hike')) {
+        if (sentiment === 'positive') {
+          return {
+            title: 'Great Sunrise Trail Experience',
+            comment: 'The pace was well managed, the guide kept everyone safe on the switchbacks, and the ridge sunrise views were worth the early start. I would book this hike again.',
+          };
+        }
+
+        if (sentiment === 'mixed') {
+          return {
+            title: 'Beautiful Views, Tougher Than Expected',
+            comment: 'The route and scenery were excellent, but the uphill sections felt more challenging than I anticipated. Still, the guide support and summit views made it a solid experience.',
+          };
+        }
+
+        return {
+          title: 'Scenic and Well Organized',
+          comment: 'This hike delivered nice lookout points and clear instructions throughout. It was a good outdoor activity with a reliable route and friendly group atmosphere.',
+        };
+      }
+
+      if (experienceTitle.toLowerCase().includes('mixology')) {
+        if (sentiment === 'positive') {
+          return {
+            title: 'Fun and Practical Mixology Class',
+            comment: 'Excellent workshop format with useful techniques I can repeat at home. The ingredient tasting and cocktail balancing tips were clear, interactive, and very enjoyable.',
+          };
+        }
+
+        if (sentiment === 'mixed') {
+          return {
+            title: 'Good Lesson, Slightly Fast Pace',
+            comment: 'The class covered strong fundamentals and the drinks tasted great, but some parts moved quickly for beginners. Overall, it was still a valuable and entertaining session.',
+          };
+        }
+
+        return {
+          title: 'Solid Intro to Craft Cocktails',
+          comment: 'The host explained tools, flavor balance, and garnish choices in a straightforward way. It felt organized and approachable, especially for first-time participants.',
+        };
+      }
+
+      if (experienceTitle.toLowerCase().includes('sightseeing') || experienceTitle.toLowerCase().includes('los arcos')) {
+        if (sentiment === 'positive') {
+          return {
+            title: 'Excellent Coastal Sightseeing Tour',
+            comment: 'Great route planning and timing across landmarks, viewpoints, and old-town areas. The local context from the guide added depth and made each stop more meaningful.',
+          };
+        }
+
+        if (sentiment === 'mixed') {
+          return {
+            title: 'Nice Stops, Busy in Some Areas',
+            comment: 'The highlights were very photogenic and informative, though a couple of stops felt crowded during peak hours. The overall pacing and landmark coverage were still good.',
+          };
+        }
+
+        return {
+          title: 'Reliable Tour of Key Highlights',
+          comment: 'A balanced itinerary with scenic viewpoints and cultural notes along the way. It is a dependable option to see major Puerto Vallarta spots in one experience.',
+        };
+      }
+
+      if (sentiment === 'positive') {
+        return {
+          title: 'Delicious and Authentic Taco Crawl',
+          comment: 'Fantastic taco variety at each stop, with clear guidance on what to try and why each style is different. The host made the whole route fun and informative.',
+        };
+      }
+
+      if (sentiment === 'mixed') {
+        return {
+          title: 'Great Flavor, Slightly Long Route',
+          comment: 'The food quality was excellent and the vendor stories were interesting, but the full route took longer than expected. Even so, it was a worthwhile local food experience.',
+        };
+      }
+
+      return {
+        title: 'Tasty and Well Guided Food Tour',
+        comment: 'Good balance of flavor, local context, and practical ordering tips at each taqueria. This was a comfortable way to explore neighborhood taco favorites.',
+      };
+    };
+
+    const clampToStarRange = (value) => Math.max(3, Math.min(5, value));
+
+    const buildOrganizerComment = (sentiment) => {
+      if (sentiment === 'positive') {
+        return {
+          title: 'Excellent Organizer and Communication',
+          comment: 'The organizer was professional, responsive, and very clear with experience details. Logistics were smooth and the overall guest experience felt thoughtful from start to finish.',
+        };
+      }
+
+      if (sentiment === 'mixed') {
+        return {
+          title: 'Good Support with Minor Delays',
+          comment: 'Communication was generally helpful and the organizer handled the experience well, though a couple updates came later than expected. Overall, the experience was still positive.',
+        };
+      }
+
+      return {
+        title: 'Reliable and Helpful Host',
+        comment: 'The organizer provided clear instructions, answered questions quickly, and kept the experience flow organized. A dependable host for a comfortable and enjoyable experience.',
+      };
+    };
+
+    const experienceComments = [];
+    const organizerComments = [];
+    const commentTimestamp = new Date();
+
+    seededExperiences.forEach((experience) => {
+      users.forEach((user, userIndex) => {
+        const sentiment = sentimentPool[Math.floor(Math.random() * sentimentPool.length)];
+        const anonymity = anonymityLevels[Math.floor(Math.random() * anonymityLevels.length)];
+
+        let stars;
+        if (sentiment === 'positive') {
+          stars = clampToStarRange(4 + Math.floor(Math.random() * 2));
+        } else if (sentiment === 'mixed') {
+          stars = clampToStarRange(3 + Math.floor(Math.random() * 2));
+        } else {
+          stars = 3;
+        }
+
+        const sentimentComment = buildCommentByTitle(experience.title, sentiment);
+
+        experienceComments.push({
+          UserId: user.id,
+          CommentableId: experience.id,
+          CommentableType: 'Experience',
+          stars,
+          title: sentimentComment.title,
+          comment: sentimentComment.comment,
+          anonymity,
+          images: JSON.stringify(buildSeededReviewImages(experience.title, userIndex)),
+          createdAt: commentTimestamp,
+          updatedAt: commentTimestamp,
+        });
+      });
+    });
+
+    seededOrganizers.forEach((organizer) => {
+      users.forEach((user) => {
+        if (user.id === organizer.UserId) {
+          return;
+        }
+
+        const sentiment = sentimentPool[Math.floor(Math.random() * sentimentPool.length)];
+        const anonymity = anonymityLevels[Math.floor(Math.random() * anonymityLevels.length)];
+
+        let stars;
+        if (sentiment === 'positive') {
+          stars = clampToStarRange(4 + Math.floor(Math.random() * 2));
+        } else if (sentiment === 'mixed') {
+          stars = clampToStarRange(3 + Math.floor(Math.random() * 2));
+        } else {
+          stars = 3;
+        }
+
+        const sentimentComment = buildOrganizerComment(sentiment);
+
+        organizerComments.push({
+          UserId: user.id,
+          CommentableId: organizer.id,
+          CommentableType: 'Organizer',
+          stars,
+          title: sentimentComment.title,
+          comment: sentimentComment.comment,
+          anonymity,
+          images: JSON.stringify([]),
+          createdAt: commentTimestamp,
+          updatedAt: commentTimestamp,
+        });
+      });
+    });
+
+    await queryInterface.bulkDelete('Comments', {
+      CommentableType: 'Experience',
+      CommentableId: {
+        [Sequelize.Op.in]: seededExperiences.map((experience) => experience.id),
+      },
+      UserId: {
+        [Sequelize.Op.in]: users.map((user) => user.id),
+      },
+    }, {});
+
+    await queryInterface.bulkDelete('Comments', {
+      CommentableType: 'Organizer',
+      CommentableId: {
+        [Sequelize.Op.in]: seededOrganizers.map((organizer) => organizer.id),
+      },
+      UserId: {
+        [Sequelize.Op.in]: users.map((user) => user.id),
+      },
+    }, {});
+
+    if (experienceComments.length > 0) {
+      await queryInterface.bulkInsert('Comments', experienceComments, {});
+    }
+
+    if (organizerComments.length > 0) {
+      await queryInterface.bulkInsert('Comments', organizerComments, {});
+    }
+
+
+
+  },
+
+  async down (queryInterface, Sequelize) {
+    const transaction = await queryInterface.sequelize.transaction();
+
+    try {
+      const testUserEmails = Array.from({ length: 24 }, (_, index) => `user${index + 1}@test.com`);
+      const testLocationNames = Array.from({ length: 7 }, (_, index) => `Test Location ${index + 1}`);
+      const seededExperienceTitles = [
+        'Sierra Ridge Sunrise Hike',
+        'Rooftop Craft Mixology Session',
+        'Los Arcos Coastal Sightseeing Tour',
+        'Old Town Taco Tour'
+      ];
+
+      const [seededExperiences] = await queryInterface.sequelize.query(
+        'SELECT id FROM Experiences WHERE title IN (:titles)',
+        { replacements: { titles: seededExperienceTitles }, transaction }
+      );
+
+      const [seededOrganizations] = await queryInterface.sequelize.query(
+        "SELECT id FROM Organizations WHERE name LIKE 'Test Company %'",
+        { transaction }
+      );
+
+      const [seededUsers] = await queryInterface.sequelize.query(
+        'SELECT id FROM Users WHERE email IN (:emails)',
+        { replacements: { emails: testUserEmails }, transaction }
+      );
+
+      const seededExperienceIds = seededExperiences.map((experience) => experience.id);
+      const seededUserIds = seededUsers.map((user) => user.id);
+      const seededOrganizationIds = seededOrganizations.map((organization) => organization.id);
+
+      const [seededOrganizers] = await queryInterface.sequelize.query(
+        'SELECT id FROM Organizers WHERE UserId IN (:userIds)',
+        { replacements: { userIds: seededUserIds.length ? seededUserIds : [-1] }, transaction }
+      );
+
+      const seededOrganizerIds = seededOrganizers.map((organizer) => organizer.id);
+
+      if (seededExperienceIds.length > 0 && seededUserIds.length > 0) {
+        await queryInterface.bulkDelete('Comments', {
+          CommentableType: 'Experience',
+          CommentableId: {
+            [Sequelize.Op.in]: seededExperienceIds
+          },
+          UserId: {
+            [Sequelize.Op.in]: seededUserIds
+          }
+        }, { transaction });
+      }
+
+      if (seededOrganizerIds.length > 0 && seededUserIds.length > 0) {
+        await queryInterface.bulkDelete('Comments', {
+          CommentableType: 'Organizer',
+          CommentableId: {
+            [Sequelize.Op.in]: seededOrganizerIds
+          },
+          UserId: {
+            [Sequelize.Op.in]: seededUserIds
+          }
+        }, { transaction });
+      }
+
+      if (seededExperienceIds.length > 0) {
+        await queryInterface.bulkDelete('ScheduledExperiences', {
+          ExperienceId: {
+            [Sequelize.Op.in]: seededExperienceIds
+          }
+        }, { transaction });
+
+        await queryInterface.bulkDelete('TicketTiers', {
+          ExperienceId: {
+            [Sequelize.Op.in]: seededExperienceIds
+          }
+        }, { transaction });
+
+        await queryInterface.bulkDelete('ExperienceOrganizers', {
+          ExperienceId: {
+            [Sequelize.Op.in]: seededExperienceIds
+          }
+        }, { transaction });
+      }
+
+      if (seededOrganizationIds.length > 0 && seededUserIds.length > 0) {
+        await queryInterface.bulkDelete('OrganizationMembers', {
+          OrganizationId: {
+            [Sequelize.Op.in]: seededOrganizationIds
+          },
+          UserId: {
+            [Sequelize.Op.in]: seededUserIds
+          }
+        }, { transaction });
+      }
+
+      if (seededUserIds.length > 0) {
+        await queryInterface.bulkDelete('Organizers', {
+          UserId: {
+            [Sequelize.Op.in]: seededUserIds
+          }
+        }, { transaction });
+      }
+
+      if (seededExperienceIds.length > 0) {
+        await queryInterface.bulkDelete('Experiences', {
+          id: {
+            [Sequelize.Op.in]: seededExperienceIds
+          }
+        }, { transaction });
+      }
+
+      await queryInterface.bulkDelete('Users', {
+        email: {
+          [Sequelize.Op.in]: testUserEmails
+        }
+      }, { transaction });
+
+      if (seededOrganizationIds.length > 0) {
+        await queryInterface.bulkDelete('Organizations', {
+          id: {
+            [Sequelize.Op.in]: seededOrganizationIds
+          }
+        }, { transaction });
+      }
+
+      await queryInterface.bulkDelete('Locations', {
+        name: {
+          [Sequelize.Op.in]: testLocationNames
+        }
+      }, { transaction });
+
+      await transaction.commit();
+    } catch (error) {
+      await transaction.rollback();
+      throw error;
+    }
+  }
+};

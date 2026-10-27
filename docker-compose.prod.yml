@@ -1,0 +1,140 @@
+services:
+  # MySQL Database
+  database:
+    image: mysql:8.0
+    container_name: pv-today-db
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?Set MYSQL_ROOT_PASSWORD in .env}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-staybooker}
+      MYSQL_USER: ${MYSQL_USER:-staybooker}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?Set MYSQL_PASSWORD in .env}
+    ports:
+      - "127.0.0.1:3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      #- ./init-db:/docker-entrypoint-initdb.d
+    networks:
+      - pv-today-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 20s
+      retries: 10
+      interval: 10s
+      
+  phpmyadmin:
+    image: phpmyadmin
+    restart: always
+    container_name: phpmyadmin
+    ports:
+      - "127.0.0.1:8081:80"
+    environment:
+      PMA_HOST: database
+      PMA_PASSWORD: ${MYSQL_ROOT_PASSWORD:?Set MYSQL_ROOT_PASSWORD in .env}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-staybooker}
+      MYSQL_USER: ${MYSQL_USER:-staybooker}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?Set MYSQL_PASSWORD in .env}
+    depends_on:
+      - database
+    networks:
+      - pv-today-network
+      
+  # Express API Backend (Production)
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: pv-today-api
+    restart: always
+    environment:
+      NODE_ENV: production
+      PORT: 4000
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-staybooker}
+      MYSQL_USER: ${MYSQL_USER:-staybooker}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?Set MYSQL_PASSWORD in .env}
+      MYSQL_HOST: database
+      JWT_SECRET: ${JWT_SECRET:?Set a unique randomly generated JWT_SECRET in .env}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-24h}
+      FRONTEND_BASE_URL: ${FRONTEND_BASE_URL:-http://localhost}
+      NOTIFICATIONS_PROVIDER: ${NOTIFICATIONS_PROVIDER:-console}
+      NOTIFICATIONS_FROM_EMAIL: ${NOTIFICATIONS_FROM_EMAIL:-no-reply@example.com}
+      # Spacemail (SMTP) settings for production
+      SPACEMAIL_HOST: ${SPACEMAIL_HOST:-}
+      SPACEMAIL_PORT: ${SPACEMAIL_PORT:-587}
+      SPACEMAIL_SECURE: ${SPACEMAIL_SECURE:-true}
+      SPACEMAIL_USER: ${SPACEMAIL_USER:-}
+      SPACEMAIL_PASS: ${SPACEMAIL_PASS:-}
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      ORGANIZER_INVITE_RATE_LIMIT_MAX: ${ORGANIZER_INVITE_RATE_LIMIT_MAX:-20}
+      ORGANIZER_INVITE_RATE_LIMIT_WINDOW_MS: ${ORGANIZER_INVITE_RATE_LIMIT_WINDOW_MS:-900000}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost}
+      COOKIE_SECURE: ${COOKIE_SECURE:-true}
+      COOKIE_SAME_SITE: ${COOKIE_SAME_SITE:-lax}
+      COOKIE_DOMAIN: ${COOKIE_DOMAIN:-}
+      TRUST_PROXY: ${TRUST_PROXY:-true}
+      JSON_BODY_LIMIT: ${JSON_BODY_LIMIT:-2mb}
+      URLENCODED_BODY_LIMIT: ${URLENCODED_BODY_LIMIT:-2mb}
+      DB_SYNC_ON_STARTUP: ${DB_SYNC_ON_STARTUP:-false}
+      DB_SYNC_FORCE: ${DB_SYNC_FORCE:-false}
+      SCHEDULER_SYNC_ENABLED: ${SCHEDULER_SYNC_ENABLED:-false}
+      SCHEDULER_SYNC_CRON: ${SCHEDULER_SYNC_CRON:-0 0 * * *}
+      AUTH_LOGIN_RATE_LIMIT_MAX: ${AUTH_LOGIN_RATE_LIMIT_MAX:-10}
+      AUTH_LOGIN_RATE_LIMIT_WINDOW_MS: ${AUTH_LOGIN_RATE_LIMIT_WINDOW_MS:-900000}
+      AUTH_REGISTER_RATE_LIMIT_MAX: ${AUTH_REGISTER_RATE_LIMIT_MAX:-10}
+      AUTH_REGISTER_RATE_LIMIT_WINDOW_MS: ${AUTH_REGISTER_RATE_LIMIT_WINDOW_MS:-3600000}
+      AUTH_FORGOT_RATE_LIMIT_MAX: ${AUTH_FORGOT_RATE_LIMIT_MAX:-8}
+      AUTH_FORGOT_RATE_LIMIT_WINDOW_MS: ${AUTH_FORGOT_RATE_LIMIT_WINDOW_MS:-3600000}
+      ORGANIZER_ONBOARDING_RATE_LIMIT_MAX: ${ORGANIZER_ONBOARDING_RATE_LIMIT_MAX:-8}
+      ORGANIZER_ONBOARDING_RATE_LIMIT_WINDOW_MS: ${ORGANIZER_ONBOARDING_RATE_LIMIT_WINDOW_MS:-3600000}
+      # REDIS_URL: use external/managed Redis in production (set in environment or secrets)
+      REDIS_URL: ${REDIS_URL}
+    ports:
+      - "127.0.0.1:4000:4000"
+    depends_on:
+      database:
+        condition: service_healthy
+    networks:
+      - pv-today-network
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:4000/"]
+      timeout: 10s
+      retries: 5
+      interval: 10s
+
+  # React Frontend (Production with Nginx)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: pv-today-frontend
+    restart: always
+    ports:
+      - "80:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - pv-today-network
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:80/"]
+      timeout: 10s
+      retries: 3
+      interval: 10s
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+    networks:
+      - pv-today-network
+
+networks:
+  pv-today-network:
+    driver: bridge
+
+volumes:
+  mysql_data:
+    driver: local
+  redis_data:
+    driver: local

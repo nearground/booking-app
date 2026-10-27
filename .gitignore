@@ -1,0 +1,36 @@
+# Environment variables
+.env
+
+# Docker volumes
+mysql_data/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Docusaurus documentation site
+docs-site/node_modules/
+docs-site/.docusaurus/
+docs-site/build/
+
+# Dependencies and build output
+node_modules/
+frontend/build/
+frontend/dist/
+.vite/
+coverage/
+frontend/cypress/videos/
+frontend/cypress/screenshots/
+
+# Logs
+*.log
+npm-debug.log*
+
+# Local R2 (Wrangler)
+r2-local/node_modules/
+r2-local/.wrangler/
+r2-local/.dev.vars

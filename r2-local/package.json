@@ -1,0 +1,14 @@
+{
+  "name": "pv-today-local-r2",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev --local --persist-to ./.wrangler/state --var R2_DEV_TOKEN=\"${R2_DEV_TOKEN}\"",
+    "dev:remote": "wrangler dev",
+    "check": "wrangler deploy --dry-run"
+  },
+  "devDependencies": {
+    "wrangler": "^4.54.0"
+  }
+}

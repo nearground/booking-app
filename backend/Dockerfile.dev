@@ -1,0 +1,23 @@
+# Development Dockerfile for hot reload
+FROM node:18-alpine
+
+# Set working directory
+WORKDIR /app
+
+# Copy package files
+COPY package*.json ./
+
+# Install all dependencies (including dev dependencies for nodemon)
+RUN npm install
+
+# Copy application code (will be overridden by volume mount in dev)
+#COPY . .
+
+# Expose port
+EXPOSE 4000
+
+# Set environment to development
+ENV NODE_ENV=development
+
+# Start the application with nodemon for hot reload
+CMD ["npx", "nodemon", "./server/bin/www"]

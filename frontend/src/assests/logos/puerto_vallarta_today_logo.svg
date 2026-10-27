@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 90" role="img" aria-labelledby="title desc">
+  <title id="title">PUERTO VALLARTA TODAY</title>
+  <desc id="desc">Text logo with PUERTO VALLARTA and small TODAY below</desc>
+  <rect width="560" height="90" fill="none" />
+  <text x="0" y="44" fill="#ffffff" font-family="Jost, Arial, sans-serif" font-size="40" font-weight="700" letter-spacing="2">PUERTO VALLARTA</text>
+  <text x="2" y="72" fill="#ffffff" font-family="Jost, Arial, sans-serif" font-size="16" font-weight="500" letter-spacing="8">TODAY</text>
+</svg>

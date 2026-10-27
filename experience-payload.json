@@ -1,0 +1,15 @@
+{
+  "organizationId": 2,
+  "locationId": 9,
+  "title": "Test Experience 2",
+  "capacity": 10,
+  "duration": 60,
+  "subtitle": "A test",
+  "description": "description",
+  "thumbnail": "users/2/experience-thumbnail/test.jpg",
+  "images": [
+    "users/2/experience-gallery/test1.jpg"
+  ],
+  "userQuestionnary": [],
+  "ticketTiers": []
+}
