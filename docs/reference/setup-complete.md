@@ -124,6 +124,31 @@ JWT_EXPIRES_IN=24h
 
 **⚠️ IMPORTANT**: Change `JWT_SECRET` and passwords for production!
 
+### Booking confirmation emails
+
+Email is sent by the backend, not a separate Compose service. Set
+`NOTIFICATIONS_PROVIDER=smtp` and configure `NOTIFICATIONS_FROM_EMAIL`,
+`SPACEMAIL_HOST`, `SPACEMAIL_PORT`, `SPACEMAIL_SECURE`, `SPACEMAIL_USER`, and
+`SPACEMAIL_PASS` in the root `.env`. The `console` provider only logs messages;
+`disabled` does not send anything.
+
+Single-quote SMTP passwords containing `$`, for example
+`SPACEMAIL_PASS='your-literal-password'`, so Compose does not interpolate parts
+of the password. Never commit credentials. Apply environment changes with
+`docker compose up -d --no-deps backend`; restarting alone does not reload them.
+
+Checkout commits the booking before attempting email, then stores
+`metadata.confirmationEmail` on the order with `status` (`sent` or `failed`) and
+`attemptedAt`. Checkout and confirmation responses expose this as
+`confirmationEmail`; the guest receipt preserves it without exposing its
+capability metadata. `sent` means the email provider accepted the message,
+not that it reached the inbox. Transport connection, greeting and socket
+timeouts bound the SMTP wait.
+
+The confirmation page and account booking list warn when sending failed, without
+asking customers to book again. Orders created before this flag was added have
+unknown email status. No automatic retry or resend is performed.
+
 ## 🐳 Services
 
 ### 1. Database (MySQL)

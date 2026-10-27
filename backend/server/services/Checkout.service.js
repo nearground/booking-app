@@ -250,27 +250,57 @@ export const checkoutCart = async (cartId, customerId, billingInfo, contactInfo 
             include: [{ model: OrderItem, as: 'Items' }],
         });
 
-        // Send booking confirmation email (fire-and-forget)
+        // The booking is committed before email is attempted; a mail failure must not
+        // turn a completed purchase into an error that encourages duplicate checkout.
+        let emailStatus = 'failed';
         if (result && result.mainContactEmail) {
             const items = Array.isArray(result.Items) ? result.Items : [];
-            sendNotification({
-                template: 'booking-confirmation',
-                to: result.mainContactEmail,
-                payload: {
-                    mainContactName: result.mainContactName || '',
-                    orderNumber: result.orderNumber,
-                    totalAmount: result.totalAmount,
-                    items: items.map((i) => ({
-                        description: i.description,
-                        quantity: i.quantity,
-                        totalPrice: i.totalPrice,
-                        confirmationCode: i.metadata?.confirmationCode || null,
-                    })),
-                },
-            }).catch((err) => {
+            try {
+                const notification = await sendNotification({
+                    template: 'booking-confirmation',
+                    to: result.mainContactEmail,
+                    payload: {
+                        mainContactName: result.mainContactName || '',
+                        orderNumber: result.orderNumber,
+                        totalAmount: result.totalAmount,
+                        items: items.map((i) => ({
+                            description: i.description,
+                            quantity: i.quantity,
+                            totalPrice: i.totalPrice,
+                            confirmationCode: i.metadata?.confirmationCode || null,
+                        })),
+                    },
+                });
+                if (notification.sent && !['console', 'disabled'].includes(notification.provider)) {
+                    emailStatus = 'sent';
+                } else {
+                    // eslint-disable-next-line no-console
+                    console.error('[checkout] booking confirmation email not sent', {
+                        orderId: order.id,
+                        provider: notification.provider,
+                    });
+                }
+            } catch (error) {
                 // eslint-disable-next-line no-console
-                console.error('[checkout] booking confirmation email failed', err && err.message ? err.message : err);
-            });
+                console.error('[checkout] booking confirmation email failed', { orderId: order.id, message: error.message });
+            }
+        } else {
+            // eslint-disable-next-line no-console
+            console.error('[checkout] booking confirmation recipient missing', { orderId: order.id });
+        }
+
+        if (result) {
+            const metadata = {
+                ...result.metadata,
+                confirmationEmail: { status: emailStatus, attemptedAt: new Date().toISOString() },
+            };
+            result.setDataValue('metadata', metadata);
+            try {
+                await result.update({ metadata });
+            } catch (error) {
+                // eslint-disable-next-line no-console
+                console.error('[checkout] could not persist confirmation email status', { orderId: order.id, message: error.message });
+            }
         }
 
         return result;

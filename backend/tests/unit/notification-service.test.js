@@ -62,6 +62,11 @@ describe('sendNotification', () => {
     const result = await sendNotification({ template: 'test', to: 'a@b.com', payload: {} });
     expect(result).toEqual({ sent: true, provider: 'smtp' });
     expect(mockSendMail).toHaveBeenCalledTimes(1);
+    expect(nodemailer.createTransport).toHaveBeenCalledWith(expect.objectContaining({
+      connectionTimeout: 10000,
+      greetingTimeout: 10000,
+      socketTimeout: 15000,
+    }));
   });
 
   test('smtp send failure returns sent:false with reason and masked email', async () => {

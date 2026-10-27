@@ -67,6 +67,9 @@ const smtpProvider = async ({ template, to, payload }) => {
         host,
         port,
         secure,
+        connectionTimeout: 10000,
+        greetingTimeout: 10000,
+        socketTimeout: 15000,
         ...(user ? { auth: { user, pass } } : {}),
     });
 

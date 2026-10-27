@@ -49,15 +49,7 @@ jest.mock('../../server/models/Order.model.js', () => ({
             update: jest.fn().mockResolvedValue({}),
         });
     }),
-    findByPk: jest.fn().mockResolvedValue({
-        id: 1,
-        orderNumber: 'ORD-TEST-0001',
-        status: 'pending',
-        mainContactEmail: 'guest@example.com',
-        mainContactName: 'Jane Doe',
-        totalAmount: 100.00,
-        Items: [],
-    }),
+    findByPk: jest.fn(),
 }));
 
 jest.mock('../../server/models/OrderItem.model.js', () => ({
@@ -166,6 +158,7 @@ const makeBillingInfo = () => ({
 
 import { checkoutCart } from '../../server/services/Checkout.service.js';
 import Cart from '../../server/models/Cart.model.js';
+import Order from '../../server/models/Order.model.js';
 import OrderItem from '../../server/models/OrderItem.model.js';
 import ExperienceReservation from '../../server/models/ExperienceReservation.model.js';
 import ServiceReservation from '../../server/models/ServiceReservation.model.js';
@@ -178,6 +171,18 @@ import { sendNotification } from '../../server/services/Notification.service.js'
 
 beforeEach(() => {
     jest.clearAllMocks();
+    Order.findByPk.mockResolvedValue({
+        id: 1,
+        orderNumber: 'ORD-TEST-0001',
+        status: 'pending',
+        mainContactEmail: 'guest@example.com',
+        mainContactName: 'Jane Doe',
+        totalAmount: 100.00,
+        Items: [],
+        metadata: { guestReceiptTokenHash: 'receipt-hash' },
+        setDataValue: jest.fn(function setDataValue(key, value) { this[key] = value; }),
+        update: jest.fn().mockResolvedValue({}),
+    });
     capturedOrderCreates.length = 0;
     capturedOrderItemCreates.length = 0;
     // Re-initialise the transaction mock state after clearAllMocks
@@ -318,7 +323,7 @@ describe('checkoutCart – confirmationCode snapshotting into OrderItem.metadata
     });
 });
 
-describe('checkoutCart � guest ownership', () => {
+describe('checkoutCart � guest ownership', () => {
     test('checks the guest session token and stores only a hashed receipt capability', async () => {
         const cart = {
             id: 5,
@@ -352,8 +357,6 @@ describe('checkoutCart � guest ownership', () => {
     });
 });
 describe('checkoutCart – booking confirmation email', () => {
-    const Order = require('../../server/models/Order.model.js');
-
     const setupCart = (items) => {
         Cart.findOne.mockResolvedValue({
             id: 1,
@@ -368,7 +371,7 @@ describe('checkoutCart – booking confirmation email', () => {
     test('sends booking-confirmation email after successful checkout', async () => {
         setupCart([makeCartItem('Experience')]);
 
-        await checkoutCart(1, 42, makeBillingInfo());
+        const result = await checkoutCart(1, 42, makeBillingInfo());
 
         expect(sendNotification).toHaveBeenCalledTimes(1);
         expect(sendNotification).toHaveBeenCalledWith(
@@ -381,6 +384,12 @@ describe('checkoutCart – booking confirmation email', () => {
                 }),
             })
         );
+        expect(result.update).toHaveBeenCalledWith({
+            metadata: {
+                guestReceiptTokenHash: 'receipt-hash',
+                confirmationEmail: { status: 'sent', attemptedAt: expect.any(String) },
+            },
+        });
     });
 
     test('checkout succeeds even when email notification fails', async () => {
@@ -391,7 +400,40 @@ describe('checkoutCart – booking confirmation email', () => {
 
         expect(result).toBeDefined();
         expect(result.orderNumber).toBe('ORD-TEST-0001');
+        expect(result.metadata.confirmationEmail.status).toBe('failed');
         expect(txHolder.tx.commit).toHaveBeenCalledTimes(1);
+    });
+
+    test.each([
+        { sent: false, provider: 'smtp', reason: 'authentication_failed' },
+        { sent: false, provider: 'disabled' },
+        { sent: true, provider: 'console' },
+    ])('flags non-delivery for $provider without failing checkout', async (notification) => {
+        sendNotification.mockResolvedValueOnce(notification);
+        setupCart([makeCartItem('Experience')]);
+
+        const result = await checkoutCart(1, 42, makeBillingInfo());
+
+        expect(result.metadata.confirmationEmail.status).toBe('failed');
+        expect(result.update).toHaveBeenCalledWith(expect.objectContaining({
+            metadata: expect.objectContaining({ confirmationEmail: expect.objectContaining({ status: 'failed' }) }),
+        }));
+        expect(txHolder.tx.rollback).not.toHaveBeenCalled();
+    });
+
+    test('returns the failure flag and logs if persisting email status fails after commit', async () => {
+        const order = await Order.findByPk();
+        order.update.mockRejectedValueOnce(new Error('DB unavailable'));
+        const log = jest.spyOn(console, 'error').mockImplementation(() => {});
+        sendNotification.mockResolvedValueOnce({ sent: false, provider: 'smtp' });
+        setupCart([makeCartItem('Experience')]);
+
+        const result = await checkoutCart(1, 42, makeBillingInfo());
+
+        expect(result.metadata.confirmationEmail.status).toBe('failed');
+        expect(log).toHaveBeenCalledWith('[checkout] could not persist confirmation email status', expect.objectContaining({ orderId: 1 }));
+        expect(txHolder.tx.rollback).not.toHaveBeenCalled();
+        log.mockRestore();
     });
 
     test('does not send email when mainContactEmail is absent', async () => {
@@ -403,6 +445,8 @@ describe('checkoutCart – booking confirmation email', () => {
             mainContactName: null,
             totalAmount: 100.00,
             Items: [],
+            setDataValue: jest.fn(function setDataValue(key, value) { this[key] = value; }),
+            update: jest.fn().mockResolvedValue({}),
         });
         setupCart([makeCartItem('Experience')]);
 

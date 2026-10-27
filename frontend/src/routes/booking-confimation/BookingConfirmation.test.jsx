@@ -116,6 +116,26 @@ describe('BookingConfirmation', () => {
     expect(screen.getByText('pending')).toBeInTheDocument();
   });
 
+  test('shows an email failure warning without invalidating the booking', () => {
+    renderWithState(makeConfirmationData({ confirmationEmail: { status: 'failed' } }));
+    expect(screen.getByRole('alert')).toHaveTextContent('Your booking is saved');
+    expect(screen.getByRole('alert')).toHaveTextContent('Do not book again');
+    expect(screen.getByRole('heading', { name: /booking confirmed/i })).toBeInTheDocument();
+    expect(screen.queryByText(/accepted by our email provider/i)).not.toBeInTheDocument();
+  });
+
+  test('only reports provider acceptance when email sending succeeded', () => {
+    renderWithState(makeConfirmationData({ confirmationEmail: { status: 'sent' } }));
+    expect(screen.getByText(/accepted by our email provider/i)).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
+  test('does not claim older orders without email status were emailed', () => {
+    renderWithState(makeConfirmationData());
+    expect(screen.getByText(/email delivery status is unavailable/i)).toBeInTheDocument();
+    expect(screen.queryByText(/has been sent|accepted by our email provider/i)).not.toBeInTheDocument();
+  });
+
   // ── Main contact ─────────────────────────────────────────────────────────
 
   test('renders main contact name from Order', () => {

@@ -102,6 +102,12 @@ const OrderCard = ({ order, defaultExpanded = false }) => {
           </button>
         </div>
 
+        {order.metadata?.confirmationEmail?.status === 'failed' && (
+          <p role="alert" className="mt-3 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
+            Confirmation email could not be sent. Your booking is saved; use View Confirmation to save or print your receipt.
+          </p>
+        )}
+
         {/* Order meta row */}
         <div className="mt-2 grid gap-3 sm:grid-cols-2 text-sm text-slate-500">
           <span>

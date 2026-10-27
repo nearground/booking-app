@@ -86,6 +86,7 @@ const initiateCheckout = async (req, res) => {
                 mainContactName: order.mainContactName,
                 mainContactPhone: order.mainContactPhone,
                 mainContactEmail: order.mainContactEmail,
+                confirmationEmail: order.metadata?.confirmationEmail || null,
                 items: order.Items,
                 ...(guestReceiptToken ? { guestReceiptToken } : {}),
             },
@@ -126,6 +127,7 @@ const getGuestOrder = async (req, res) => {
             new Date(order.metadata.guestReceiptExpiresAt).getTime() <= Date.now()) {
             return sendError(res, { status: 404, message: 'Receipt not found' });
         }
+        order.setDataValue('confirmationEmail', order.metadata?.confirmationEmail || null);
         order.setDataValue('metadata', null);
         return res.status(200).json({ errors: [], data: { order } });
     } catch (error) {
@@ -174,6 +176,7 @@ const getOrderConfirmation = async (req, res) => {
                 mainContactName: order.mainContactName,
                 mainContactPhone: order.mainContactPhone,
                 mainContactEmail: order.mainContactEmail,
+                confirmationEmail: order.metadata?.confirmationEmail || null,
                 items: order.Items,
             },
         });

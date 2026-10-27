@@ -162,6 +162,12 @@ describe('OrderItemCard', () => {
 // ---------------------------------------------------------------------------
 
 describe('OrderCard', () => {
+  test('flags confirmation email failure on a saved order', () => {
+    const order = { ...makeOrder(), metadata: { confirmationEmail: { status: 'failed' } } };
+    render(<MemoryRouter><ul><OrderCard order={order} /></ul></MemoryRouter>);
+    expect(screen.getByRole('alert')).toHaveTextContent('Confirmation email could not be sent');
+  });
+
   test('renders the order number', () => {
     render(<MemoryRouter><ul><OrderCard order={makeOrder()} /></ul></MemoryRouter>);
     expect(screen.getByText('ORD-20260410-ABCD')).toBeInTheDocument();

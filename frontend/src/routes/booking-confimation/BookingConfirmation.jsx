@@ -108,9 +108,17 @@ const BookingConfirmation = () => {
           <p className="text-slate-500 mt-2 text-sm max-w-md mx-auto">
             Your reservation is confirmed. Please keep this page for your records.
           </p>
-          {confirmationData.mainContactEmail && (
+          {confirmationData.confirmationEmail?.status === 'failed' ? (
+            <p role="alert" data-testid="confirmation__email-failure" className="mt-3 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
+              Your booking is saved, but we could not send your confirmation email. Please save or print this page and your order number. Do not book again.
+            </p>
+          ) : confirmationData.confirmationEmail?.status === 'sent' && confirmationData.mainContactEmail ? (
             <p className="text-slate-500 mt-1 text-sm">
-              A confirmation email has been sent to <span className="font-medium text-slate-700">{confirmationData.mainContactEmail}</span>.
+              A confirmation email was accepted by our email provider for <span className="font-medium text-slate-700">{confirmationData.mainContactEmail}</span>. Please check your inbox and spam folder.
+            </p>
+          ) : (
+            <p className="text-slate-500 mt-1 text-sm">
+              Email delivery status is unavailable. Please save or print this confirmation for your records.
             </p>
           )}
           <div className="mt-4 inline-flex items-center gap-3 bg-slate-50 border border-slate-200 rounded-lg px-4 py-2.5">
@@ -325,4 +333,3 @@ const BookingConfirmation = () => {
 };
 
 export default BookingConfirmation;
-
