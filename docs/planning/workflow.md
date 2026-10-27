@@ -126,7 +126,7 @@ does not by itself mark a Task done.
 
 During development use the **Work dashboard** at
 `http://localhost:8080/internal/docs/work/` to browse current work and recent
-Git history; the **Planning** menu (Workflow, Epics, Templates) and **Reference**
+Git history; the **Planning** menu (Epics, Work dashboard, Workflow, Templates) and **Reference**
 provide document navigation.
 Commit history refreshes when the dashboard is refreshed. If repository Git
 metadata is missing/unavailable, the dashboard reports that clearly rather than

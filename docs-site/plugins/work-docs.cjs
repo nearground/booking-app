@@ -1,4 +1,5 @@
 const path = require('node:path');
+const { computeWaves } = require('../work-waves.cjs');
 
 const repositoryRoot = path.resolve(__dirname, '..', '..');
 
@@ -14,7 +15,7 @@ module.exports = function workDocsPlugin() {
     async loadContent() {
       const { loadWorkDocuments } = await import('../../scripts/planning.mjs');
       const documents = await loadWorkDocuments(repositoryRoot);
-      return documents.map(({ data, filePath }) => {
+      const items = documents.map(({ data, filePath }) => {
         const relative = path.relative(path.join(repositoryRoot, 'docs'), filePath).replaceAll('\\', '/');
         return {
           id: data.work_id,
@@ -27,6 +28,8 @@ module.exports = function workDocsPlugin() {
           route: `/${relative.replace(/\.md$/i, '').replace(/(^|\/)index$/i, '')}/`,
         };
       });
+      const waves = computeWaves(items.filter((item) => item.type === 'epic'));
+      return items.map((item) => ({ ...item, wave: waves.get(item.id) || null }));
     },
 
     async contentLoaded({ content, actions }) {
