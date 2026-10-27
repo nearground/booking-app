@@ -62,9 +62,11 @@ Every implementation commit must include one or more exact task-ID trailers:
 Work-Item: EPIC-organizer-publishing/STORY-001/TASK-001
 ```
 
-For a commit covering multiple Tasks, repeat `Work-Item:` once per Task. Never
-guess links based on commit subject, file names or dates. Historical commits
-without trailers remain unlinked. Update the owning Task document's status and
+For a commit covering multiple Tasks, repeat `Work-Item:` once per Task, always
+with the full `EPIC-slug/STORY-NNN/TASK-NNN` ID (never a file slug). Never
+guess links based on commit subject, file names or dates. Fix links on pushed
+commits with `git notes add -m "Work-Item: <full-id>" <sha>` and push
+`refs/notes/commits`. Update the owning Task document's status and
 evidence in a commit; the dashboard does not infer completion from commit count.
 Track progress and decisions in the owning document; report rollups without
 falsely closing the parent.

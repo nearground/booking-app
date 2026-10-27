@@ -112,7 +112,10 @@ function WorkDashboard() {
                     <h3><Link to={docsUrl(item.path)}>{item.title}</Link></h3>
                     <code>{item.id}</code>
                     <p>Branch: <code>{item.branch}</code></p>
-                    {item.type === 'task' && <CommitList commits={item.commits} />}
+                    {item.type !== 'task' && item.commits.length > 0 && (
+                      <p className={styles.muted}>Includes commits for child work items.</p>
+                    )}
+                    <CommitList commits={item.commits} />
                   </article>
                 ))}
               </div>
@@ -133,7 +136,7 @@ function WorkDashboard() {
             <footer className={styles.footer}>
               Task scope/status: committed work documents. Implementation history: Git.
               Add one exact <code>Work-Item: EPIC-slug/STORY-001/TASK-001</code>
-              trailer per Task to a commit message.
+              line per Task to a commit message; Story and Epic cards include their Tasks' commits.
               <Link to="/planning/workflow/">Workflow and conventions</Link>
             </footer>
           </>

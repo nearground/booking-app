@@ -104,12 +104,21 @@ Implement attendee list export
 Work-Item: EPIC-attendee-tools/STORY-001/TASK-001
 ```
 
-For multiple Tasks, add multiple trailers. Use the full Task work ID exactly as
-shown in its front matter. The dashboard attaches commits only to exact
-`Work-Item` matches. It never guesses associations from subjects, changed files,
-author, or dates. Commits without trailers remain visible in the general Git
-history but are not attributed to tasks. Historical task docs and old commits
-are preserved as-is; no false relationships are invented.
+For multiple Tasks, add multiple `Work-Item:` lines. Use the full Task work ID
+exactly as shown in its front matter. The dashboard reads `Work-Item:` lines
+from the commit message body (and from Git notes) and attaches commits only to
+exact matches. Story and Epic cards also list the commits of their child Tasks.
+It never guesses associations from subjects, changed files, author, or dates.
+Commits without `Work-Item` lines remain visible in the general Git history but
+are not attributed to tasks.
+
+To correct a pushed commit's links without rewriting history, add a note and
+push the notes ref:
+
+```text
+git notes add -m "Work-Item: EPIC-attendee-tools/STORY-001/TASK-001" <sha>
+git push origin refs/notes/commits
+```
 
 Update Task status and completion evidence in the Task document in a commit.
 The dashboard displays that status alongside linked commit evidence. A commit

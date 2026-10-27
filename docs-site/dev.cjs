@@ -4,7 +4,9 @@ const path = require('node:path');
 const docusaurusCli = require.resolve('@docusaurus/core/bin/docusaurus.mjs');
 const children = [
   spawn(process.execPath, [path.join(__dirname, 'work-index.cjs')], { stdio: 'inherit' }),
-  spawn(process.execPath, [docusaurusCli, 'start', '--host', '0.0.0.0', '--port', '3100', '--no-open'], {
+  // Polling: file events from Windows/macOS bind mounts don't reach the container,
+  // so merged Epic/Story/Task docs would otherwise stay stale until a restart.
+  spawn(process.execPath, [docusaurusCli, 'start', '--host', '0.0.0.0', '--port', '3100', '--no-open', '--poll', '2000'], {
     cwd: __dirname,
     stdio: 'inherit',
   }),

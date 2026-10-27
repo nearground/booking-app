@@ -2,7 +2,12 @@ const http = require('node:http');
 const path = require('node:path');
 const { execFile } = require('node:child_process');
 const { promisify } = require('node:util');
-const { parseCommitLog, githubRemoteUrl } = require('./git-utils.cjs');
+const {
+  LOG_FORMAT,
+  commitsForWorkItem,
+  parseCommitLog,
+  githubRemoteUrl,
+} = require('./git-utils.cjs');
 const execFileAsync = promisify(execFile);
 const repositoryRoot = path.resolve(__dirname, '..');
 process.env.WORKSPACE_ROOT = repositoryRoot;
@@ -28,10 +33,12 @@ async function buildWorkIndex() {
   try {
     const output = await runGit([
       'log',
+      '--exclude=refs/notes/*',
       '--all',
       '-n',
-      '100',
-      '--format=%H%x1f%h%x1f%aI%x1f%s%x1f%(trailers:key=Work-Item,valueonly,separator=%x2c)',
+      '300',
+      '--notes',
+      LOG_FORMAT,
     ]);
     commits = parseCommitLog(output);
     const remote = await runGit(['remote', 'get-url', 'origin']).catch(() => '');
@@ -61,7 +68,7 @@ async function buildWorkIndex() {
       status: data.status,
       branch: data.branch,
       path: path.relative(repositoryRoot, filePath).replaceAll('\\', '/'),
-      commits: commits.filter((commit) => commit.workItems.includes(data.work_id)),
+      commits: commitsForWorkItem(commits, data.work_id),
     }));
 
   return {
@@ -75,7 +82,7 @@ async function buildWorkIndex() {
       branch: data.branch,
       path: path.relative(repositoryRoot, filePath).replaceAll('\\', '/'),
       parent: data.parent,
-      commits: commits.filter((commit) => commit.workItems.includes(data.work_id)),
+      commits: commitsForWorkItem(commits, data.work_id),
     })),
     tasks: taskItems,
     commits,
