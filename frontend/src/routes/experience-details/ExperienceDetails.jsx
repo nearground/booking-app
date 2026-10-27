@@ -20,6 +20,7 @@ import ScheduledExperiencesList from '../../components/scheduled-experiences-lis
 import ImageGalleryModal from '../../components/image-gallery-modal/ImageGalleryModal';
 import LightboxOverlay from '../../components/image-gallery-modal/LightboxOverlay';
 import ReviewSidebar from './components/ReviewSidebar';
+import GuestCommentPrompt from '../../components/comments/GuestCommentPrompt';
 import {
   buildExperienceGalleryImages,
   getOrganizerGalleryImages,
@@ -526,7 +527,9 @@ const ExperienceDetails = ({ previewData = null, isPreview = false }) => {
             </div>
 
             <div className="mt-4">
-              {justPostedReview ? (
+              {!userDetails ? (
+                <GuestCommentPrompt />
+              ) : justPostedReview ? (
                 <div className="transition-opacity duration-300">
                   <div className="bg-green-50 border border-green-400 text-green-800 p-4 rounded mb-4">
                     Thank you for your review!
@@ -647,6 +650,7 @@ const ExperienceDetails = ({ previewData = null, isPreview = false }) => {
             isOpen={isCommentsModalOpen}
             onClose={() => setIsCommentsModalOpen(false)}
             comments={comments}
+            isLoggedIn={Boolean(userDetails)}
           />
         </Suspense>
       )}

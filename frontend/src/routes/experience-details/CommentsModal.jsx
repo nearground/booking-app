@@ -2,8 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faStar } from '@fortawesome/free-solid-svg-icons';
 import CommentCard from '../../components/comments/CommentCard';
+import GuestCommentPrompt from '../../components/comments/GuestCommentPrompt';
 
-const CommentsModal = ({ isOpen, onClose, comments }) => {
+const CommentsModal = ({ isOpen, onClose, comments, isLoggedIn = false }) => {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 12;
 
@@ -51,6 +52,7 @@ const CommentsModal = ({ isOpen, onClose, comments }) => {
           <h3 className="text-xl font-semibold text-slate-800">
             All Comments ({topLevelComments.length})
           </h3>
+          {!isLoggedIn && <GuestCommentPrompt />}
           <button
             onClick={onClose}
             className="text-slate-500 hover:text-slate-700 text-2xl leading-none"

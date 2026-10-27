@@ -148,14 +148,14 @@ const AddCommentForm = ({
               throw new Error('Image upload response missing URL');
             }
 
-            return { imageUrl };
+            return { imageUrl: uploadResponse?.data?.objectKey || imageUrl };
           })
         );
       }
 
       const retainedImages = existingImages
         .filter((image) => image && image.imageUrl)
-        .map((image) => ({ imageUrl: image.imageUrl, accessibleText: image.accessibleText }));
+        .map((image) => ({ imageUrl: image.imageKey || image.imageUrl, accessibleText: image.accessibleText }));
 
       const allImages = !initial?.ParentId ? [...retainedImages, ...uploadedImages] : undefined;
 

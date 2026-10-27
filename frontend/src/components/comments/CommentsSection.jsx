@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 import CommentCard from './CommentCard';
+import GuestCommentPrompt from './GuestCommentPrompt';
 
 const REVIEW_FILTER_OPTIONS = [
   { value: 'organizer', label: 'About You' },
@@ -45,6 +46,7 @@ const CommentsSection = ({
           <p className="text-sm text-slate-500">
             {displayText || 'Reviews'}
           </p>
+          {!userDetails && <GuestCommentPrompt />}
         </div>
         <div className="flex gap-2 flex-wrap items-center">
           {setCommentsTargetType && REVIEW_FILTER_OPTIONS.map((option) => {
