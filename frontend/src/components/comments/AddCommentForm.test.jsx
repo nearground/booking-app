@@ -74,6 +74,35 @@ describe('AddCommentForm', () => {
     expect(screen.getByText(/exceeds 5MB limit/i)).toBeInTheDocument();
   });
 
+  test('resubmits retained API images as imageUrl objects after removing a photo', async () => {
+    networkAdapter.put.mockResolvedValue({ ok: true, data: { id: 8 } });
+    const removedUrl = 'http://localhost:4000/api/media/object/users/10/review-image/remove.jpg';
+    const retainedUrl = 'http://localhost:4000/api/media/object/users/10/review-image/retain.jpg';
+
+    render(
+      <AddCommentForm
+        initial={{
+          id: 8,
+          UserId: 10,
+          ParentId: null,
+          comment: 'Original comment body',
+          images: [
+            { imageUrl: removedUrl, accessibleText: 'Remove this' },
+            { imageUrl: retainedUrl, accessibleText: 'Keep this' },
+          ],
+        }}
+        uploaderUserId={10}
+      />
+    );
+
+    fireEvent.click(screen.getAllByLabelText('Remove attached image')[0]);
+    fireEvent.click(screen.getByRole('button', { name: 'Update' }));
+
+    await waitFor(() => expect(networkAdapter.put).toHaveBeenCalledTimes(1));
+    expect(networkAdapter.put).toHaveBeenCalledWith('/api/comments/8', expect.objectContaining({
+      images: [{ imageUrl: retainedUrl, accessibleText: 'Keep this' }],
+    }));
+  });
   test('uploads selected images and includes them in comment payload', async () => {
     networkAdapter.upload.mockResolvedValue({
       ok: true,

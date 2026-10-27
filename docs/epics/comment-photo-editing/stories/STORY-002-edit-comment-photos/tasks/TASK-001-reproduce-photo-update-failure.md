@@ -3,7 +3,7 @@ title: "Reproduce photo removal failure with response-shaped payloads"
 work_id: "EPIC-comment-photo-editing/STORY-002/TASK-001"
 work_type: task
 template_version: 1
-status: ready
+status: done
 parent: "EPIC-comment-photo-editing/STORY-002"
 branch: "epic/comment-photo-editing"
 depends_on: []
@@ -29,7 +29,7 @@ Comment.service.js validateImages accepts object entries, checks absolute URLs a
 
 | Path | Change | Ownership/contract constraints |
 |------|--------|--------------------------------|
-| backend/tests/unit/comment-service.test.js | Add failing edit regression with a mock response/public URL shape; optionally assert object-valued PUT data in AddCommentForm.test.jsx. | Tests must keep external/disallowed URLs, bad image shapes, and too many photos rejected; do not relax validation or ownership. |
+| backend/tests/unit/comment-service.test.js and frontend/src/components/comments/AddCommentForm.test.jsx | Assert response shape and exact object-valued PUT payload after removal. | Preserve media allow-list and ownership checks. |
 
 ## Dependencies
 
@@ -44,9 +44,9 @@ None; this is the prerequisite reproduction for TASK-002.
 
 ## Definition of Done
 
-- [ ] Story acceptance criteria covered with recorded results.
-- [ ] Targeted checks pass; existing intended behavior is preserved.
-- [ ] Documentation updated; no unresolved contract conflicts.
+- [x] Response-to-update payload and failing round-trip condition captured.
+- [x] The configured public URL and external-base rejection behavior are recorded without changing validation.
+- [x] The remaining base-configuration question is recorded as an open risk.
 
 ## Documentation updates
 
@@ -54,7 +54,7 @@ Record the reproduced shape and failure evidence in this Task before completing 
 
 ## Progress and completion evidence
 
-Pending reproduction. Do not modify the validator before capturing the failing test.
+Payload capture: AddCommentForm resubmits `images` as objects, e.g. `{ imageUrl: "http://localhost:4000/api/media/object/users/10/review-image/retain.jpg", accessibleText: "Keep this" }`. Frontend component test passed 5/5. Backend baseline: configured default URL is accepted and normalizes to `users/10/review-image/retained.jpg`; a URL outside configured `MEDIA_PUBLIC_BASE_URL` is rejected with exactly `Maximum 10 images allowed, each must have a valid imageUrl`. The new round-trip test is intentionally red (20 passed, 1 failed) because API response images do not expose the stored key needed to avoid replaying a public URL. `MEDIA_PUBLIC_BASE_URL` is unset in this worktree (default applies); backend .env absent. The read-only dev API probe returned 500, so deployment-specific public URL configuration remains unverified. Next task adds an explicit canonical key while retaining server allow-list checks.
 
 ## Git history
 

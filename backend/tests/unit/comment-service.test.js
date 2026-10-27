@@ -292,6 +292,74 @@ describe('review images handling', () => {
     }), expect.any(Object));
   });
 
+  test('accepts the configured public URL that the API returns on an edit', async () => {
+    const existing = {
+      id: 9,
+      UserId: 10,
+      ParentId: null,
+      CommentableId: 1,
+      update: jest.fn().mockResolvedValue(true),
+      toJSON: () => ({ id: 9, images: [{ imageUrl: 'users/10/review-image/retained.jpg' }] }),
+    };
+    Comment.findByPk.mockResolvedValue(existing);
+
+    const result = await updateComment({
+      id: 9,
+      userId: 10,
+      images: [{ imageUrl: 'http://localhost:4000/api/media/object/users/10/review-image/retained.jpg' }],
+    });
+
+    expect(result.status).toBe(200);
+    expect(existing.update).toHaveBeenCalledWith(expect.objectContaining({
+      images: [{ imageUrl: 'users/10/review-image/retained.jpg', accessibleText: undefined }],
+    }), expect.any(Object));
+  });
+
+  test('rejects absolute image URLs outside the configured public media base', async () => {
+    const existing = {
+      id: 10,
+      UserId: 10,
+      ParentId: null,
+      CommentableId: 1,
+      update: jest.fn(),
+      toJSON: () => ({ id: 10, images: [] }),
+    };
+    Comment.findByPk.mockResolvedValue(existing);
+
+    const result = await updateComment({
+      id: 10,
+      userId: 10,
+      images: [{ imageUrl: 'https://media.example.test/api/media/object/users/10/review-image/retained.jpg' }],
+    });
+
+    expect(result.status).toBe(400);
+    expect(result.errors[0]).toBe('Maximum 10 images allowed, each must have a valid imageUrl');
+    expect(existing.update).not.toHaveBeenCalled();
+  });
+  test('returns a stored image key with its resolved URL for a stable edit round-trip', async () => {
+    const existing = {
+      id: 8,
+      UserId: 10,
+      ParentId: null,
+      CommentableId: 1,
+      update: jest.fn().mockResolvedValue(true),
+      toJSON: () => ({ id: 8, images: [{ imageUrl: 'users/10/review-image/retained.jpg', accessibleText: 'Retained' }] }),
+    };
+    Comment.findByPk.mockResolvedValue(existing);
+
+    const result = await updateComment({
+      id: 8,
+      userId: 10,
+      images: [{ imageUrl: 'users/10/review-image/retained.jpg', accessibleText: 'Retained' }],
+    });
+
+    expect(result.status).toBe(200);
+    expect(result.data.images).toEqual([{
+      imageUrl: 'http://localhost:4000/api/media/object/users/10/review-image/retained.jpg',
+      imageKey: 'users/10/review-image/retained.jpg',
+      accessibleText: 'Retained',
+    }]);
+  });
   test('updateComment rejects images for replies', async () => {
     const existing = {
       id: 1,
