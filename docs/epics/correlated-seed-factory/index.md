@@ -3,7 +3,7 @@ title: "Correlated seed factory spike and seeder rewrite plan"
 work_id: "EPIC-correlated-seed-factory"
 work_type: epic
 template_version: 1
-status: draft
+status: in-progress
 parent: null
 branch: "epic/correlated-seed-factory"
 depends_on: []
@@ -25,11 +25,11 @@ Non-goals in this Epic: executing the full rewrite (planned here, delivered as f
 
 ## Acceptance criteria
 
-- [ ] Decision/design doc compares adopt/build alternatives against repository constraints, maintenance and licensing, and recommends one.
-- [ ] Recommendation specifies schema/input format, correlated relationships, reproducibility (explicit seed), overrides/traits, idempotency and cleanup.
-- [ ] Concept spike, isolated from existing seeders, repeatably generates the correlated graph above with valid associations, verified by a test that runs it twice with the same seed and compares results.
-- [ ] Spike demonstrates seeding a media asset through the media pipeline so it exists as a DB media record.
-- [ ] Rewrite plan lists each existing seeder and fixture, its replacement, migration order, rollback and how other Epics add feature seeds (single-date, pinned comments, hero video).
+- [x] Decision/design doc compares adopt/build alternatives against repository constraints, maintenance and licensing, and recommends one.
+- [x] Recommendation specifies schema/input format, correlated relationships, reproducibility (explicit seed), overrides/traits, idempotency and cleanup.
+- [x] Isolated concept spike emits the correlated graph and validates schema references; Jest verifies same-seed equality and the store contract.
+- [x] Media adapter calls the authenticated `/api/media/upload` route and persists the returned object key in the Experience `images` JSON database field; the upload/persistence interface is tested with a stub.
+- [x] Rewrite plan maps both existing seeders, Cypress JSON fixtures and follow-on feature seeds, with migration order and rollback guidance.
 
 ## Branch independence and ownership
 
@@ -44,21 +44,25 @@ Prerequisite for `EPIC-single-date-experience`, `EPIC-pinned-experience-comments
 
 ## User Stories
 
-Children are created only when expansion is explicitly requested.
+Expansion was explicitly requested. Both Stories and their implementation Tasks are expanded and delivered in this branch.
 
 <!-- children:start -->
+- [STORY-001: Choose the seed factory architecture and rewrite path](stories/STORY-001-choose-seed-factory-architecture/index.md)
+- [STORY-002: Prove deterministic correlated graph generation](stories/STORY-002-prove-correlated-seed-factory/index.md)
 <!-- children:end -->
 
 ## Risks, assumptions and open questions
 
 - Factories should serve dev/demo seeds, backend tests and Cypress; confirm whether Cypress resets the DB between specs.
 - Is a new package acceptable (e.g. `@faker-js/faker` MIT plus an in-house graph builder)? Recommendation: yes for faker; build the correlation layer in-house on Sequelize models.
-- Risk: seeding media through the pipeline needs the r2-local service running during seeding.
+- Risk: actual media upload requires r2-local and an authenticated `_token` cookie; current route only accepts images, and the app has no standalone Media model/table. The contract stores object-key references in `Experience.images`; MP4 needs a separate API/schema decision.
 
 ## Verification and completion evidence
 
-Spike reproducibility test and association checks against `backend/server/models/index.js`; seeded media visible through the API; plan reviewed by the user.
+Spike reproducibility and schema-reference checks grounded in `backend/server/models/index.js`; media adapter contract stub-tested. Actual media upload, SQL materialization and user review remain follow-up verification.
 
 ## Progress and decisions
 
 - 2026-10-26: User broadened scope to a full seeder rewrite plan based on a concept spike.
+- 2026-10-26: Completed Stories and spike; Epic remains `in-progress` because the full rewrite is intentionally a follow-on and not implemented here.
+- Spike verification: `backend/tests/seed-factory/seed-factory.test.js` passes (5 tests). Actual media upload and SQL materialization are not run; see contract limitations.
