@@ -3,7 +3,7 @@ title: "Identify MCP client capabilities and safety boundaries"
 work_id: "EPIC-mcp-booking-assistant/STORY-002"
 work_type: story
 template_version: 1
-status: in-progress
+status: done
 parent: "EPIC-mcp-booking-assistant"
 branch: "epic/mcp-booking-assistant"
 depends_on: []
@@ -23,9 +23,9 @@ Describe capability gaps for non-browser clients, including cookie-only auth, CS
 
 ## Acceptance criteria
 
-- [ ] Given the documented current API, when a future implementer reads the memo, then supported, blocked, and deferred capabilities are distinguished with no speculative route contracts.
-- [ ] Given each proposed write/financial or organization-management action, when the tool catalogue is reviewed, then its required user confirmation and credential handling are explicit.
-- [ ] Epic acceptance coverage: a gap analysis and MCP recommendation memo are published and linked from the Epic.
+- [x] Given the documented current API, when a future implementer reads the memo, then supported, blocked, and deferred capabilities are distinguished with no speculative route contracts.
+- [x] Given each proposed write/financial or organization-management action, when the tool catalogue is reviewed, then its required user confirmation and credential handling are explicit.
+- [x] Epic acceptance coverage: a gap analysis and MCP recommendation memo are published and linked from the Epic.
 
 ## Ownership and dependencies
 
@@ -39,7 +39,7 @@ Owns `docs/reference/contracts/api/mcp-gap-analysis.md` and the link/progress en
 
 ## Verification and completion evidence
 
-Review the memo against `inventory.md` and backend middleware/controller source, then run `node scripts/planning.mjs validate`. Evidence should cite the concrete route/middleware gaps and clearly label future proposals as recommendations.
+Reviewed the memo against `inventory.md` and backend middleware/controller source; `node scripts/planning.mjs validate` passed. The memo distinguishes unavailable confirmation-code lookup and host-managed auth recommendations from current routes.
 
 ## Progress and decisions
 

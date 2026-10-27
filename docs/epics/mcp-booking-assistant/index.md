@@ -72,5 +72,5 @@ The static Jest route contract test must pass without a database. An optional GE
 
 ## Progress and decisions
 
-- 2026-10-26: Expanded Epic into two Stories and three Tasks; the verified API inventory is complete, with OpenAPI/test and gap memo in progress.
+- 2026-10-26: Expanded Epic into two Stories and three Tasks; the API inventory, OpenAPI route contract/test, and MCP gap/tool recommendation are complete; planning validation and all 265 backend Jest tests pass. No production behavior was changed.
 - 2026-10-26: Scope narrowed by user to API research first; MCP scope decided incrementally.

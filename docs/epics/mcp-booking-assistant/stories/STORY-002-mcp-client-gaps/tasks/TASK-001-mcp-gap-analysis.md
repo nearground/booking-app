@@ -3,7 +3,7 @@ title: "Recommend MCP tools and client safety model"
 work_id: "EPIC-mcp-booking-assistant/STORY-002/TASK-001"
 work_type: task
 template_version: 1
-status: in-progress
+status: done
 parent: "EPIC-mcp-booking-assistant/STORY-002"
 branch: "epic/mcp-booking-assistant"
 depends_on: []
@@ -53,9 +53,9 @@ No prerequisite for recommendation; relies on inventory from Story 001/TASK-001.
 
 ## Definition of Done
 
-- [ ] Story acceptance criteria covered with recorded results.
-- [ ] Targeted checks pass; existing intended behavior is preserved.
-- [ ] Documentation updated; no unresolved contract conflicts.
+- [x] Story acceptance criteria covered with recorded results.
+- [x] Targeted checks pass; existing intended behavior is preserved.
+- [x] Documentation updated; no unresolved contract conflicts.
 
 ## Documentation updates
 
@@ -63,7 +63,7 @@ The memo is an input to future MCP implementation planning, not authorization to
 
 ## Progress and completion evidence
 
-In progress; complete after review against `inventory.md` and Epic planning validation.
+Done: published source-grounded gaps and tool catalogue; reviewed against inventory and backend middleware/controllers. Planning validation passed; full backend Jest suite passed (27 suites, 265 tests). No production source changed.
 
 ## Git history
 
