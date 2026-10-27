@@ -123,3 +123,169 @@ availability outside the model session; do not paste raw private responses,
 cookies or tokens into chat. Roll back by removing the host entry or stopping its
 child process; no REST routes, database schemas or booking state are installed by
 the MCP server.
+
+## Architecture findings and deployment considerations
+
+These findings were reviewed on 2026-10-27. They distinguish the implemented
+stdio integration from possible future production infrastructure; they do not
+authorize or implement remote hosting, authenticated tools or booking writes.
+
+### Service boundary and LangChain
+
+The MCP server does **not** have to run inside the Express backend. Its code
+currently shares the backend package and dependencies, but runs as a separate
+process and calls REST rather than importing controllers or database models.
+Code location, process isolation and independent deployment are separate choices.
+
+LangChain serves a different role: it can orchestrate a conversational agent that
+uses MCP tools. A future interaction path could be:
+
+**Discord → LangChain agent/MCP client → MCP server → Booking REST API → database**
+
+Neither LangChain nor a Discord runtime is implemented here. LangChain could
+instead call REST directly, reducing components for a single bot but bypassing
+the reusable MCP interface and its tested validation/filtering boundary. The
+recommended starting point is to retain MCP and add agent orchestration only
+when conversational behavior is required. LangChain does not supply booking
+identity, consent, authorization or safe checkout automatically.
+
+### Transport and hosting options
+
+| Option | Suitable use | Considerations |
+|---|---|---|
+| Client-owned stdio child process | One bot/agent deployment using the current implementation | No network MCP listener or ingress needed; the host owns process startup, shutdown and restart. Multiple bot replicas each own their MCP child. |
+| Independent MCP service using Streamable HTTP | Multiple clients needing a shared network endpoint | Requires new transport implementation, authentication/authorization, TLS, rate limits and connection/session lifecycle management. Not supported by the current entrypoint. |
+
+A child process can be packaged with its client or launched through a
+container-aware host, but an ordinary detached stdio container is not a remotely
+callable MCP service. Likewise, adding a reverse proxy in front of this stdio
+entrypoint does not turn it into Streamable HTTP.
+
+For independent packaging, separate the MCP package/image and its SDK dependencies
+from the API package without moving business logic or database access into MCP.
+Only the booking API should own database access; MCP and bot/agent components
+should receive no MySQL credentials. Cross-container API configuration must use
+the API service address, not `localhost`, which identifies the caller's own
+container. The existing origin validator accepts only an HTTP(S) origin, not a
+path prefix or embedded credentials.
+
+| Infrastructure | Appropriate starting point | Main trade-off |
+|---|---|---|
+| Single VM with Docker Compose | Small initial deployment with manageable availability requirements | Simple operations, but shared host failure and operator-owned backups/upgrades |
+| Managed container platform | Independent releases/scaling with less host administration | Platform cost, networking/secrets configuration and transport compatibility |
+| Kubernetes | Established platform team or demonstrated orchestration needs | More operational complexity; not required merely because MCP is a separate process |
+
+Long-lived bot connections and MCP streaming/session behavior must match the
+chosen platform's connection limits, request timeouts and scale-to-zero behavior.
+For Streamable HTTP, decide whether sessions are stateful before designing
+replica routing, reconnects or shared state; do not assume arbitrary load
+balancing preserves a session.
+
+### Current repository production gaps
+
+The production Compose definition at
+`/home/runner/work/booking-app/booking-app/docker-compose.prod.yml` describes the
+frontend, API, MySQL, Redis and an administrative helper. It does not launch MCP,
+a bot or an agent. It builds application images locally; it is a deployment
+baseline, not evidence that the infrastructure below is provisioned.
+
+- Both `/home/runner/work/booking-app/booking-app/backend/Dockerfile` and the
+  frontend build stage at
+  `/home/runner/work/booking-app/booking-app/frontend/Dockerfile` use Node 18.
+  Reconcile these with the MCP runtime guidance above: select a supported Node
+  LTS, test image builds and the native dependencies, and align CI/runtime
+  versions before shipping. Do not assume the current API image is a validated
+  MCP production image.
+- Compose publishes the frontend on HTTP port 80. Public HTTPS needs a configured
+  TLS ingress/proxy or a correctly configured tunnel. API and data services must
+  remain private; omit administrative helpers unless explicitly needed and
+  access-controlled.
+- Docker volumes provide persistence, not backup, restore verification,
+  replication or high availability. Choose managed MySQL/Redis or explicitly own
+  those operational responsibilities.
+- The Compose file defines a Redis service, while the API consumes `REDIS_URL`
+  from configuration. Confirm the intended instance and connectivity rather
+  than assuming that the local service is automatically used.
+- The deployment guide already requires deliberate migrations, disabled startup
+  schema synchronization, and scheduling in exactly one worker. Preserve those
+  constraints when adding replicas; MCP must not run migrations or scheduling.
+
+### Production readiness checklist
+
+**Build and release**
+
+- Build immutable, versioned images from lockfiles in CI; promote the same
+  artifacts through staging and production rather than rebuilding on each host.
+  Use multi-stage builds where appropriate, non-root runtime users, minimal
+  runtime contents and regularly updated base images.
+- Run existing backend regressions, MCP protocol tests, frontend build/tests and
+  applicable end-to-end checks. Add container startup and real staging API
+  interoperability checks: the fixture smoke alone does not validate production.
+- Scan dependencies/images and generate an artifact inventory/SBOM. Keep secrets
+  out of build arguments, image layers, frontend bundles and source control.
+- Run schema migrations as a controlled release step with compatible rollout
+  sequencing and a recovery plan. Keep a known-good image and configuration for
+  rollback; an application rollback does not automatically undo a migration.
+
+**Network and credential boundaries**
+
+- Terminate TLS at a controlled ingress, restrict proxy trust to the actual
+  topology, and keep MySQL/Redis on private networks. Restrict MCP egress to the
+  trusted booking API where the platform supports it.
+- If remote MCP is introduced, validate HTTP host/origin expectations, authenticate
+  callers and authorize tool access; CORS is not authentication. Define token
+  audience/scopes and credential rotation. Never forward a caller's arbitrary
+  bearer token to the booking API.
+- Inject secrets at runtime using the deployment secret store. The current public
+  MCP tools need no account, Discord or model-provider credentials; future
+  bot/agent credentials belong to their owning service, not every container.
+- Authenticated booking tools require a separate user-linking, tenant-isolation,
+  consent and revocation design. Current cookie-based REST auth is not an
+  existing delegated-agent authorization contract.
+
+**Reliability, scaling and data**
+
+- Separate frontend, API, bot/agent and any remote MCP service release boundaries.
+  A model-provider or bot outage should not prevent ordinary website bookings.
+- Set concurrency/resource limits, request deadlines and graceful shutdown.
+  Supervise stdio child processes; drain active calls before termination where
+  practical. Configure any streaming proxy to avoid unwanted buffering and
+  premature connection termination.
+- Budget database connections across API replicas. Keep scheduler ownership
+  explicit and test backup restoration against defined recovery requirements.
+  Protect backup and log access as carefully as live data.
+- The existing MCP adapter enforces a 5-second HTTP deadline, 1 MiB response limit
+  and no automatic retries; these are code defaults, not environment-tunable
+  production controls. Size and load-test them before changing them. Do not
+  blindly retry dates calls: their GET can synchronize schedules. Checkout
+  remains unimplemented and lacks a client idempotency contract.
+
+**Observability, agent safety and cost**
+
+- Add readiness/liveness signals appropriate to the deployment: a stdio process
+  is not an HTTP health endpoint. Monitor initialization failures, tool latency,
+  upstream errors, timeouts, process restarts and saturation.
+- Correlate requests across client/MCP/API without logging full prompts, tool
+  payloads, cookies, receipt capabilities or customer PII. Define retention and
+  redaction policies before enabling model tracing.
+- Bound agent iterations, tool calls, concurrency and model spending. Treat API
+  content as untrusted input; tool allowlists and backend authorization remain
+  required even when an agent requests an action.
+- A future Discord adapter needs mention-safe formatting, platform rate-limit
+  handling and least-privilege permissions. Discord identity alone is not proof
+  of booking-account or receipt ownership.
+
+### Recommended initial topology and open decisions
+
+Start with Compose or a managed container platform, private data services and a
+bot/agent that owns its local stdio MCP child. Extract an independent package/image
+when release or dependency isolation warrants it; adopt a network MCP service
+only when shared remote clients justify the added operational/security boundary.
+Keep discovery public-only and continue purchases in the existing application.
+
+Before provisioning, decide the expected clients/traffic, availability and
+recovery requirements, hosting region/data residency, operating owner, monthly
+cost limits, and whether remote MCP is actually needed. Decide LangChain/model
+provider and Discord scope separately from MCP transport. Authenticated tools,
+payment integration and public remote exposure require their own approved
+implementation and verification work.
