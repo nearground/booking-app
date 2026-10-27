@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { networkAdapter } from 'services/NetworkAdapter';
+import { resolveAppUrl } from './organizationSiteResolver';
 import './organization-site.scss';
 
 const fontFamilies = {
@@ -24,7 +25,7 @@ const ExperienceCards = ({ experiences }) => experiences.length ? (
           {experience.subtitle ? <p className="org-site-subtitle">{experience.subtitle}</p> : null}
           {experience.description ? <p>{experience.description}</p> : null}
           {experience.nextDateTime ? <p className="org-site-date">Next session: {new Date(experience.nextDateTime).toLocaleDateString()}</p> : null}
-          <a className="org-site-button" href={experience.url}>View experience</a>
+          <a className="org-site-button" href={resolveAppUrl(`/experience/${experience.id}`)}>View experience</a>
         </div>
       </article>
     ))}
@@ -63,7 +64,7 @@ const TemplateLayout = ({ organization, experiences }) => {
           </footer>
         ) : null}
       </section>
-      <div className="org-site-powered">Experiences by <a href="https://puertovallarta.today/experiences">Puerto Vallarta Today</a></div>
+      <div className="org-site-powered">Experiences by <a href={resolveAppUrl('/experiences')}>Puerto Vallarta Today</a></div>
     </main>
   );
 };
@@ -87,8 +88,8 @@ const OrganizationSite = ({ slug: providedSlug }) => {
   }, [slug]);
 
   const content = useMemo(() => {
-    if (loading) return <main className="org-site-state" aria-live="polite">Loading organization site…</main>;
-    if (error || !siteData) return <main className="org-site-state"><h1>Organization site not found</h1><p>This organization site is unavailable.</p><a href="https://puertovallarta.today/experiences">Browse experiences</a></main>;
+    if (loading) return <main className="org-site-state" aria-live="polite">Loading organization siteï¿½</main>;
+    if (error || !siteData) return <main className="org-site-state"><h1>Organization site not found</h1><p>This organization site is unavailable.</p><a href={resolveAppUrl('/experiences')}>Browse experiences</a></main>;
     return <TemplateLayout organization={siteData.organization} experiences={siteData.experiences || []} />;
   }, [error, loading, siteData]);
 

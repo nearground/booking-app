@@ -76,7 +76,7 @@ services:
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-24h}
       R2_WORKER_BASE_URL: ${R2_WORKER_BASE_URL:-http://r2-local:8787}
       R2_DEV_TOKEN: ${R2_DEV_TOKEN:-}
-      FRONTEND_BASE_URL: ${FRONTEND_BASE_URL:-http://localhost:3000}
+      FRONTEND_BASE_URL: ${FRONTEND_BASE_URL:-http://localhost:8080}
       NOTIFICATIONS_PROVIDER: ${NOTIFICATIONS_PROVIDER:-console}
       NOTIFICATIONS_FROM_EMAIL: ${NOTIFICATIONS_FROM_EMAIL:-no-reply@example.com}
       # Spacemail (SMTP) settings — set these in your environment or .env

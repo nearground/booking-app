@@ -1,4 +1,19 @@
-import { isValidOrganizationSiteSlug, resolveOrganizationSlugFromHost } from './organizationSiteResolver';
+import { isValidOrganizationSiteSlug, resolveOrganizationSlugFromHost, resolveAppUrl } from './organizationSiteResolver';
+
+describe('app link origins', () => {
+  test.each([
+    ['http://localhost:8080', 'http://localhost:8080'],
+    ['http://localhost:3300', 'http://localhost:3300'],
+    ['http://192.168.1.25:8080', 'http://192.168.1.25:8080'],
+    ['http://[::1]:8080', 'http://[::1]:8080'],
+    ['https://preview.example.com', 'https://preview.example.com'],
+    ['https://puertovallarta.today', 'https://puertovallarta.today'],
+    ['https://pv-adventures.puertovallarta.today', 'https://puertovallarta.today'],
+  ])('links from %s to %s', (origin, expected) => {
+    expect(resolveAppUrl('/experience/7', origin)).toBe(`${expected}/experience/7`);
+    expect(resolveAppUrl('/experiences', origin)).toBe(`${expected}/experiences`);
+  });
+});
 
 describe('organization hostname and slug resolution', () => {
   test.each([

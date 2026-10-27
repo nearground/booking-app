@@ -42,7 +42,7 @@ const INVITE_TOKEN_REGEX = /^[a-f0-9]{48}$/i;
 const INVITE_CODE_REGEX = /^[A-Z0-9]{6}$/;
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const FRONTEND_BASE_URL = String(
-    process.env.FRONTEND_BASE_URL || 'http://localhost:3000'
+    process.env.FRONTEND_BASE_URL || 'http://localhost:8080'
 ).replace(/\/+$/, '');
 
 const normalizeEmail = (email) => String(email || '').trim().toLowerCase();

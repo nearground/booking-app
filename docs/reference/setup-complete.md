@@ -126,6 +126,17 @@ JWT_EXPIRES_IN=24h
 
 ### Booking confirmation emails
 
+Browser app links follow the current origin (including scheme and port), so
+localhost, LAN access and tunnel URLs stay on the host being visited.
+Organization subdomains under `puertovallarta.today` link back to the main
+domain. The organization API returns relative experience paths rather than
+hardcoded production URLs.
+
+Emails have no browser origin: configure `FRONTEND_BASE_URL` for invite,
+verification and reset links. Development defaults to `http://localhost:8080`;
+set the externally reachable app origin for production or email links opened
+from another device.
+
 Email is sent by the backend, not a separate Compose service. Set
 `NOTIFICATIONS_PROVIDER=smtp` and configure `NOTIFICATIONS_FROM_EMAIL`,
 `SPACEMAIL_HOST`, `SPACEMAIL_PORT`, `SPACEMAIL_SECURE`, `SPACEMAIL_USER`, and

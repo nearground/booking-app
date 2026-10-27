@@ -15,7 +15,7 @@ const buildPublicOrganizationSitePayload = (organization) => {
       duration: experience.duration || null,
       nextDateTime: firstSession?.dateTime || null,
       soldOut: sessions.length > 0 && sessions.every((session) => Number(session.availableSpots) <= 0),
-      url: `https://puertovallarta.today/experience/${experience.id}`,
+      url: `/experience/${experience.id}`,
     };
   });
   return {

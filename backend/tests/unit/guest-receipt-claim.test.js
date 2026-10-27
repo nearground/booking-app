@@ -58,6 +58,19 @@ describe('guest receipt email verification', () => {
         }));
     });
 
+    test('uses the configured app origin for emailed verification links', async () => {
+        const previous = process.env.FRONTEND_BASE_URL;
+        try {
+            process.env.FRONTEND_BASE_URL = 'http://localhost:8080/';
+            mockUser.findOne.mockResolvedValue({ email: 'guest@example.com', isEmailVerified: false });
+            await service.startEmailVerification('guest@example.com');
+            expect(sendNotification.mock.calls[0][0].payload.verifyUrl).toMatch(/^http:\/\/localhost:8080\/verify-email\?token=/);
+        } finally {
+            if (previous === undefined) delete process.env.FRONTEND_BASE_URL;
+            else process.env.FRONTEND_BASE_URL = previous;
+        }
+    });
+
     test('claims only matching unowned orders after a valid token and is transactional', async () => {
         const token = 'a'.repeat(64);
         const record = { email: 'Guest@Example.com', expiresAt: new Date(Date.now() + 60000), usedAt: null };

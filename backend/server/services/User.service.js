@@ -141,7 +141,7 @@ class UserService {
         const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
         await EmailVerificationToken.create({ email: user.email, tokenHash, expiresAt });
 
-        const frontendUrl = String(process.env.FRONTEND_URL || 'http://localhost:5173').trim().replace(/\/$/, '');
+        const frontendUrl = String(process.env.FRONTEND_BASE_URL || process.env.FRONTEND_URL || 'http://localhost:8080').trim().replace(/\/+$/, '');
         const verifyUrl = `${frontendUrl}/verify-email?token=${encodeURIComponent(token)}`;
         try {
             await sendNotification({
@@ -208,7 +208,7 @@ class UserService {
 
         await PasswordReset.create({ email, token, expiresAt });
 
-        const frontendUrl = String(process.env.FRONTEND_URL || 'http://localhost:5173').trim();
+        const frontendUrl = String(process.env.FRONTEND_BASE_URL || process.env.FRONTEND_URL || 'http://localhost:8080').trim().replace(/\/+$/, '');
         const resetUrl = `${frontendUrl}/reset-password?token=${token}`;
 
         try {

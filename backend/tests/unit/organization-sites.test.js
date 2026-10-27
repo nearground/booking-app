@@ -54,6 +54,21 @@ describe('branding validation', () => {
 });
 
 describe('public site response privacy', () => {
+  test.each([
+    ['development', ''],
+    ['production', ''],
+  ])('uses the correct experience origin in %s', (environment, origin) => {
+    const previous = process.env.NODE_ENV;
+    try {
+      process.env.NODE_ENV = environment;
+      const result = buildPublicOrganizationSitePayload({ Experiences: [{ id: 42 }] });
+      expect(result.experiences[0].url).toBe(`${origin}/experience/42`);
+    } finally {
+      if (previous === undefined) delete process.env.NODE_ENV;
+      else process.env.NODE_ENV = previous;
+    }
+  });
+
   test('projects only public organization and experience fields and marks sold-out sessions', () => {
     const result = buildPublicOrganizationSitePayload({
       id: 8, name: 'PV Adventures', slug: 'pv-adventures', email: 'private@example.com', organizationUsername: 'pvadventures',
@@ -63,7 +78,7 @@ describe('public site response privacy', () => {
         ScheduledExperiences: [{ dateTime: '2030-01-01T10:00:00Z', availableSpots: 0 }] }],
     });
     expect(result.organization).toMatchObject({ id: 8, name: 'PV Adventures', slug: 'pv-adventures', primaryColor: '#123456' });
-    expect(result.experiences[0]).toMatchObject({ id: 42, title: 'Sunset boat', soldOut: true, url: 'https://puertovallarta.today/experience/42' });
+    expect(result.experiences[0]).toMatchObject({ id: 42, title: 'Sunset boat', soldOut: true, url: '/experience/42' });
     const serialized = JSON.stringify(result);
     expect(serialized).not.toContain('private@example.com');
     expect(serialized).not.toContain('OrganizationMembers');

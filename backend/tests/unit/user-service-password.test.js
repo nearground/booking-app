@@ -51,6 +51,20 @@ beforeEach(() => {
 // ─── forgotPassword ─────────────────────────────────────────────────────────
 
 describe('forgotPassword', () => {
+  test('uses the configured app origin for emailed reset links', async () => {
+    const previous = process.env.FRONTEND_BASE_URL;
+    try {
+      process.env.FRONTEND_BASE_URL = 'http://localhost:8080/';
+      User.findOne.mockResolvedValue({ id: 1, email: 'user@test.com' });
+      PasswordReset.create.mockResolvedValue({});
+      await UserService.forgotPassword('user@test.com');
+      expect(sendNotification.mock.calls[0][0].payload.resetUrl).toMatch(/^http:\/\/localhost:8080\/reset-password\?token=/);
+    } finally {
+      if (previous === undefined) delete process.env.FRONTEND_BASE_URL;
+      else process.env.FRONTEND_BASE_URL = previous;
+    }
+  });
+
   test('returns sent:true for existing user and creates token', async () => {
     User.findOne.mockResolvedValue({ id: 1, email: 'user@test.com' });
     PasswordReset.create.mockResolvedValue({});

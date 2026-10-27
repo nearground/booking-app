@@ -1,6 +1,14 @@
 const RESERVED_SLUGS = new Set(['www', 'api', 'admin', 'internal', 'app', 'mail', 'static', 'assets', 'docs', 'ftp', 'smtp', 'cdn', 'support', 'help', 'blog', 'dev', 'staging', 'test', 'localhost', 'root', 'security', 'status', 'dashboard', 'login', 'auth']);
 const SLUG_PATTERN = /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/;
 
+export const resolveAppUrl = (pathname, origin = window.location.origin) => {
+  const url = new URL(origin);
+  if (resolveOrganizationSlugFromHost(url.hostname)) {
+    url.hostname = url.hostname.slice(url.hostname.indexOf('.') + 1);
+  }
+  return new URL(pathname, url.origin).href;
+};
+
 export const isValidOrganizationSiteSlug = (slug) => {
   const normalized = String(slug || '').toLowerCase();
   return normalized.length >= 3 && normalized.length <= 63 && SLUG_PATTERN.test(normalized) && !RESERVED_SLUGS.has(normalized);

@@ -40,7 +40,7 @@ const forgotPassword = async (req, res) => {
 
         await PasswordReset.create({ email, token, expiresAt });
 
-        const resetUrl = `${String(process.env.FRONTEND_BASE_URL || 'http://localhost:3000').replace(/\/+$/, '')}/reset-password?token=${encodeURIComponent(
+        const resetUrl = `${String(process.env.FRONTEND_BASE_URL || 'http://localhost:8080').replace(/\/+$/, '')}/reset-password?token=${encodeURIComponent(
             token
         )}&email=${encodeURIComponent(email)}`;
 
