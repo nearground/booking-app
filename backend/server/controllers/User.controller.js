@@ -13,6 +13,7 @@ import {
 } from '../utils/constants.js';
 
 import UserService from '../services/User.service.js';
+import { mergeGuestCart } from '../services/Cart.service.js';
 import {
     normalizeStoredMediaValue,
     resolveMediaUrl,
@@ -113,12 +114,13 @@ const loginUser = async (req, res) => {
             });
         }
         const existingToken = req.cookies._token ?? '';
-        const { token } = await UserService.authenticateUser({
+        const { token, user } = await UserService.authenticateUser({
             username,
             password,
             organizationUsername: organizationUsername || undefined,
             existingToken,
         });
+        await mergeGuestCart({ sessionToken: req.cookies?._cart_session, customerId: user.id });
 
         res.cookie('_token', token, cookieOptions);
         res.cookie(
