@@ -103,6 +103,95 @@ describe('AddCommentForm', () => {
       images: [{ imageUrl: 'users/10/review-image/retain.jpg', accessibleText: 'Keep this' }],
     }));
   });
+  test('removing all existing photos sends an empty image list', async () => {
+    networkAdapter.put.mockResolvedValue({ ok: true, data: { id: 8 } });
+    render(
+      <AddCommentForm
+        initial={{
+          id: 8,
+          UserId: 10,
+          ParentId: null,
+          comment: 'Original comment body',
+          images: [
+            { imageUrl: 'http://localhost:4000/api/media/object/users/10/review-image/a.jpg', imageKey: 'users/10/review-image/a.jpg' },
+            { imageUrl: 'http://localhost:4000/api/media/object/users/10/review-image/b.jpg', imageKey: 'users/10/review-image/b.jpg' },
+          ],
+        }}
+        uploaderUserId={10}
+      />
+    );
+
+    fireEvent.click(screen.getAllByLabelText('Remove attached image')[0]);
+    fireEvent.click(screen.getByLabelText('Remove attached image'));
+    fireEvent.click(screen.getByRole('button', { name: 'Update' }));
+
+    await waitFor(() => expect(networkAdapter.put).toHaveBeenCalledTimes(1));
+    expect(networkAdapter.put.mock.calls[0][1].images).toEqual([]);
+  });
+
+  test('retains the unchanged image set as canonical keys when saving', async () => {
+    networkAdapter.put.mockResolvedValue({ ok: true, data: { id: 8 } });
+    render(
+      <AddCommentForm
+        initial={{
+          id: 8,
+          UserId: 10,
+          ParentId: null,
+          comment: 'Original comment body',
+          images: [
+            { imageUrl: 'http://localhost:4000/api/media/object/users/10/review-image/a.jpg', imageKey: 'users/10/review-image/a.jpg', accessibleText: 'A' },
+            { imageUrl: 'http://localhost:4000/api/media/object/users/10/review-image/b.jpg', imageKey: 'users/10/review-image/b.jpg', accessibleText: 'B' },
+          ],
+        }}
+        uploaderUserId={10}
+      />
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: 'Update' }));
+
+    await waitFor(() => expect(networkAdapter.put).toHaveBeenCalledTimes(1));
+    expect(networkAdapter.put.mock.calls[0][1].images).toEqual([
+      { imageUrl: 'users/10/review-image/a.jpg', accessibleText: 'A' },
+      { imageUrl: 'users/10/review-image/b.jpg', accessibleText: 'B' },
+    ]);
+  });
+
+  test('combines newly uploaded image keys with retained photos after removal', async () => {
+    networkAdapter.put.mockResolvedValue({ ok: true, data: { id: 8 } });
+    networkAdapter.upload.mockResolvedValue({
+      ok: true,
+      data: {
+        url: 'http://localhost:4000/api/media/object/users/10/review-image/new.jpg',
+        objectKey: 'users/10/review-image/new.jpg',
+      },
+    });
+    const { container } = render(
+      <AddCommentForm
+        initial={{
+          id: 8,
+          UserId: 10,
+          ParentId: null,
+          comment: 'Original comment body',
+          images: [
+            { imageUrl: 'http://localhost:4000/api/media/object/users/10/review-image/remove.jpg', imageKey: 'users/10/review-image/remove.jpg' },
+            { imageUrl: 'http://localhost:4000/api/media/object/users/10/review-image/retain.jpg', imageKey: 'users/10/review-image/retain.jpg', accessibleText: 'Retained' },
+          ],
+        }}
+        uploaderUserId={10}
+      />
+    );
+
+    const file = new File(['abc'], 'new.jpg', { type: 'image/jpeg' });
+    fireEvent.change(container.querySelector('input[type="file"]'), { target: { files: [file] } });
+    fireEvent.click(screen.getAllByLabelText('Remove attached image')[0]);
+    fireEvent.click(screen.getByRole('button', { name: 'Update' }));
+
+    await waitFor(() => expect(networkAdapter.put).toHaveBeenCalledTimes(1));
+    expect(networkAdapter.put.mock.calls[0][1].images).toEqual([
+      { imageUrl: 'users/10/review-image/retain.jpg', accessibleText: 'Retained' },
+      { imageUrl: 'users/10/review-image/new.jpg', accessibleText: undefined },
+    ]);
+  });
   test('uploads selected images and includes them in comment payload', async () => {
     networkAdapter.upload.mockResolvedValue({
       ok: true,

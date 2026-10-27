@@ -3,7 +3,7 @@ title: "Comment only after sign-in"
 work_id: "EPIC-comment-photo-editing/STORY-001"
 work_type: story
 template_version: 1
-status: ready
+status: done
 parent: "EPIC-comment-photo-editing"
 branch: "epic/comment-photo-editing"
 depends_on: []
@@ -15,7 +15,7 @@ Parent Epic: [EPIC-comment-photo-editing](../../index.md)
 
 ## User value
 
-As a a visitor, I want comment on an experience only after signing in, so that my reviews and replies are tied to my account.
+As a visitor, I want to comment on an experience only after signing in, so that my reviews and replies are tied to my account.
 
 ## Scope and non-goals
 
@@ -23,7 +23,7 @@ Replace the top-level review composer on ExperienceDetails with a subtle “Log 
 
 ## Acceptance criteria
 
-- [ ] Given a visitor is viewing an experience while logged out, when they reach the review composer area or open the all-comments modal, then they see only a small “Log in to comment” link in the composer area, and after login can return to that experience while continuing to read public comments.
+- [x] Given a visitor is viewing an experience while logged out, when they reach the review composer area or open the all-comments modal, then they see only a small “Log in to comment” link in the composer area, and after login can return to that experience while continuing to read public comments.
 - Epic acceptance coverage: Covers the Epic criterion requiring a return-aware guest login link at every comment composition entry point while preserving public reading.
 
 ## Ownership and dependencies
@@ -42,4 +42,4 @@ Run focused frontend Vitest and Cypress component checks for AddCommentForm/Comm
 
 ## Progress and decisions
 
-- Ready for implementation after confirming media response-to-update representations in regression coverage.
+- Completed: a guest-only, return-aware login link appears at the ExperienceDetails, CommentsSection, and CommentsModal entry points; public reading remains available. Focused UI tests passed 4/4 across the guest prompt and its entry points.

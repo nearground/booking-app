@@ -17,14 +17,14 @@ Only authenticated users see comment-composition UI, and an owner can remove a p
 
 ## Scope and non-goals
 
-In scope: hide composer while logged out (public reading stays available); support image-comment editing; correct serialization/validation and add regression tests. UI: `frontend/src/routes/experience-details/ExperienceDetails.jsx`, `CommentsModal.jsx`, `frontend/src/components/comments/AddCommentForm.jsx`, `CommentCard.jsx`; API `backend/server/routes/comments.js`. The error ?Maximum 10 images allowed, each must have a valid imageUrl? is returned by `validateImages` in `backend/server/services/Comment.service.js` on create and update. It accepts objects with `imageUrl`, normalizes media URLs and restricts stored keys. Likely cause: edit resubmits one or more API-exposed/public URL values in a representation or base-URL form not accepted by `toStoredReviewImageValue` / `isAllowedReviewImageKey`; the backend rejects the entire remaining array after a removal. Confirm exact failing payload/config before fix; do not weaken ownership or media allow-list. `Comment.model.js` separately enforces array/max length.
+In scope: hide composer while logged out (public reading stays available); support image-comment editing; correct serialization/validation and add regression tests. UI: `frontend/src/routes/experience-details/ExperienceDetails.jsx`, `CommentsModal.jsx`, `frontend/src/components/comments/AddCommentForm.jsx`, `CommentCard.jsx`; API `backend/server/routes/comments.js`. `validateImages` in `backend/server/services/Comment.service.js` returns `Maximum 10 images allowed, each must have a valid imageUrl` for malformed or unconfigured absolute URLs. The UI originally replayed API-exposed public URLs on edit, making updates dependent on exact `MEDIA_PUBLIC_BASE_URL` matching. The configured local base round-trips; an external-base mismatch reproduces the reported 400. Responses now expose the validated stored `imageKey`, and the UI submits that key while continuing to display `imageUrl`. The backend still enforces the media prefix allow-list, image count, and authorization; `Comment.model.js` separately enforces array/max length.
 
 ## Acceptance criteria
 
-- [ ] Logged-out visitors can read comments and see only a small, unobtrusive "Log in to comment" text link in place of the composer (all entry points, including `CommentsModal`); it returns them to the same experience after login. Authenticated controls remain.
-- [ ] Owner removes a photo and saves: only remaining valid images persist and save succeeds.
-- [ ] Supported media URL forms round-trip; malformed/external/disallowed paths and >10 images remain rejected.
-- [ ] Tests cover remove one/all, retain multiple, upload-plus-remove, and unchanged image comment.
+- [x] Logged-out visitors can read comments and see only a small, unobtrusive "Log in to comment" text link in place of the composer (all entry points, including `CommentsModal`); it returns them to the same experience after login. Authenticated controls remain.
+- [x] Owner removes a photo and saves: only remaining valid images persist and save succeeds.
+- [x] Supported media URL forms round-trip; malformed/external/disallowed paths and >10 images remain rejected.
+- [x] Tests cover remove one/all, retain multiple, upload-plus-remove, and unchanged image comment.
 
 ## Branch independence and ownership
 
@@ -53,9 +53,9 @@ The Epic is expanded into two Stories and four implementation Tasks; implementat
 
 ## Verification and completion evidence
 
-Run `AddCommentForm.test.jsx`, `CommentCard.test.jsx`, `backend/tests/unit/comment-service.test.js`; capture and test actual response-to-update URL shape, including media base configuration.
+Run `AddCommentForm.test.jsx`, `CommentCard.test.jsx`, guest prompt entry-point tests, and `backend/tests/unit/comment-service.test.js`; verify the canonical response key and rejection of external media URLs.
 
 ## Progress and decisions
 
-- Expanded into Stories 001–002 and Tasks 001–004; implementation started after selecting the in-progress status.
+- Expanded into Stories 001–002 and Tasks 001–004; all Stories and Tasks are complete. Backend Jest passed 266/266; frontend build passed. Full Vitest: 28 files passed, 1 unrelated pre-existing Login.test.jsx failure (230 passed, 1 failed). Cypress component testing was attempted but is blocked by the existing ESM/CJS config-load error; the named component test files use Vitest.
 - 2026-10-26: User decided logged-out UX: small unobtrusive "Log in to comment" text.
