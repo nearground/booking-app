@@ -3,7 +3,7 @@ const path = require('node:path');
 const { describe, expect, test } = require('@jest/globals');
 
 const backendRoot = path.resolve(__dirname, '..');
-const specPath = path.resolve(backendRoot, '..', 'docs', 'reference', 'contracts', 'api', 'openapi.yaml');
+const specPath = path.join(process.env.API_CONTRACT_DOCS_ROOT || path.resolve(backendRoot, '..', 'docs'), 'reference', 'contracts', 'api', 'openapi.yaml');
 const routeSources = {
   users: { file: 'users.js', prefix: '/api/users' },
   organizers: { file: 'organizers.js', prefix: '/api/organizers' },
@@ -12,10 +12,15 @@ const routeSources = {
   orders: { file: 'orders.js', prefix: '/api/orders' },
   comments: { file: 'comments.js', prefix: '/api/comments' },
   media: { file: 'media.js', prefix: '/api/media' },
+  organizationSites: { file: 'organization-sites.js', prefix: '/api/organization-sites' },
 };
 
 const expectedOperations = [
   ['users', 'put', '/register'], ['users', 'post', '/login'],
+  ['users', 'post', '/email-verification/request'], ['users', 'post', '/email-verification/confirm'],
+  ['users', 'post', '/forgot-password'], ['users', 'get', '/reset-password/:token'], ['users', 'post', '/reset-password'],
+  ['organizationSites', 'get', '/:slug'],
+  ['organizationSites', 'get', '/admin/:organizationId/branding'], ['organizationSites', 'patch', '/admin/:organizationId/branding'],
   ['organizers', 'post', '/onboarding/start'], ['organizers', 'post', '/onboarding/complete'],
   ['organizers', 'get', '/invites/resolve'], ['organizers', 'post', '/invites'],
   ['organizers', 'post', '/invites/:id/resend'], ['organizers', 'delete', '/invites/:id'],
@@ -37,7 +42,7 @@ const expectedOperations = [
   ['experiences', 'patch', '/manage/scheduled-experiences/:sessionId/sync-lock'],
   ['cart', 'get', '/'], ['cart', 'post', '/items'], ['cart', 'patch', '/items/:id'],
   ['cart', 'delete', '/items/:id'], ['cart', 'delete', '/'], ['cart', 'post', '/checkout'],
-  ['orders', 'get', '/'], ['orders', 'get', '/:orderNumber/confirmation'], ['orders', 'get', '/:orderNumber'],
+  ['orders', 'get', '/'], ['orders', 'post', '/guest-receipt'], ['orders', 'get', '/:orderNumber/confirmation'], ['orders', 'get', '/:orderNumber'],
   ['comments', 'get', '/received/:commentableType/:commentableId'],
   ['comments', 'get', '/sent/:userId'], ['comments', 'get', '/parent/:parentId/replies'],
   ['comments', 'get', '/eligibility'], ['comments', 'post', '/:commentableType/:commentableId'],
@@ -82,5 +87,14 @@ describe('OpenAPI target route contract', () => {
   test('every documented method/path exists in its corresponding router source', () => {
     const unregistered = [...documented].filter(route => !registered.has(route));
     expect(unregistered).toEqual([]);
+  });
+
+  test('guest checkout and receipt capabilities stay distinct from customer authentication', () => {
+    expect(spec.paths['/api/cart/checkout'].post.security).toEqual([{}, { cookieAuth: [] }]);
+    expect(spec.paths['/api/orders/guest-receipt'].post.security).toEqual([]);
+    expect(spec.paths['/api/orders/{orderNumber}/confirmation'].get.security).toEqual([{ cookieAuth: [] }]);
+    expect(spec.components.schemas.CartItemRequest.properties.ProductType.enum).toEqual(['Experience']);
+    expect(spec.components.schemas.CheckoutRequest.properties.saveBookingForLater).toMatchObject({ type: 'boolean', default: true });
+    expect(spec.components.schemas.GuestReceiptRequest.required).toEqual(['orderNumber', 'receiptToken']);
   });
 });

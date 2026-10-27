@@ -1,19 +1,23 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faStar } from '@fortawesome/free-solid-svg-icons';
 import CommentCard from '../../components/comments/CommentCard';
 import GuestCommentPrompt from '../../components/comments/GuestCommentPrompt';
+import useModalAccessibility from '../../components/ux/modal/useModalAccessibility';
 
 const CommentsModal = ({ isOpen, onClose, comments, isLoggedIn = false }) => {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 12;
+  const dialogRef = useRef(null);
+  useModalAccessibility({ isOpen, onClose, dialogRef });
 
   useEffect(() => {
-    if (isOpen) {
-      document.body.style.overflow = 'hidden';
-    }
+    if (!isOpen) return undefined;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    setCurrentPage(1);
     return () => {
-      document.body.style.overflow = 'unset';
+      document.body.style.overflow = previousOverflow;
     };
   }, [isOpen]);
 
@@ -42,27 +46,33 @@ const CommentsModal = ({ isOpen, onClose, comments, isLoggedIn = false }) => {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+      className="responsive-overlay fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+      onClick={onClose}
     >
       <div
-        className="relative bg-white rounded-xl shadow-lg w-full max-w-4xl max-h-[90vh] flex flex-col"
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label="All comments"
+        tabIndex={-1}
+        className="responsive-dialog relative bg-white rounded-xl shadow-lg max-w-4xl flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex justify-between items-center px-6 py-4 border-b border-slate-200">
-          <h3 className="text-xl font-semibold text-slate-800">
+        <div className="flex flex-wrap shrink-0 justify-between items-center gap-2 px-4 py-2 border-b border-slate-200">
+          <h3 className="min-w-0 text-lg font-semibold text-slate-800">
             All Comments ({topLevelComments.length})
           </h3>
           {!isLoggedIn && <GuestCommentPrompt />}
           <button
             onClick={onClose}
-            className="text-slate-500 hover:text-slate-700 text-2xl leading-none"
+            className="min-h-11 min-w-11 text-slate-500 hover:text-slate-700 text-2xl leading-none"
             aria-label="Close comments"
           >
             ×
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-6">
+        <div className="responsive-dialog__body flex-1 overflow-y-auto p-3 sm:p-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {currentTopLevel.map((comment) => (
               <CommentCard
@@ -76,7 +86,7 @@ const CommentsModal = ({ isOpen, onClose, comments, isLoggedIn = false }) => {
               />
             ))}
             {currentTopLevel.length === 0 && (
-              <p className="text-slate-500 col-span-2 text-center">
+              <p className="text-slate-500 md:col-span-2 text-center">
                 No comments found.
               </p>
             )}
@@ -84,11 +94,11 @@ const CommentsModal = ({ isOpen, onClose, comments, isLoggedIn = false }) => {
         </div>
 
         {totalPages > 1 && (
-          <div className="flex justify-between items-center px-6 py-4 border-t border-slate-200 bg-slate-50 rounded-b-xl">
+          <div className="flex flex-wrap shrink-0 justify-between items-center gap-2 px-3 py-2 border-t border-slate-200 bg-slate-50 rounded-b-xl">
             <button
               onClick={prevPage}
               disabled={currentPage === 1}
-              className="px-4 py-2 text-sm font-medium rounded-md border border-slate-300 text-slate-700 bg-white hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="min-h-11 min-w-11 px-4 py-2 text-sm font-medium rounded-md border border-slate-300 text-slate-700 bg-white hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Previous
             </button>
@@ -98,7 +108,7 @@ const CommentsModal = ({ isOpen, onClose, comments, isLoggedIn = false }) => {
             <button
               onClick={nextPage}
               disabled={currentPage === totalPages}
-              className="px-4 py-2 text-sm font-medium rounded-md border border-slate-300 text-slate-700 bg-white hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="min-h-11 min-w-11 px-4 py-2 text-sm font-medium rounded-md border border-slate-300 text-slate-700 bg-white hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Next
             </button>

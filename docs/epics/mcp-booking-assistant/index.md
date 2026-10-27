@@ -3,7 +3,7 @@ title: "MCP booking assistant: API research"
 work_id: "EPIC-mcp-booking-assistant"
 work_type: epic
 template_version: 1
-status: in-progress
+status: done
 parent: null
 branch: "epic/mcp-booking-assistant"
 depends_on: []
@@ -30,10 +30,10 @@ Non-goals for this phase: building the MCP server, changing REST contracts, issu
 
 ## Acceptance criteria
 
-- [ ] API inventory covers every target capability with verified route, auth requirement, inputs, outputs and errors; unknowns are listed, not guessed.
-- [ ] OpenAPI spec for those routes exists and an automated database-free test detects route/method drift against Express router definitions.
-- [ ] Gap analysis and MCP recommendation memo are published and linked from this Epic.
-- [ ] No production code behavior changes in this phase.
+- [x] API inventory covers every target capability with verified route, auth requirement, inputs, outputs and errors; unknowns are listed, not guessed.
+- [x] OpenAPI spec for those routes exists and an automated database-free test detects route/method drift against Express router definitions.
+- [x] Gap analysis and MCP recommendation memo are published and linked from this Epic.
+- [x] No production code behavior changes in this phase.
 
 ## Branch independence and ownership
 
@@ -74,3 +74,4 @@ The static Jest route contract test must pass without a database. An optional GE
 
 - 2026-10-26: Expanded Epic into two Stories and three Tasks; the API inventory, OpenAPI route contract/test, and MCP gap/tool recommendation are complete; planning validation and all 265 backend Jest tests pass. No production behavior was changed.
 - 2026-10-26: Scope narrowed by user to API research first; MCP scope decided incrementally.
+- Wave 1 closeout: refreshed inventory/spec/memo for merged guest checkout, default linking consent, verified-email claims, account recovery, organization sites and canonical review media. The database-free route check passes (3 tests); Docker invocation mounts docs read-only without changing the dev service. MCP server implementation, agent credentials and confirmation-code-only receipt lookup remain outside this research release.

@@ -25,14 +25,14 @@ const ReviewSidebar = ({ review }) => {
 
   return (
     <aside
-      className="w-full rounded-3xl bg-white/95 p-5 text-slate-900 shadow-2xl backdrop-blur-sm lg:h-full"
+      className="w-full min-w-0 [overflow-wrap:anywhere] rounded-3xl bg-white/95 p-5 text-slate-900 shadow-2xl backdrop-blur-sm lg:h-full"
       aria-label="Review context"
     >
       <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">
         Guest Photo
       </p>
 
-      <div className="mt-3 flex items-center gap-3">
+      <div className="mt-3 flex flex-wrap items-center gap-3">
         <p className="text-lg font-semibold text-slate-900">{reviewerName}</p>
         {Number(review?.anonymity) === 0 ? (
           <span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-medium text-slate-600">

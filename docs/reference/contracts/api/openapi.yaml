@@ -19,7 +19,7 @@
         "tags": [
           "Authentication"
         ],
-        "description": "Public. Does not create a login session.",
+        "description": "Public. Email is trimmed, lowercased and unique across users. Starts email verification, but does not create a login session. Verified email ownership claims only eligible guest orders whose saveBookingForLater preference is not false.",
         "requestBody": {
           "required": true,
           "content": {
@@ -66,6 +66,89 @@
             "$ref": "#/components/responses/ErrorEnvelope"
           }
         }
+      }
+    },
+    "/api/users/email-verification/request": {
+      "post": {
+        "operationId": "requestEmailVerification",
+        "summary": "Request email ownership verification",
+        "description": "Public, forgot-password rate limiter. Returns an anti-enumeration message; does not return the verification token.",
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/EmailRequest" } } } },
+        "responses": { "200": { "$ref": "#/components/responses/SuccessEnvelope" }, "default": { "$ref": "#/components/responses/ErrorEnvelope" } }
+      }
+    },
+    "/api/users/email-verification/confirm": {
+      "post": {
+        "operationId": "confirmEmailVerification",
+        "summary": "Verify email and claim eligible guest orders",
+        "description": "Public capability exchange. Body token proves email ownership; equality of email alone is insufficient. Returns data.emailVerified and data.claimedOrderCount. Explicit saveBookingForLater=false orders are excluded. Invalid, expired or reused tokens return 400.",
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "object", "required": ["token"], "properties": { "token": { "type": "string" } } } } } },
+        "responses": { "200": { "$ref": "#/components/responses/SuccessEnvelope" }, "default": { "$ref": "#/components/responses/ErrorEnvelope" } }
+      }
+    },
+    "/api/users/forgot-password": {
+      "post": {
+        "operationId": "forgotPassword",
+        "summary": "Request a password reset email",
+        "description": "Public, forgot-password rate limiter. Returns generic success for existing and unknown emails; missing email returns 400. Link uses configured FRONTEND_BASE_URL (localhost:8080 in development).",
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/EmailRequest" } } } },
+        "responses": { "200": { "$ref": "#/components/responses/SuccessEnvelope" }, "default": { "$ref": "#/components/responses/ErrorEnvelope" } }
+      }
+    },
+    "/api/users/reset-password/{token}": {
+      "get": {
+        "operationId": "validateResetToken",
+        "summary": "Validate a password reset capability",
+        "description": "Public. Returns data.valid; does not change the password.",
+        "parameters": [{ "name": "token", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "responses": { "200": { "$ref": "#/components/responses/SuccessEnvelope" }, "default": { "$ref": "#/components/responses/ErrorEnvelope" } }
+      }
+    },
+    "/api/users/reset-password": {
+      "post": {
+        "operationId": "resetPassword",
+        "summary": "Consume a password reset token",
+        "description": "Public, single-use token. Email is optional; when supplied it must match the token account after normalization. Unknown, expired and reused tokens are rejected.",
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "object", "required": ["token", "newPassword"], "properties": {
+          "token": { "type": "string" }, "newPassword": { "type": "string", "minLength": 6 }, "email": { "type": "string", "format": "email" }
+        } } } } },
+        "responses": { "200": { "$ref": "#/components/responses/SuccessEnvelope" }, "default": { "$ref": "#/components/responses/ErrorEnvelope" } }
+      }
+    },
+    "/api/organization-sites/{slug}": {
+      "get": {
+        "operationId": "getPublicOrganizationSite",
+        "summary": "Read public organization branding and upcoming experiences",
+        "description": "Public safe-field allow-list; includes branding, contact/social links intentionally published by admins, and experiences with scheduled upcoming sessions. Empty branded sites are valid. Unknown/reserved slugs return 404. Experience links are relative /experience/{id}.",
+        "parameters": [{ "name": "slug", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "responses": { "200": { "$ref": "#/components/responses/SuccessEnvelope" }, "default": { "$ref": "#/components/responses/ErrorEnvelope" } }
+      }
+    },
+    "/api/organization-sites/admin/{organizationId}/branding": {
+      "parameters": [{ "name": "organizationId", "in": "path", "required": true, "schema": { "type": "integer" } }],
+      "get": {
+        "operationId": "getOrganizationBranding",
+        "summary": "Read organization branding as an admin",
+        "security": [{ "cookieAuth": [] }],
+        "responses": { "200": { "$ref": "#/components/responses/SuccessEnvelope" }, "default": { "$ref": "#/components/responses/ErrorEnvelope" } }
+      },
+      "patch": {
+        "operationId": "updateOrganizationBranding",
+        "summary": "Update validated organization branding",
+        "description": "Organization admin only, with CSRF. Unknown fields rejected. Media keys must be uploaded by the current admin. Unique slug conflicts return 409. See inventory for field validation.",
+        "security": [{ "cookieAuth": [] }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "type": "object", "description": "Partial branding fields; see inventory. Nested validation remains authoritative on the server.", "additionalProperties": true } } } },
+        "responses": { "200": { "$ref": "#/components/responses/SuccessEnvelope" }, "default": { "$ref": "#/components/responses/ErrorEnvelope" } }
+      }
+    },
+    "/api/orders/guest-receipt": {
+      "post": {
+        "operationId": "getGuestOrder",
+        "summary": "Read an unclaimed guest receipt using its private capability",
+        "description": "No customer session required. Requires orderNumber plus receiptToken in JSON, not in the URL. Invalid, expired, claimed and missing receipts return 404. Stored capability hashes/metadata are not returned; confirmationEmail and saveBookingForLater are exposed separately.",
+        "security": [],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/GuestReceiptRequest" } } } },
+        "responses": { "200": { "$ref": "#/components/responses/SuccessEnvelope" }, "default": { "$ref": "#/components/responses/ErrorEnvelope" } }
       }
     },
     "/api/organizers/onboarding/start": {
@@ -1172,8 +1255,9 @@
         "tags": [
           "Cart"
         ],
-        "description": "Authenticated customer only; no client idempotency key is accepted.",
+        "description": "Optional customer authentication. Guests must own the _cart_session cart cookie. No client idempotency key is accepted. Guest responses include a one-time guestReceiptToken (30-day capability) and saveBookingForLater; all responses include confirmationEmail status when available. Email failure does not invalidate the booking.",
         "security": [
+          {},
           {
             "cookieAuth": []
           }
@@ -1666,7 +1750,7 @@
         "tags": [
           "Media"
         ],
-        "description": "Raw image bytes; body limit 6 MB; only the authenticated user may upload for their own user ID.",
+        "description": "Raw image or MP4 bytes; body limit 6 MB; only the authenticated user may upload for their own user ID.",
         "security": [
           {
             "cookieAuth": []
@@ -1703,7 +1787,9 @@
                 "profile",
                 "experience-thumbnail",
                 "experience-gallery",
-                "review-image"
+                "review-image",
+                "organization-logo",
+                "organization-cover"
               ],
               "default": "asset"
             }
@@ -1731,6 +1817,12 @@
               }
             },
             "image/gif": {
+              "schema": {
+                "type": "string",
+                "format": "binary"
+              }
+            },
+            "video/mp4": {
               "schema": {
                 "type": "string",
                 "format": "binary"
@@ -2204,6 +2296,16 @@
           }
         }
       },
+      "EmailRequest": {
+        "type": "object",
+        "required": ["email"],
+        "properties": { "email": { "type": "string", "format": "email" } }
+      },
+      "GuestReceiptRequest": {
+        "type": "object",
+        "required": ["orderNumber", "receiptToken"],
+        "properties": { "orderNumber": { "type": "string" }, "receiptToken": { "type": "string" } }
+      },
       "CartItemRequest": {
         "type": "object",
         "required": [
@@ -2215,9 +2317,7 @@
           "ProductType": {
             "type": "string",
             "enum": [
-              "Experience",
-              "Service",
-              "Hotel"
+              "Experience"
             ]
           },
           "ProductId": {
@@ -2301,6 +2401,11 @@
           "contact": {
             "type": "object",
             "additionalProperties": true
+          },
+          "saveBookingForLater": {
+            "type": "boolean",
+            "default": true,
+            "description": "Guest-only consent to associate this booking with a later verified account. False prevents future claiming while retaining receipt access and confirmation email."
           }
         },
         "description": "No idempotency key is currently consumed."
@@ -2321,13 +2426,13 @@
             "type": "integer"
           },
           "anonymity": {
-            "type": "boolean"
+            "type": "integer",
+            "enum": [0, 1, 2]
           },
           "images": {
             "type": "array",
-            "items": {
-              "type": "string"
-            }
+            "maxItems": 10,
+            "items": { "$ref": "#/components/schemas/ReviewImageRequest" }
           }
         },
         "additionalProperties": true
@@ -2345,16 +2450,24 @@
             "type": "integer"
           },
           "anonymity": {
-            "type": "boolean"
+            "type": "integer",
+            "enum": [0, 1, 2]
           },
           "images": {
             "type": "array",
-            "items": {
-              "type": "string"
-            }
+            "maxItems": 10,
+            "items": { "$ref": "#/components/schemas/ReviewImageRequest" }
           }
         },
         "additionalProperties": true
+      },
+      "ReviewImageRequest": {
+        "type": "object",
+        "required": ["imageUrl"],
+        "properties": {
+          "imageUrl": { "type": "string", "description": "Canonical allowed media object key, or a supported configured media URL. Responses expose imageKey for retained-image updates." },
+          "accessibleText": { "type": "string", "maxLength": 200 }
+        }
       },
       "MediaUploadResponse": {
         "type": "object",

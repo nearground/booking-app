@@ -27,7 +27,7 @@ const ImageThumbnailGrid = ({ images, onImageClick, title }) => {
       <img
         src={image.imageUrl}
         alt={image.accessibleText || `${title || 'Gallery'} photo ${index + 1}`}
-        className="w-full rounded-xl object-cover"
+        className="w-full min-h-11 aspect-[4/3] rounded-xl object-cover"
         loading="lazy"
       />
     </button>

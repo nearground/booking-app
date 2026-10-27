@@ -5,6 +5,26 @@ sidebar_position: 3
 
 # PUERTO VALLARTA TODAY - Docker Setup Summary
 
+## Wave 1 release completion
+
+The six scoped Wave 1 Epics are implemented/verified on `main`: guest checkout and cart continuity, comment privacy/photo editing, correlated seed-factory research/spike, MCP API research, branded organization sites, and responsive UX. The live development work dashboard shows all 6 Epics, 17 Stories and 33 Tasks as done.
+
+Release validation:
+
+| Check | Result |
+|---|---|
+| Backend Jest | 357 application tests plus 3 separately run database-free OpenAPI checks passed |
+| Frontend Vitest | 283 tests passed |
+| Booking and password-reset Cypress | 39 booking checks and 3 real-API password-reset checks passed |
+| Responsive Cypress | 88 route/dialog matrix checks plus 11 comment/editor checks passed |
+| Planning / Git index utilities | 14 tests passed; all 61 planning documents validate |
+| Production builds | Frontend and Docusaurus builds passed |
+| Changed frontend files | ESLint: no errors; existing warnings remain |
+
+Browser totals represent the latest relevant passing runs, not a single combined command: after the original combined regression passed, the strengthened matrix and affected booking/cart/guest/comments suites were rerun successfully. Matrix checkout/receipt use explicit router-state layout fixtures; the separate booking suite creates real orders. Comments layout uses controlled API fixtures; backend tests cover authorization and canonical media handling. Password-reset E2E reads a dedicated test token from the development database rather than inspecting an email inbox.
+
+Completion does not activate production wildcard DNS/tunnel ingress; that remains deferred to launch. Physical-phone virtual keyboard/notch/LAN checks remain manual. The seed Epic delivers the agreed research/spike and rewrite plan, not the later durable SQL-store/seeder rewrite. The MCP Epic delivers API research/contracts, not an MCP server. Later hero/video, pinned-comments, single-date and Spanish-localization Epics are not pulled into Wave 1.
+
 ## ✅ What Has Been Completed
 
 Your PUERTO VALLARTA TODAY application is now fully dockerized with a complete container orchestration setup.

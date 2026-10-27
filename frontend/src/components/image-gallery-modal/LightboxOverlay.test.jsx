@@ -7,6 +7,14 @@ const images = [
 ];
 
 describe('LightboxOverlay', () => {
+  test('does not lock page scrolling when no active image exists', () => {
+    render(
+      <LightboxOverlay images={[]} currentIndex={0} onClose={() => {}} onNavigate={() => {}} />
+    );
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(document.body.style.overflow).toBe('');
+  });
+
   test('renders image-only layout when no sidebar content is provided', () => {
     render(
       <LightboxOverlay
@@ -21,7 +29,7 @@ describe('LightboxOverlay', () => {
 
     expect(screen.queryByTestId('lightbox-sidebar')).not.toBeInTheDocument();
     expect(screen.getByTestId('lightbox-content')).toHaveClass('items-center');
-    expect(screen.getByRole('img')).toHaveClass('max-w-[92vw]');
+    expect(screen.getByRole('img')).toHaveClass('max-w-full', 'max-h-[78dvh]');
   });
 
   test('renders sidebar layout when sidebar content is provided', () => {

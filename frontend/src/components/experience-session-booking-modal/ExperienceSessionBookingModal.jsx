@@ -65,6 +65,13 @@ const ExperienceSessionBookingModal = ({
   const [errorMessage, setErrorMessage] = useState('');
   const dialogRef = useRef(null);
   useModalAccessibility({ isOpen: isOpen && Boolean(session), onClose, dialogRef });
+  useEffect(() => {
+    if (!isOpen || !session) return undefined;
+    const previousOverflow = document.body.style.overflow;
+    if (previousOverflow === 'hidden') return undefined;
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = previousOverflow; };
+  }, [isOpen, session]);
 
   // Questionnaire answers: experience-level
   const [reservationAnswers, setReservationAnswers] = useState({});
@@ -330,36 +337,40 @@ const ExperienceSessionBookingModal = ({
   return (
     <div className="responsive-overlay fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={(event) => { if (event.target === event.currentTarget) onClose(); }}>
       <div
-        className="bg-white w-full max-w-4xl max-h-[90vh] rounded-xl shadow-lg border border-slate-200 p-5 overflow-y-auto"
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="booking-modal-title"
+        tabIndex={-1}
+        className="responsive-dialog bg-white max-w-4xl rounded-xl shadow-lg border border-slate-200 flex flex-col"
         data-testid="booking-modal"
         onClick={(event) => event.stopPropagation()}
       >
         {/* Header */}
-        <div className="sticky top-0 z-10 -mx-4 -mt-4 flex items-start justify-between gap-4 border-b border-slate-200 bg-white px-4 pb-4 pt-4 sm:-mx-5 sm:-mt-5 sm:px-5 sm:pt-5">
-          <div>
+        <div className="shrink-0 flex items-start justify-between gap-3 border-b border-slate-200 bg-white p-4 sm:p-5">
+          <div className="min-w-0 flex-1 [overflow-wrap:anywhere]">
             <h3 className="text-xl font-semibold text-slate-800" id="booking-modal-title"
               data-testid="booking-modal__title">
               {experienceTitle || 'Experience'}
             </h3>
             <p className="text-sm text-slate-600 mt-1">{experienceSubtitle || 'Session details'}</p>
-          </div>
-          <div className="flex items-start gap-3">
-            <div className="text-right">
+            <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1">
               <p className="text-sm font-medium text-slate-700">Start: {formatDateTime(startDate)}</p>
-              <p className="text-sm text-slate-600 mt-1">End: {formatDateTime(endDate)}</p>
+              <p className="text-sm text-slate-600">End: {formatDateTime(endDate)}</p>
             </div>
+          </div>
             <button
               type="button"
               onClick={onClose}
-              className="touch-target rounded-md px-2 text-2xl leading-none text-slate-500 hover:text-slate-700"
+              className="touch-target shrink-0 rounded-md px-2 text-2xl leading-none text-slate-500 hover:text-slate-700"
               aria-label="Close booking modal"
             >
               &times;
             </button>
-          </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-5">
+        <div className="responsive-dialog__body flex-1 overflow-y-auto p-4 sm:p-5">
+        <div className="grid min-w-0 grid-cols-1 md:grid-cols-3 gap-6">
           {/* Left column: Tickets + Questionnaire + Contact */}
           <div className="md:col-span-2 space-y-3">
             {isSessionFull ? (
@@ -432,6 +443,7 @@ const ExperienceSessionBookingModal = ({
                 {errorMessage}
               </p>
             ) : null}
+          </div>
           </div>
 
           {/* Right column: Summary */}

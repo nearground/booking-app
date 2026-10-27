@@ -1,6 +1,7 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import LightboxOverlay from './LightboxOverlay';
 import ImageThumbnailGrid from './ImageThumbnailGrid';
+import useModalAccessibility from '../ux/modal/useModalAccessibility';
 
 const galleryAnimationStyles = `
 @keyframes fadeIn {
@@ -43,6 +44,8 @@ const ImageGalleryModal = ({
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
   const [animationOrigin, setAnimationOrigin] = useState(null);
   const activeImage = Array.isArray(images) ? images[currentIndex] : null;
+  const dialogRef = useRef(null);
+  useModalAccessibility({ isOpen: isOpen && viewMode === 'gallery' && Boolean(images?.length), onClose, dialogRef });
 
   useEffect(() => {
     if (isOpen) {
@@ -53,17 +56,12 @@ const ImageGalleryModal = ({
   }, [isOpen, initialIndex]);
 
   useEffect(() => {
-    if (!isOpen) return undefined;
-    if (viewMode !== 'gallery') return undefined;
-
-    const handleKeyDown = (event) => {
-      if (event.key === 'Escape') {
-        onClose();
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, viewMode, onClose]);
+    if (!isOpen || !images?.length) return undefined;
+    const previousOverflow = document.body.style.overflow;
+    if (previousOverflow === 'hidden') return undefined;
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = previousOverflow; };
+  }, [isOpen, images?.length]);
 
   const openLightbox = useCallback((index) => {
     setAnimationOrigin(null);
@@ -106,21 +104,23 @@ const ImageGalleryModal = ({
         />
       ) : (
         <div
-          className="fixed inset-0 z-50 bg-black/85 p-4 md:p-6 overflow-y-auto"
+          ref={dialogRef}
+          tabIndex={-1}
+          className="responsive-overlay fixed inset-0 z-50 bg-black/85 overflow-y-auto overscroll-contain"
           onClick={onClose}
           role="dialog"
           aria-modal="true"
           aria-label="Image gallery"
         >
           <div
-            className="mx-auto w-full max-w-6xl"
+            className="mx-auto w-full min-w-0 max-w-6xl"
             onClick={(event) => event.stopPropagation()}
           >
-            <div className="sticky top-0 z-10 mb-4 flex items-center justify-center rounded-xl bg-black/70 px-4 py-3 text-white backdrop-blur-sm">
-              <p className="text-sm md:text-base font-medium text-center">{title}</p>
+            <div className="sticky top-0 z-10 mb-4 flex items-center justify-between gap-3 rounded-xl bg-black/70 px-4 py-2 text-white backdrop-blur-sm">
+              <p className="min-w-0 break-words text-sm md:text-base font-medium">{title}</p>
               <button
                 type="button"
-                className="absolute right-4 top-1/2 -translate-y-1/2 text-white text-3xl leading-none"
+                className="shrink-0 min-w-11 min-h-11 text-white text-3xl leading-none"
                 onClick={onClose}
                 aria-label="Close photos gallery"
               >

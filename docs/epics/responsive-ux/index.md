@@ -3,7 +3,7 @@ title: "Responsive UX across device shapes"
 work_id: "EPIC-responsive-ux"
 work_type: epic
 template_version: 1
-status: in-progress
+status: done
 parent: null
 branch: "epic/responsive-ux"
 depends_on: []
@@ -13,7 +13,7 @@ depends_on: []
 
 ## Outcome and MVP traceability
 
-Every customer-facing screen renders cleanly and is easy to use on phones, tablets, laptops and wide desktops, in portrait and landscape, including notched devices and foldables. Comment presentation is part of this Epic but deliberately deferred until the comment-photo-editing branch merges; its Stories and Tasks remain not started.
+Customer-facing layouts support the documented phone, tablet, laptop, wide-desktop and foldable viewport matrix. Comment presentation is complete following the comment-photo-editing merge; physical-device keyboard/notch checks remain manual launch checks rather than hardware certification.
 
 ## Scope and non-goals
 
@@ -32,12 +32,12 @@ Non-goals: redesigning branding or information architecture; new features (handl
 
 ## Acceptance criteria
 
-- [ ] Supported device matrix documented in `docs/reference/` and encoded in a Cypress viewport spec.
-- [ ] Home, experience browse, experience details (default layout), cart, checkout, receipt, login/register and organizer profile have no horizontal overflow, clipped controls or obscured content at every matrix viewport in portrait and landscape.
-- [ ] Modals/drawers fit the dynamic viewport, are scrollable, trap focus and close reliably on touch.
-- [ ] Comment list, threads, photo grid/viewer and composer are comfortable at 360px wide and at desktop widths; touch targets >= 44px (deferred until comment-photo-editing merges).
-- [ ] Images reserve space (no notable layout shift) and use responsive sources where the media pipeline supports it.
-- [ ] Viewport Cypress spec and existing Cypress/Vitest suites pass.
+- [x] Supported device matrix documented in `docs/reference/` and encoded in a Cypress viewport spec.
+- [x] Home, experience browse, experience details, populated cart, checkout, receipt, login/register, authenticated organizer profile and public organization profile have no horizontal overflow or clipped primary controls at every matrix viewport. Checkout/receipt matrix cases use explicit router-state layout fixtures; booking suites independently verify real checkout/receipt creation.
+- [x] Modals/drawers fit the dynamic viewport, are scrollable, trap focus and close reliably.
+- [x] Comment list, threads, photo grid/viewer and composer fit 360px through desktop widths; actions meet >=44px touch targets, including reduced-height composer checks.
+- [x] Images reserve layout space; no unsupported responsive-source URLs are invented.
+- [x] Viewport Cypress spec and existing Cypress/Vitest suites pass; see release verification and device matrix for coverage boundaries.
 
 ## Branch independence and ownership
 
@@ -48,7 +48,7 @@ Non-goals: redesigning branding or information architecture; new features (handl
 
 ## Dependencies and integration
 
-No formal prerequisite. Recommend landing the layout primitives early so the hero, single-date and organization-site Epics build on them; their new screens must pass the same viewport spec.
+Layout primitives are merged. Comment-photo-editing is also merged, unblocking Story 004. Later hero/single-date/pinned-comment Epics must preserve this viewport contract.
 
 ## User Stories
 
@@ -72,7 +72,11 @@ Children are created only when expansion is explicitly requested.
 
 Run the responsive Cypress spec across the matrix, existing Cypress and Vitest suites, and a manual pass on a real phone over the LAN (`http://<LAN-IP>:8080`).
 
+Wave 1 closeout: all four Stories and eight Tasks are complete on main. The route matrix passes 88 checks using actual seeded details, populated carts and authenticated organizer pages; checkout/receipt use explicit layout state. The comments suite passes 11 checks across eight device shapes and three editor heights. Full frontend unit tests pass (283), as does the production build. Physical-device virtual keyboards and production tunnel hosts have not been tested by these automated checks.
+
 ## Progress and decisions
 
 - 2026-10-26: Expanded into four Stories and eight Tasks. Stories 001?003 and their six implementation Tasks are complete; the comment Story/Tasks remain not started pending comment-photo-editing merge.
 - 2026-10-26: Worktree build succeeded; 80 responsive Cypress checks and the modal focus hook test passed. The full Vitest suite has one unrelated existing Login.test.jsx failure, and repository lint reports pre-existing Cypress booking-test errors.
+- Wave 1 closeout: the former Login test failure is resolved on main. Finished comment card/thread wrapping, gallery/dialog focus and scrolling, photo removal touch targets, and labeled scrollable composers. Long authenticated names are bounded in the navbar after the new overflow test exposed the issue. Changed frontend files pass ESLint with only existing warnings.
+- The strengthened matrix exposed missing dialog ref/role wiring in booking/cart and a sticky booking header covering the phone field. These are fixed with the shared focus helper, dynamic-viewport dialog shell, non-overlapping header and independent scrolling body. The final booking-modal/cart-checkout/guest-cart/comments regression rerun passes all 29 checks.

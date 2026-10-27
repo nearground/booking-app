@@ -28,6 +28,13 @@ const CartModal = () => {
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const dialogRef = useRef(null);
   useModalAccessibility({ isOpen: isCartOpen, onClose: closeCart, dialogRef });
+  useEffect(() => {
+    if (!isCartOpen) return undefined;
+    const previousOverflow = document.body.style.overflow;
+    if (previousOverflow === 'hidden') return undefined;
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = previousOverflow; };
+  }, [isCartOpen]);
 
   // Contact info (collected at checkout, not in booking modal)
   const [contact, setContact] = useState({ fullName: '', phone: '', email: '' });
@@ -198,12 +205,17 @@ const CartModal = () => {
   return (
     <div className="responsive-overlay fixed inset-0 z-[9998] flex items-center justify-center bg-black/50" onClick={(event) => { if (event.target === event.currentTarget) closeCart(); }}>
       <div
-        className="bg-slate-50 w-full max-w-3xl max-h-[90vh] rounded-xl shadow-xl border border-slate-200 flex flex-col"
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="cart-modal-title"
+        tabIndex={-1}
+        className="responsive-dialog bg-slate-50 max-w-3xl rounded-xl shadow-xl border border-slate-200 flex flex-col"
         data-testid="cart-modal"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 bg-white rounded-t-xl">
+        <div className="shrink-0 flex flex-wrap gap-2 items-center justify-between px-4 py-3 border-b border-slate-200 bg-white rounded-t-xl">
           <h2 id="cart-modal-title" className="text-xl font-bold text-slate-800">Your Cart</h2>
           <div className="flex items-center gap-2">
             <button
@@ -393,7 +405,7 @@ const CartModal = () => {
 
         {/* Footer with total & checkout */}
         {!submitSuccess && cartItems.length > 0 && (
-          <div className="border-t border-slate-200 bg-white px-6 py-4 rounded-b-xl flex items-center justify-between">
+          <div className="shrink-0 border-t border-slate-200 bg-white px-4 py-3 rounded-b-xl flex flex-wrap gap-2 items-center justify-between">
             <div>
               <p className="text-sm text-slate-500">Total</p>
               <p className="text-2xl font-bold text-slate-800" data-testid="cart-modal__total">${cartTotal.toFixed(2)}</p>
