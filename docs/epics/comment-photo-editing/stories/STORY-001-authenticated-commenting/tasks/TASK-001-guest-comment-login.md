@@ -3,7 +3,7 @@ title: "Replace the guest composer with a return-aware login link"
 work_id: "EPIC-comment-photo-editing/STORY-001/TASK-001"
 work_type: task
 template_version: 1
-status: ready
+status: done
 parent: "EPIC-comment-photo-editing/STORY-001"
 branch: "epic/comment-photo-editing"
 depends_on: []
@@ -29,7 +29,8 @@ ExperienceDetails obtains userDetails from AuthContext and currently always rend
 
 | Path | Change | Ownership/contract constraints |
 |------|--------|--------------------------------|
-| frontend/src/routes/experience-details/ExperienceDetails.jsx | Select guest message/link versus authenticated composer and preserve experience return path. | Do not hide public comment reading or change authorization/backend behavior. |
+| frontend/src/routes/experience-details/ExperienceDetails.jsx | Select guest message/link versus authenticated composer. | Do not hide public comment reading or change authorization/backend behavior. |
+| frontend/src/components/comments/GuestCommentPrompt.jsx and test | Provide and test the login link with current route state. | Keep route state compatible with Login.jsx location.state.from.pathname. |
 
 ## Dependencies
 
@@ -44,9 +45,9 @@ None. Keep authenticated review and edit controls unchanged.
 
 ## Definition of Done
 
-- [ ] Story acceptance criteria covered with recorded results.
-- [ ] Targeted checks pass; existing intended behavior is preserved.
-- [ ] Documentation updated; no unresolved contract conflicts.
+- [x] Story acceptance criteria covered with recorded results.
+- [x] Targeted checks pass; existing intended behavior is preserved.
+- [x] Documentation updated; no unresolved contract conflicts.
 
 ## Documentation updates
 
@@ -54,7 +55,7 @@ Update this Task with completion status and test evidence; no separate user-faci
 
 ## Progress and completion evidence
 
-Pending implementation. Record the route return parameter and executed test results when complete.
+Implemented a small “Log in to comment” link in place of ExperienceDetails review composition for logged-out visitors. It passes the current React Router location as Login route state; Login.jsx returns to `from.pathname`. CommentsModal remains public/read-only. `npx vitest --run src/components/comments/GuestCommentPrompt.test.jsx`: 1 test passed; the test verifies the login link retains the experience pathname, query, and hash in route state.
 
 ## Git history
 
