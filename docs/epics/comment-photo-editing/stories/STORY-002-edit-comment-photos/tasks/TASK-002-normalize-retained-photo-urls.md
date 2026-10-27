@@ -3,7 +3,7 @@ title: "Normalize retained photo URLs without weakening validation"
 work_id: "EPIC-comment-photo-editing/STORY-002/TASK-002"
 work_type: task
 template_version: 1
-status: ready
+status: done
 parent: "EPIC-comment-photo-editing/STORY-002"
 branch: "epic/comment-photo-editing"
 depends_on: []
@@ -44,9 +44,9 @@ Depends on STORY-002/TASK-001 reproduction.
 
 ## Definition of Done
 
-- [ ] Story acceptance criteria covered with recorded results.
-- [ ] Targeted checks pass; existing intended behavior is preserved.
-- [ ] Documentation updated; no unresolved contract conflicts.
+- [x] Canonical image-key round-trip implemented with response-URL compatibility preserved.
+- [x] Configured URLs and stored keys pass; URLs outside configured public base remain rejected.
+- [x] Completion evidence and remaining integration risk recorded.
 
 ## Documentation updates
 
@@ -54,7 +54,7 @@ Record confirmed root cause, supported forms, and test evidence in this Task.
 
 ## Progress and completion evidence
 
-Pending Task 1 confirmation and implementation.
+Root cause: comment responses exposed only a resolved public imageUrl and AddCommentForm replayed it on PUT; validateImages accepts absolute URLs only under the backend configured MEDIA_PUBLIC_BASE_URL. The default local URL round-trips, but a stale/re-written public host reproduces the exact 400 validation message. The API now returns both imageUrl (for display) and imageKey (canonical storage value); edits and new uploads submit the key. Existing backend allow-list, image-count limit, and upload ownership behavior are unchanged. `npx jest tests/unit/comment-service.test.js --runInBand`: 21/21 passed, including configured URL acceptance, external-base rejection, and imageKey response. Frontend AddCommentForm tests: 5/5 passed, asserting the PUT contains the key rather than resolved URL.
 
 ## Git history
 

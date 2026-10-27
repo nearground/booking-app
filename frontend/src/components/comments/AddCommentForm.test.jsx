@@ -88,7 +88,7 @@ describe('AddCommentForm', () => {
           comment: 'Original comment body',
           images: [
             { imageUrl: removedUrl, accessibleText: 'Remove this' },
-            { imageUrl: retainedUrl, accessibleText: 'Keep this' },
+            { imageUrl: retainedUrl, imageKey: 'users/10/review-image/retain.jpg', accessibleText: 'Keep this' },
           ],
         }}
         uploaderUserId={10}
@@ -100,13 +100,13 @@ describe('AddCommentForm', () => {
 
     await waitFor(() => expect(networkAdapter.put).toHaveBeenCalledTimes(1));
     expect(networkAdapter.put).toHaveBeenCalledWith('/api/comments/8', expect.objectContaining({
-      images: [{ imageUrl: retainedUrl, accessibleText: 'Keep this' }],
+      images: [{ imageUrl: 'users/10/review-image/retain.jpg', accessibleText: 'Keep this' }],
     }));
   });
   test('uploads selected images and includes them in comment payload', async () => {
     networkAdapter.upload.mockResolvedValue({
       ok: true,
-      data: { url: 'http://localhost:4000/api/media/object/users/10/review-image/photo.jpg' },
+      data: { url: 'http://localhost:4000/api/media/object/users/10/review-image/photo.jpg', objectKey: 'users/10/review-image/photo.jpg' },
     });
     networkAdapter.post.mockResolvedValue({ ok: true, data: { id: 1 } });
 
@@ -137,7 +137,7 @@ describe('AddCommentForm', () => {
 
     const [, payload] = networkAdapter.post.mock.calls[0];
     expect(payload.images).toHaveLength(1);
-    expect(payload.images[0].imageUrl).toContain('/api/media/object/users/10/review-image/photo.jpg');
+    expect(payload.images[0].imageUrl).toBe('users/10/review-image/photo.jpg');
     expect(onSuccess).toHaveBeenCalled();
   });
 });

@@ -259,7 +259,7 @@ describe('review images handling', () => {
     expect(Comment.create).toHaveBeenCalledWith(expect.objectContaining({
       images: [{ imageUrl: 'users/10/review-image/a.jpg', accessibleText: undefined }],
     }));
-    expect(result.data.images).toEqual([{ imageUrl: 'http://localhost:4000/api/media/object/users/10/review-image/a.jpg', accessibleText: undefined }]);
+    expect(result.data.images).toEqual([{ imageUrl: 'http://localhost:4000/api/media/object/users/10/review-image/a.jpg', imageKey: 'users/10/review-image/a.jpg', accessibleText: undefined }]);
   });
 
   test('postComment rejects more than 10 images', async () => {

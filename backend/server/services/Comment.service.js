@@ -79,6 +79,7 @@ const mapReviewImagesForResponse = (images) => {
 
       return {
         imageUrl: publicUrl,
+        imageKey: storedValue,
         accessibleText: image.accessibleText ? String(image.accessibleText).trim().slice(0, 200) : undefined,
       };
     })
