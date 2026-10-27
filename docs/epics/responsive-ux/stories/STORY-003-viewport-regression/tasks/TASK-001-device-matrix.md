@@ -3,7 +3,7 @@ title: "Document supported viewport and orientation coverage"
 work_id: "EPIC-responsive-ux/STORY-003/TASK-001"
 work_type: task
 template_version: 1
-status: in-progress
+status: done
 parent: "EPIC-responsive-ux/STORY-003"
 branch: "epic/responsive-ux"
 depends_on: []
@@ -54,7 +54,7 @@ This task creates the required reference document.
 
 ## Progress and completion evidence
 
-Implementation active; validate matrix matches Cypress dimensions.
+Completed: documented 8 viewport sizes and orientations, route/test coverage, keyboard/safe-area checks, and known route-state limitations in docs/reference/responsive-device-matrix.md.
 
 ## Git history
 

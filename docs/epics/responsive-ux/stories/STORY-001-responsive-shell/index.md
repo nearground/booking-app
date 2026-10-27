@@ -3,7 +3,7 @@ title: "Navigate and browse comfortably at every viewport"
 work_id: "EPIC-responsive-ux/STORY-001"
 work_type: story
 template_version: 1
-status: in-progress
+status: done
 parent: "EPIC-responsive-ux"
 branch: "epic/responsive-ux"
 depends_on: []
@@ -43,4 +43,4 @@ Run the responsive Cypress spec for home, browse, login/register, and organizer 
 
 ## Progress and decisions
 
-- Draft created; not approved for implementation.
+- 2026-10-26: Shared responsive foundation and shell implemented; build and viewport matrix passed.

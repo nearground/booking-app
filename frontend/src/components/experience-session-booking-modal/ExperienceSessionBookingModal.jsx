@@ -1,4 +1,5 @@
-import React, { useContext, useEffect, useMemo, useState } from 'react';
+import React, { useContext, useEffect, useMemo, useRef, useState } from 'react';
+import useModalAccessibility from 'components/ux/modal/useModalAccessibility';
 import TicketTierSelector from './TicketTierSelector';
 import SessionSummary from './SessionSummary';
 import WaitlistSection from './WaitlistSection';
@@ -62,6 +63,8 @@ const ExperienceSessionBookingModal = ({
   const [waitlistJoined, setWaitlistJoined] = useState(false);
   const [isAddingToCart, setIsAddingToCart] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const dialogRef = useRef(null);
+  useModalAccessibility({ isOpen: isOpen && Boolean(session), onClose, dialogRef });
 
   // Questionnaire answers: experience-level
   const [reservationAnswers, setReservationAnswers] = useState({});
@@ -325,16 +328,17 @@ const ExperienceSessionBookingModal = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+    <div className="responsive-overlay fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={(event) => { if (event.target === event.currentTarget) onClose(); }}>
       <div
         className="bg-white w-full max-w-4xl max-h-[90vh] rounded-xl shadow-lg border border-slate-200 p-5 overflow-y-auto"
         data-testid="booking-modal"
         onClick={(event) => event.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-start justify-between gap-4 border-b border-slate-200 pb-4">
+        <div className="sticky top-0 z-10 -mx-4 -mt-4 flex items-start justify-between gap-4 border-b border-slate-200 bg-white px-4 pb-4 pt-4 sm:-mx-5 sm:-mt-5 sm:px-5 sm:pt-5">
           <div>
-            <h3 className="text-xl font-semibold text-slate-800" data-testid="booking-modal__title">
+            <h3 className="text-xl font-semibold text-slate-800" id="booking-modal-title"
+              data-testid="booking-modal__title">
               {experienceTitle || 'Experience'}
             </h3>
             <p className="text-sm text-slate-600 mt-1">{experienceSubtitle || 'Session details'}</p>
@@ -347,7 +351,7 @@ const ExperienceSessionBookingModal = ({
             <button
               type="button"
               onClick={onClose}
-              className="text-slate-500 hover:text-slate-700 text-2xl leading-none"
+              className="touch-target rounded-md px-2 text-2xl leading-none text-slate-500 hover:text-slate-700"
               aria-label="Close booking modal"
             >
               &times;
@@ -393,7 +397,7 @@ const ExperienceSessionBookingModal = ({
                 {activeTierQuestions.map(({ tierKey, tierTitle, questions }) => (
                   <QuestionnaireSection
                     key={tierKey}
-                    title={`${tierTitle} — Questions`}
+                    title={`${tierTitle} â€” Questions`}
                     questions={questions}
                     answers={tierAnswers[tierKey] || {}}
                     onChange={(qKey, value) => handleTierAnswerChange(tierKey, qKey, value)}

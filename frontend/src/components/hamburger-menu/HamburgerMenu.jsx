@@ -1,5 +1,6 @@
 import { Link, useNavigate } from 'react-router-dom';
-import { useContext } from 'react';
+import { useContext, useRef } from 'react';
+import useModalAccessibility from 'components/ux/modal/useModalAccessibility';
 import { AuthContext } from 'contexts/AuthContext';
 import { networkAdapter } from 'services/NetworkAdapter';
 
@@ -18,6 +19,8 @@ const HamburgerMenu = (props) => {
   const { isVisible, onHamburgerMenuToggle } = props;
   const { isAuthenticated, isAuthResolved, userDetails, triggerAuthCheck } = useContext(AuthContext);
   const navigate = useNavigate();
+  const menuRef = useRef(null);
+  useModalAccessibility({ isOpen: isVisible, onClose: onHamburgerMenuToggle, dialogRef: menuRef });
 
   const hasOrganizerProfile = Boolean(userDetails?.organizerProfile);
   const canShowOrganizerActions =
@@ -35,14 +38,20 @@ const HamburgerMenu = (props) => {
   }
 
   return (
-    <div data-testid="hamburger-menu" className="fixed inset-0 z-20">
+    <div data-testid="hamburger-menu" className="fixed inset-0 z-50">
       <button
         type="button"
         aria-label="Close menu"
-        className="absolute inset-0 bg-transparent"
+        className="absolute inset-0 min-h-full w-full bg-black/30"
         onClick={onHamburgerMenuToggle}
       />
-      <div className="absolute right-4 top-16 w-72 max-w-[80vw] rounded-2xl border border-white/20 bg-brand shadow-2xl z-30">
+      <div id="site-navigation-menu"
+        ref={menuRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Site navigation"
+        tabIndex={-1}
+        className="absolute right-0 top-0 max-h-[calc(100dvh-env(safe-area-inset-top)-env(safe-area-inset-bottom))] w-80 max-w-[calc(100vw-env(safe-area-inset-left)-env(safe-area-inset-right))] overflow-y-auto rounded-bl-2xl border border-white/20 bg-brand pt-[max(4.5rem,calc(env(safe-area-inset-top)+1rem))] shadow-2xl">
         <ul className="list-none my-4 px-4 space-y-3">
           {!isAuthenticated && (
             <li>

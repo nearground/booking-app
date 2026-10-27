@@ -28,10 +28,10 @@ const CartItemCard = ({ item, onRemove, onChange, isRemoving }) => {
   const totalPrice = Number(item.totalPrice || 0);
 
   return (
-    <div className="flex gap-4 p-4 bg-white border border-slate-200 rounded-lg shadow-sm" data-testid="cart-item-card">
+    <div className="flex min-w-0 flex-col gap-3 rounded-lg border border-slate-200 bg-white p-3 shadow-sm sm:flex-row sm:gap-4 sm:p-4" data-testid="cart-item-card">
       {/* Thumbnail */}
       {thumbnail ? (
-        <div className="flex-shrink-0 w-24 h-24 rounded-md overflow-hidden bg-slate-100">
+        <div className="h-20 w-20 flex-shrink-0 sm:h-24 sm:w-24 rounded-md overflow-hidden bg-slate-100">
           <img
             src={thumbnail}
             alt={title}
@@ -70,14 +70,14 @@ const CartItemCard = ({ item, onRemove, onChange, isRemoving }) => {
       </div>
 
       {/* Price & Actions */}
-      <div className="flex flex-col items-end justify-between flex-shrink-0">
+      <div className="flex min-w-0 flex-row items-center justify-between gap-3 sm:flex-shrink-0 sm:flex-col sm:items-end sm:justify-between">
         <p className="text-lg font-bold text-slate-800" data-testid="cart-item-card__price">${totalPrice.toFixed(2)}</p>
         <div className="flex flex-col items-end gap-2 mt-2">
           <button
             type="button"
             onClick={() => onChange?.(item)}
             data-testid="cart-item-card__change"
-            className="text-sm text-slate-600 hover:text-slate-800"
+            className="touch-target rounded px-2 py-2 text-sm text-slate-600 hover:text-slate-800"
           >
             Change
           </button>
@@ -86,7 +86,7 @@ const CartItemCard = ({ item, onRemove, onChange, isRemoving }) => {
             onClick={() => onRemove(item.id)}
             disabled={isRemoving}
             data-testid="cart-item-card__remove"
-            className="text-sm text-red-600 hover:text-red-800 disabled:opacity-50"
+            className="touch-target rounded px-2 py-2 text-sm text-red-600 hover:text-red-800 disabled:opacity-50"
           >
             {isRemoving ? 'Removing…' : 'Remove'}
           </button>

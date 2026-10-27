@@ -1,4 +1,5 @@
-import React, { useContext, useEffect, useState } from 'react';
+import React, { useContext, useEffect, useRef, useState } from 'react';
+import useModalAccessibility from 'components/ux/modal/useModalAccessibility';
 import { useNavigate } from 'react-router-dom';
 import { CartContext } from 'contexts/CartContext';
 import { AuthContext } from 'contexts/AuthContext';
@@ -23,6 +24,8 @@ const CartModal = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
   const [submitSuccess, setSubmitSuccess] = useState(false);
+  const dialogRef = useRef(null);
+  useModalAccessibility({ isOpen: isCartOpen, onClose: closeCart, dialogRef });
 
   // Contact info (collected at checkout, not in booking modal)
   const [contact, setContact] = useState({ fullName: '', phone: '', email: '' });
@@ -242,7 +245,7 @@ const CartModal = () => {
   };
 
   return (
-    <div className="fixed inset-0 z-[9998] bg-black/50 flex items-center justify-center p-4">
+    <div className="responsive-overlay fixed inset-0 z-[9998] flex items-center justify-center bg-black/50" onClick={(event) => { if (event.target === event.currentTarget) closeCart(); }}>
       <div
         className="bg-slate-50 w-full max-w-3xl max-h-[90vh] rounded-xl shadow-xl border border-slate-200 flex flex-col"
         data-testid="cart-modal"
@@ -250,7 +253,7 @@ const CartModal = () => {
       >
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 bg-white rounded-t-xl">
-          <h2 className="text-xl font-bold text-slate-800">Your Cart</h2>
+          <h2 id="cart-modal-title" className="text-xl font-bold text-slate-800">Your Cart</h2>
           <div className="flex items-center gap-2">
             <button
               type="button"
@@ -262,7 +265,7 @@ const CartModal = () => {
             <button
               type="button"
               onClick={closeCart}
-              className="text-slate-500 hover:text-slate-700 text-2xl leading-none"
+              className="touch-target rounded-md px-2 text-2xl leading-none text-slate-500 hover:text-slate-700"
               aria-label="Close cart"
             >
               &times;
@@ -271,7 +274,7 @@ const CartModal = () => {
         </div>
 
         {/* Scrollable body */}
-        <div className="flex-1 overflow-y-auto px-6 py-5 space-y-6">
+        <div className="responsive-dialog__body flex-1 overflow-y-auto px-4 py-5 sm:px-6">
           {submitSuccess ? (
             <div className="text-center py-12">
               <div className="text-4xl mb-3">✓</div>

@@ -74,4 +74,5 @@ Run the responsive Cypress spec across the matrix, existing Cypress and Vitest s
 
 ## Progress and decisions
 
-- 2026-10-26: Expanded into four Stories and eight Tasks. Comment presentation is intentionally deferred until comment-photo-editing merges.
+- 2026-10-26: Expanded into four Stories and eight Tasks. Stories 001?003 and their six implementation Tasks are complete; the comment Story/Tasks remain not started pending comment-photo-editing merge.
+- 2026-10-26: Worktree build succeeded; 80 responsive Cypress checks and the modal focus hook test passed. The full Vitest suite has one unrelated existing Login.test.jsx failure, and repository lint reports pre-existing Cypress booking-test errors.

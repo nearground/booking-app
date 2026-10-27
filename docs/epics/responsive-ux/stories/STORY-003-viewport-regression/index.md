@@ -3,7 +3,7 @@ title: "Verify responsive layouts across the supported device matrix"
 work_id: "EPIC-responsive-ux/STORY-003"
 work_type: story
 template_version: 1
-status: in-progress
+status: done
 parent: "EPIC-responsive-ux"
 branch: "epic/responsive-ux"
 depends_on: []
@@ -43,4 +43,4 @@ Run the new Cypress viewport spec against localhost:8080 only as a main-branch b
 
 ## Progress and decisions
 
-- Draft created; not approved for implementation.
+- 2026-10-26: Published the viewport matrix and Cypress checks; 80 responsive checks passed on the worktree.

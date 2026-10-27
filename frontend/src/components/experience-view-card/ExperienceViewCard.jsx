@@ -27,7 +27,7 @@ const ExperienceViewCard = (props) => {
       <img
         src={cardImage}
         alt={image?.accessibleText || title}
-        className="w-full aspect-square object-cover rounded-lg"
+        className="aspect-square w-full rounded-lg object-cover" loading="lazy" decoding="async"
       />
       <h4 className="text-sm md:text-base font-semibold text-slate-700 mt-2 line-clamp-1">
         {title}

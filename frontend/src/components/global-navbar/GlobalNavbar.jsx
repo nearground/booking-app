@@ -1,62 +1,54 @@
 import logo from 'assests/logos/puerto_vallarta_today_logo.svg';
-import { useState } from 'react';
+import { useState, useContext } from 'react';
 import { Link } from 'react-router-dom';
 import HamburgerMenu from 'components/hamburger-menu/HamburgerMenu';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faBars } from '@fortawesome/free-solid-svg-icons';
 import { AuthContext } from 'contexts/AuthContext';
-import { useContext } from 'react';
 import NavbarItems from 'components/navbar-items/NavbarItems';
 import NavbarProfiles from 'components/navbar-profiles/NavbarProfiles';
 
 const GlobalNavbar = () => {
   const [isVisible, setIsVisible] = useState(false);
   const { isAuthenticated } = useContext(AuthContext);
-  const onHamburgerMenuToggle = () => {
-    setIsVisible(!isVisible);
-  };
+  const onHamburgerMenuToggle = () => setIsVisible((visible) => !visible);
 
   return (
-    <div className="relative flex flex-wrap justify-between items-center px-4 md:px-12 global-navbar__container bg-brand brand-divider-bottom shadow-md">
-      <div className="flex">
-        <Link to="/experiences">
-          <img src={logo} alt="site logo" className="site-logo__img" />
+    <header className="relative z-30 flex min-h-[4.5rem] w-full min-w-0 flex-wrap items-center justify-between gap-2 bg-brand px-4 shadow-md md:px-12 global-navbar__container brand-divider-bottom">
+      <div className="flex min-w-0 items-center gap-2">
+        <Link to="/experiences" aria-label="Puerto Vallarta Today home" className="touch-target flex shrink-0 items-center">
+          <img src={logo} alt="Puerto Vallarta Today" className="site-logo__img" />
         </Link>
+        <div data-testid="language-switcher-slot" className="h-11 w-11 shrink-0" aria-hidden="true" />
         {import.meta.env.DEV && (
-          <a
-            href="/internal/docs/"
-            className="ml-4 self-center rounded bg-white/10 px-3 py-2 text-sm font-medium text-white"
-          >
+          <a href="/internal/docs/" className="hidden rounded bg-white/10 px-3 py-2 text-sm font-medium text-white sm:inline-flex sm:items-center">
             Internal docs
           </a>
         )}
       </div>
-      <ul className="list-none hidden md:flex md:absolute md:left-1/2 md:-translate-x-1/2">
+      <ul className="hidden list-none md:absolute md:left-1/2 md:flex md:-translate-x-1/2">
         <NavbarItems isAuthenticated={isAuthenticated} showOnlyMainLinks={true} />
       </ul>
-
-
-      <div className="flex items-center gap-4 absolute right-4 md:right-12">
-        <NavbarProfiles 
-          isAuthenticated={isAuthenticated}
-          className="cursor-pointer"
-        />
-        <FontAwesomeIcon
+      <div className="ml-auto flex shrink-0 items-center gap-2 sm:gap-4">
+        <NavbarProfiles isAuthenticated={isAuthenticated} className="cursor-pointer" />
+        <button
+          type="button"
           data-testid="menu-toggle__button"
-          icon={faBars}
-          size="2x"
-          color="#fff"
-          className="cursor-pointer"
+          aria-label={isVisible ? 'Close navigation menu' : 'Open navigation menu'}
+          aria-expanded={isVisible}
+          aria-controls="site-navigation-menu"
+          className="touch-target inline-flex items-center justify-center rounded-md text-white hover:bg-emerald-800 focus-visible:outline-offset-2"
           onClick={onHamburgerMenuToggle}
-        />
+        >
+          <FontAwesomeIcon icon={faBars} size="lg" aria-hidden="true" />
+        </button>
       </div>
-
       <HamburgerMenu
         isVisible={isVisible}
         onHamburgerMenuToggle={onHamburgerMenuToggle}
         isAuthenticated={isAuthenticated}
       />
-    </div>
+    </header>
   );
 };
 

@@ -3,7 +3,7 @@ title: "Make booking and cart overlays safe-area aware"
 work_id: "EPIC-responsive-ux/STORY-002/TASK-001"
 work_type: task
 template_version: 1
-status: in-progress
+status: done
 parent: "EPIC-responsive-ux/STORY-002"
 branch: "epic/responsive-ux"
 depends_on: []
@@ -54,7 +54,7 @@ Document dynamic viewport and safe-area overlay conventions in the device matrix
 
 ## Progress and completion evidence
 
-Implementation active; record targeted results when complete.
+Completed: booking/cart surfaces use dynamic viewport and safe-area sizing; shared keyboard focus trap, Escape/backdrop dismissal, and focus restoration are implemented. The shared hook unit test and responsive menu keyboard checks pass; cart data was not populated in the read-only browser session.
 
 ## Git history
 

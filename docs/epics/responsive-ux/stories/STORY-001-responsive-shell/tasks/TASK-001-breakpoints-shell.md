@@ -3,7 +3,7 @@ title: "Define responsive breakpoints and rebuild the shared shell"
 work_id: "EPIC-responsive-ux/STORY-001/TASK-001"
 work_type: task
 template_version: 1
-status: in-progress
+status: done
 parent: "EPIC-responsive-ux/STORY-001"
 branch: "epic/responsive-ux"
 depends_on: []
@@ -54,7 +54,7 @@ Record breakpoints and container rules in docs/reference/responsive-device-matri
 
 ## Progress and completion evidence
 
-Implementation active; record check results and exact commit trailer when complete.
+Completed: Tailwind breakpoints/containers, shared shell, language slot, footer, base main region, visible focus, reduced motion, and touch sizing implemented. Verified by successful production build, responsive Cypress matrix, and targeted ESLint.
 
 ## Git history
 

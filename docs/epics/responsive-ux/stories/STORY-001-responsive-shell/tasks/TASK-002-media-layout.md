@@ -3,7 +3,7 @@ title: "Stabilize responsive media and common page containers"
 work_id: "EPIC-responsive-ux/STORY-001/TASK-002"
 work_type: task
 template_version: 1
-status: in-progress
+status: done
 parent: "EPIC-responsive-ux/STORY-001"
 branch: "epic/responsive-ux"
 depends_on: []
@@ -54,7 +54,7 @@ Document that responsive sources require support from the media pipeline; this t
 
 ## Progress and completion evidence
 
-Implementation active; record changed components and results when complete.
+Completed: experience and hotel card media now reserve responsive aspect-ratio space and load lazily. Viewport Cypress assertions pass at all 8 sizes; no srcset variants were available in the current media pipeline.
 
 ## Git history
 

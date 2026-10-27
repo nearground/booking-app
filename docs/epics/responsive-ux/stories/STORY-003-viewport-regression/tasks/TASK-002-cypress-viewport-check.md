@@ -3,7 +3,7 @@ title: "Assert responsive route controls and overflow in Cypress"
 work_id: "EPIC-responsive-ux/STORY-003/TASK-002"
 work_type: task
 template_version: 1
-status: in-progress
+status: done
 parent: "EPIC-responsive-ux/STORY-003"
 branch: "epic/responsive-ux"
 depends_on: []
@@ -54,7 +54,7 @@ Reference matrix document for exact route list and expected visibility.
 
 ## Progress and completion evidence
 
-Implementation active; record baseline/worktree distinction and run output.
+Completed: 80 Cypress checks passed across 8 viewports, covering 9 route entries, horizontal overflow, visible controls/touch sizing, and focus wrapping/restoration. Baseline on localhost:8080 had no horizontal overflow assertion failures but failed the 44px navigation-target assertion on the pre-change main checkout.
 
 ## Git history
 

@@ -12,7 +12,7 @@ const FooterLink = ({ to, label }) => (
 
 const GlobalFooter = () => {
   return (
-    <footer className="bg-slate-50 text-slate-700 mt-6">
+    <footer className="global-footer mt-6 bg-slate-50 text-slate-700">
       <div className="container mx-auto px-6 py-6">
         <div className="flex flex-wrap justify-between">
           <div className="w-full md:w-1/3 mb-6 md:mb-0">
@@ -28,13 +28,13 @@ const GlobalFooter = () => {
           <div className="w-full md:w-1/3 mb-6 md:mb-0">
             <h4 className="font-bold text-lg mb-2">Newsletter</h4>
             <p>Stay updated with our latest trends</p>
-            <form>
+            <form className="mt-3 flex flex-wrap items-center gap-2">
               <input
                 type="email"
                 placeholder="Enter email"
-                className="p-2 rounded"
+                className="min-w-0 flex-1 rounded border border-slate-300 p-2"
               />
-              <button className="ml-2 p-2 bg-brand text-white rounded">
+              <button className="touch-target rounded bg-brand px-4 py-2 text-white">
                 Subscribe
               </button>
             </form>

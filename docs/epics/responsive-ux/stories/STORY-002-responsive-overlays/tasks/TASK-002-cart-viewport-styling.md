@@ -3,7 +3,7 @@ title: "Constrain cart and checkout layouts without changing behavior"
 work_id: "EPIC-responsive-ux/STORY-002/TASK-002"
 work_type: task
 template_version: 1
-status: in-progress
+status: done
 parent: "EPIC-responsive-ux/STORY-002"
 branch: "epic/responsive-ux"
 depends_on: []
@@ -54,7 +54,7 @@ Reference the viewport matrix and CSS-only ownership boundary.
 
 ## Progress and completion evidence
 
-Implementation active; record exact files and results on completion.
+Completed: cart FAB and item rows wrap on narrow screens with safe-area spacing and 44px action targets. Cart/checkout logic and context were not changed. Production build and all responsive route assertions pass; no cart item was available to exercise the modal flow in Cypress.
 
 ## Git history
 

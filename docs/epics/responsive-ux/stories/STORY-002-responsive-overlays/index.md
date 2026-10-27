@@ -3,7 +3,7 @@ title: "Use booking and cart overlays on touch and desktop"
 work_id: "EPIC-responsive-ux/STORY-002"
 work_type: story
 template_version: 1
-status: in-progress
+status: done
 parent: "EPIC-responsive-ux"
 branch: "epic/responsive-ux"
 depends_on: []
@@ -43,4 +43,4 @@ Run booking/cart Vitest tests and Cypress booking smoke flows where fixtures and
 
 ## Progress and decisions
 
-- Draft created; not approved for implementation.
+- 2026-10-26: Responsive overlay presentation and shared modal keyboard focus behavior implemented; hook and viewport checks passed.
