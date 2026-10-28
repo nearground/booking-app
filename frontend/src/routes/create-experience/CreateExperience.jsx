@@ -579,6 +579,10 @@ const CreateExperience = ({ mode = 'create', experienceData = null }) => {
       formData.schedules.forEach((item) => {
         if (!item) return;
         if (item.kind === 'template') {
+          if (item.ruleType === 'datetime' && item.ruleDateTime) {
+            results.push(new Date(item.ruleDateTime));
+            return;
+          }
           const recurrenceType = item._recurrenceType || 'weekly';
           const cron = item.ruleCron || buildCronExpression({ recurrenceType, time: item._time || formData.scheduleTime, weekDays: item._weekDays || formData.scheduleDays });
           const upcoming = getUpcomingSchedulePreview({ recurrenceType, time: item._time || formData.scheduleTime, weekDays: item._weekDays || formData.scheduleDays, cronExpression: cron, timezone: schedulePreviewTimezone, limit: 6 });
@@ -610,6 +614,9 @@ const CreateExperience = ({ mode = 'create', experienceData = null }) => {
       return formData.schedules.flatMap((item) => {
         if (!item) return [];
         if (item.kind === 'template') {
+          if (item.ruleType === 'datetime' && item.ruleDateTime) {
+            return [{ id: `schedule-calendar-once-${item.ruleDateTime}`, title: item.name || 'Scheduled session', dateTime: new Date(item.ruleDateTime).toISOString(), source: 'Schedule Builder' }];
+          }
           const recurrenceType = item._recurrenceType || 'weekly';
           const cron = item.ruleCron || buildCronExpression({ recurrenceType, time: item._time || formData.scheduleTime, weekDays: item._weekDays || formData.scheduleDays });
           return getUpcomingSchedulePreview({ recurrenceType, time: item._time || formData.scheduleTime, weekDays: item._weekDays || formData.scheduleDays, limit: 120, cronExpression: cron, timezone: schedulePreviewTimezone }).map((d, idx) => ({ id: `schedule-calendar-${item.name || 't'}-${idx + 1}-${d.toISOString()}`, title: 'Scheduled session', dateTime: d.toISOString(), source: 'Schedule Builder' }));
