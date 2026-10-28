@@ -13,6 +13,7 @@ const routeSources = {
   comments: { file: 'comments.js', prefix: '/api/comments' },
   media: { file: 'media.js', prefix: '/api/media' },
   organizationSites: { file: 'organization-sites.js', prefix: '/api/organization-sites' },
+  chat: { file: 'chat.js', prefix: '/api/chat' },
 };
 
 const expectedOperations = [
@@ -21,6 +22,7 @@ const expectedOperations = [
   ['users', 'post', '/forgot-password'], ['users', 'get', '/reset-password/:token'], ['users', 'post', '/reset-password'],
   ['organizationSites', 'get', '/:slug'],
   ['organizationSites', 'get', '/admin/:organizationId/branding'], ['organizationSites', 'patch', '/admin/:organizationId/branding'],
+  ['chat', 'post', '/'],
   ['organizers', 'post', '/onboarding/start'], ['organizers', 'post', '/onboarding/complete'],
   ['organizers', 'get', '/invites/resolve'], ['organizers', 'post', '/invites'],
   ['organizers', 'post', '/invites/:id/resend'], ['organizers', 'delete', '/invites/:id'],
@@ -117,5 +119,17 @@ describe('OpenAPI target route contract', () => {
     expect(receipt.required).toEqual(['orderNumber', 'receiptToken']);
     expect(receipt.properties.receiptToken.writeOnly).toBe(true);
     expect(spec.components.schemas.GuestReceiptRequest.required).toEqual(['orderNumber', 'receiptToken']);
+  });
+
+  test('public chat has bounded input, no authentication, and exposes no booking tools', () => {
+    const chat = spec.paths['/api/chat'].post;
+    expect(chat.security).toEqual([]);
+    expect(chat.requestBody.content['application/json'].schema).toMatchObject({
+      required: ['messages'],
+      properties: { messages: { maxItems: 15, minItems: 1 } },
+    });
+    expect(chat.responses['200'].content['application/json'].schema.allOf[1]).toMatchObject({
+      properties: { data: { properties: { message: { type: 'string' } } } },
+    });
   });
 });

@@ -1,23 +1,59 @@
 import React from 'react';
 
-const PickedEditor = ({ value = {}, onChange }) => {
-  const setField = (field, v) => onChange({ ...value, [field]: v });
+const fieldClassName = 'w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-800 focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/20';
+const labelClassName = 'mb-1 block text-sm font-medium text-slate-700';
+
+const PickedEditor = ({ value = {}, onChange, idPrefix }) => {
+  const setField = (field, nextValue) => onChange({ ...value, [field]: nextValue });
 
   return (
-    <div className="space-y-2">
-      <div>
-        <label className="block text-xs text-slate-600 mb-1">Date & time</label>
-        <input className="border rounded px-2 py-1 w-full" type="datetime-local" value={value.dateTime || ''} onChange={(e) => setField('dateTime', e.target.value)} />
-      </div>
-
-      <div className="grid grid-cols-2 gap-2 mt-2">
-        <input className="border rounded px-2 py-1" placeholder="End (optional)" type="datetime-local" value={value.endDateTime || ''} onChange={(e)=>setField('endDateTime', e.target.value)} />
-        <input className="border rounded px-2 py-1" placeholder="Capacity" type="number" value={value.capacity || ''} onChange={(e)=>setField('capacity', e.target.value ? Number(e.target.value) : null)} />
-      </div>
-
-      <div>
-        <label className="block text-xs text-slate-600 mb-1">Note</label>
-        <input className="border rounded px-2 py-1 w-full" value={value.note || ''} onChange={(e)=>setField('note', e.target.value)} />
+    <div className="space-y-4">
+      <p className="text-sm text-slate-500">
+        Add a one-off session. You can set a different end time, capacity, or organizer note.
+      </p>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div>
+          <label className={labelClassName} htmlFor={`${idPrefix}-start`}>Date and start time</label>
+          <input
+            id={`${idPrefix}-start`}
+            className={fieldClassName}
+            type="datetime-local"
+            value={value.dateTime || ''}
+            onChange={(event) => setField('dateTime', event.target.value)}
+          />
+        </div>
+        <div>
+          <label className={labelClassName} htmlFor={`${idPrefix}-end`}>End time <span className="font-normal text-slate-400">optional</span></label>
+          <input
+            id={`${idPrefix}-end`}
+            className={fieldClassName}
+            type="datetime-local"
+            value={value.endDateTime || ''}
+            onChange={(event) => setField('endDateTime', event.target.value || null)}
+          />
+        </div>
+        <div>
+          <label className={labelClassName} htmlFor={`${idPrefix}-capacity`}>Session capacity <span className="font-normal text-slate-400">optional</span></label>
+          <input
+            id={`${idPrefix}-capacity`}
+            className={fieldClassName}
+            type="number"
+            min="1"
+            placeholder="Use experience capacity"
+            value={value.capacity ?? ''}
+            onChange={(event) => setField('capacity', event.target.value ? Number(event.target.value) : null)}
+          />
+        </div>
+        <div>
+          <label className={labelClassName} htmlFor={`${idPrefix}-note`}>Organizer note <span className="font-normal text-slate-400">optional</span></label>
+          <input
+            id={`${idPrefix}-note`}
+            className={fieldClassName}
+            placeholder="e.g. Holiday special"
+            value={value.note || ''}
+            onChange={(event) => setField('note', event.target.value)}
+          />
+        </div>
       </div>
     </div>
   );

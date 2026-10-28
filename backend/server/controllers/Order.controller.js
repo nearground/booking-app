@@ -51,6 +51,13 @@ const RESERVATION_INCLUDES = [
         required: false,
     },
 ];
+const hasPublicAttendanceOptIn = (items) => (Array.isArray(items) ? items : []).some((item) =>
+    item.ProductType === 'Experience' &&
+    Array.isArray(item.metadata?.reservationAnswers) &&
+    item.metadata.reservationAnswers.some((answer) =>
+        answer?.questionKey === 'publicAttendance' && answer.answerText === 'true'
+    )
+);
 
 const initiateCheckout = async (req, res) => {
     try {
@@ -92,6 +99,7 @@ const initiateCheckout = async (req, res) => {
                 mainContactPhone: order.mainContactPhone,
                 mainContactEmail: order.mainContactEmail,
                 confirmationEmail: order.metadata?.confirmationEmail || null,
+                publicAttendanceOptIn: hasPublicAttendanceOptIn(order.Items),
                 ...(isGuest ? { saveBookingForLater: guestReceipt.saveBookingForLater } : {}),
                 items: order.Items,
                 ...(guestReceiptToken ? { guestReceiptToken } : {}),
@@ -135,6 +143,7 @@ const getGuestOrder = async (req, res) => {
         }
         order.setDataValue('confirmationEmail', order.metadata?.confirmationEmail || null);
         order.setDataValue('saveBookingForLater', order.metadata?.saveBookingForLater !== false);
+        order.setDataValue('publicAttendanceOptIn', hasPublicAttendanceOptIn(order.Items));
         order.setDataValue('metadata', null);
         return res.status(200).json({ errors: [], data: { order } });
     } catch (error) {

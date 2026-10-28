@@ -29,7 +29,9 @@ const Order = sequelize.define('Order', {
     timestamps: true,
 });
 
-Order.addHook('beforeCreate', async (order) => {
+Order.addHook('beforeValidate', (order) => {
+    if (!order.isNewRecord || order.orderNumber) return;
+
     const now = new Date();
     const datePart = now.toISOString().slice(0, 10).replace(/-/g, '');
     const randomSuffix = Math.random().toString(36).substring(2, 6).toUpperCase();

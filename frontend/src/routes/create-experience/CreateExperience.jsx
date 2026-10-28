@@ -1,5 +1,6 @@
 import { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { EXPERIENCE_DETAILS_TEMPLATES, resolveDetailsMetadata } from '../experience-details/experienceDetailsTemplate';
+import { EXPERIENCE_TEMPLATE_COPY, resolveTemplateCopy } from '../experience-details/experienceDetailsCopy';
 import { Navigate, useNavigate } from 'react-router-dom';
 import {
   CircleMarker,
@@ -19,6 +20,7 @@ import {
   WEEKDAY_OPTIONS,
   buildCronExpression,
   getUpcomingSchedulePreview,
+  parseCronExpression,
 } from 'utils/schedule-builder';
 import ScheduleBuilder from 'components/schedule-builder/ScheduleBuilder';
 
@@ -201,23 +203,34 @@ const LocationMiniMap = ({ point }) => {
  * returned by the manage GET endpoint. Used to seed the ScheduleBuilder in edit mode.
  */
 const buildSchedulesFromExperienceData = (experienceData) => {
-  const templates = (experienceData?.ScheduleTemplates || []).map((tpl) => ({
-    kind: 'template',
-    name: tpl.name || null,
-    ruleType: tpl.ruleType || 'cron',
-    ruleCron: tpl.ruleCron || null,
-    ruleDateTime: tpl.ruleDateTime || null,
-    timezone: tpl.timezone || 'UTC',
-    durationMinutes: tpl.durationMinutes != null ? String(tpl.durationMinutes) : '',
-    capacity: tpl.capacity != null ? String(tpl.capacity) : '',
-  }));
+  const templates = (experienceData?.ScheduleTemplates || []).map((tpl) => {
+    const parsedCron = tpl.ruleType === 'cron' ? parseCronExpression(tpl.ruleCron) : null;
+    return {
+      kind: 'template',
+      name: tpl.name || '',
+      ruleType: tpl.ruleType || 'cron',
+      ruleCron: tpl.ruleCron || null,
+      ruleDateTime: tpl.ruleDateTime || null,
+      timezone: tpl.timezone || 'UTC',
+      durationMinutes: tpl.durationMinutes != null ? String(tpl.durationMinutes) : '',
+      capacity: tpl.capacity != null ? String(tpl.capacity) : '',
+      startDate: tpl.startDate || '',
+      endDate: tpl.endDate || '',
+      _recurrenceType: parsedCron?.recurrenceType || 'weekly',
+      _time: parsedCron
+        ? `${String(parsedCron.hour).padStart(2, '0')}:${String(parsedCron.minute).padStart(2, '0')}`
+        : '',
+      _weekDays: parsedCron?.weekDays || [],
+      _useCustomCron: tpl.ruleType === 'cron' && !parsedCron,
+    };
+  });
 
   const picks = (experienceData?.PickedOccurrences || []).map((pick) => ({
     kind: 'picked',
     dateTime: pick.dateTime || null,
     endDateTime: pick.endDateTime || null,
     capacity: pick.capacity != null ? String(pick.capacity) : '',
-    note: pick.note || null,
+    note: pick.note || '',
   }));
 
   return [...templates, ...picks];
@@ -251,10 +264,27 @@ const serializeSchedules = (schedules) => JSON.stringify(
   (schedules || []).map((s) => {
     if (!s) return null;
     if (s.kind === 'template') {
-      return { kind: 'template', ruleCron: s.ruleCron || null, ruleDateTime: s.ruleDateTime || null, ruleType: s.ruleType || 'cron', timezone: s.timezone || 'UTC' };
+      return {
+        kind: 'template',
+        name: s.name || null,
+        ruleCron: s.ruleCron || null,
+        ruleDateTime: s.ruleDateTime || null,
+        ruleType: s.ruleType || 'cron',
+        timezone: s.timezone || 'UTC',
+        startDate: s.startDate || null,
+        endDate: s.endDate || null,
+        durationMinutes: s.durationMinutes || null,
+        capacity: s.capacity || null,
+      };
     }
     if (s.kind === 'picked') {
-      return { kind: 'picked', dateTime: s.dateTime || null, endDateTime: s.endDateTime || null };
+      return {
+        kind: 'picked',
+        dateTime: s.dateTime || null,
+        endDateTime: s.endDateTime || null,
+        capacity: s.capacity || null,
+        note: s.note || null,
+      };
     }
     return null;
   }).filter(Boolean)
@@ -289,6 +319,7 @@ const CreateExperience = ({ mode = 'create', experienceData = null }) => {
   const [isPreviewMode, setIsPreviewMode] = useState(false);
   const [activeStep, setActiveStep] = useState('core');
   const [validationSummary, setValidationSummary] = useState([]);
+  const [pinnedCommentSearch, setPinnedCommentSearch] = useState('');
   const [, setLocationGeocodeDebug] = useState({
     status: 'idle',
     fullQuery: '',
@@ -311,6 +342,17 @@ const CreateExperience = ({ mode = 'create', experienceData = null }) => {
   const countryOptions = useMemo(() => getStandardCountryList(), []);
   const isDevelopment = import.meta.env.DEV;
   const singleOrganization = availableOrganizations.length === 1 ? availableOrganizations[0] : null;
+  const pinnableComments = useMemo(
+    () => (Array.isArray(experienceData?.pinnableComments) ? experienceData.pinnableComments : []),
+    [experienceData?.pinnableComments]
+  );
+  const filteredPinnableComments = useMemo(() => {
+    const searchTerm = pinnedCommentSearch.trim().toLowerCase();
+    if (!searchTerm) return pinnableComments;
+    return pinnableComments.filter((comment) =>
+      `${comment.title || ''} ${comment.comment || ''}`.toLowerCase().includes(searchTerm)
+    );
+  }, [pinnedCommentSearch, pinnableComments]);
 
   const initialSchedules = useMemo(
     () => (isEditMode && experienceData ? buildSchedulesFromExperienceData(experienceData) : []),
@@ -537,8 +579,9 @@ const CreateExperience = ({ mode = 'create', experienceData = null }) => {
       formData.schedules.forEach((item) => {
         if (!item) return;
         if (item.kind === 'template') {
-          const cron = item.ruleCron || buildCronExpression({ recurrenceType: item.ruleType || 'weekly', time: item._time || formData.scheduleTime, weekDays: item._weekDays || formData.scheduleDays });
-          const upcoming = getUpcomingSchedulePreview({ recurrenceType: item.ruleType || 'weekly', time: item._time || formData.scheduleTime, weekDays: item._weekDays || formData.scheduleDays, cronExpression: cron, timezone: schedulePreviewTimezone, limit: 6 });
+          const recurrenceType = item._recurrenceType || 'weekly';
+          const cron = item.ruleCron || buildCronExpression({ recurrenceType, time: item._time || formData.scheduleTime, weekDays: item._weekDays || formData.scheduleDays });
+          const upcoming = getUpcomingSchedulePreview({ recurrenceType, time: item._time || formData.scheduleTime, weekDays: item._weekDays || formData.scheduleDays, cronExpression: cron, timezone: schedulePreviewTimezone, limit: 6 });
           upcoming.forEach((d) => results.push(d));
         } else if (item.kind === 'picked' && item.dateTime) {
           results.push(new Date(item.dateTime));
@@ -567,8 +610,9 @@ const CreateExperience = ({ mode = 'create', experienceData = null }) => {
       return formData.schedules.flatMap((item) => {
         if (!item) return [];
         if (item.kind === 'template') {
-          const cron = item.ruleCron || buildCronExpression({ recurrenceType: item.ruleType || 'weekly', time: item._time || formData.scheduleTime, weekDays: item._weekDays || formData.scheduleDays });
-          return getUpcomingSchedulePreview({ recurrenceType: item.ruleType || 'weekly', time: item._time || formData.scheduleTime, weekDays: item._weekDays || formData.scheduleDays, limit: 120, cronExpression: cron, timezone: schedulePreviewTimezone }).map((d, idx) => ({ id: `schedule-calendar-${item.name || 't'}-${idx + 1}-${d.toISOString()}`, title: 'Scheduled session', dateTime: d.toISOString(), source: 'Schedule Builder' }));
+          const recurrenceType = item._recurrenceType || 'weekly';
+          const cron = item.ruleCron || buildCronExpression({ recurrenceType, time: item._time || formData.scheduleTime, weekDays: item._weekDays || formData.scheduleDays });
+          return getUpcomingSchedulePreview({ recurrenceType, time: item._time || formData.scheduleTime, weekDays: item._weekDays || formData.scheduleDays, limit: 120, cronExpression: cron, timezone: schedulePreviewTimezone }).map((d, idx) => ({ id: `schedule-calendar-${item.name || 't'}-${idx + 1}-${d.toISOString()}`, title: 'Scheduled session', dateTime: d.toISOString(), source: 'Schedule Builder' }));
         }
         if (item.kind === 'picked' && item.dateTime) {
           return [{ id: `schedule-calendar-picked-${item.dateTime}`, title: 'Scheduled session', dateTime: new Date(item.dateTime).toISOString(), source: 'Schedule Builder' }];
@@ -657,9 +701,12 @@ const CreateExperience = ({ mode = 'create', experienceData = null }) => {
         required: Boolean(question.required),
       }));
 
+    const previewComments = isEditMode && Array.isArray(experienceData?.pinnableComments)
+      ? experienceData.pinnableComments
+      : PREVIEW_REVIEWS;
     const averageRating =
-      PREVIEW_REVIEWS.reduce((sum, comment) => sum + Number(comment.stars || 0), 0) /
-      PREVIEW_REVIEWS.length;
+      previewComments.reduce((sum, comment) => sum + Number(comment.stars || 0), 0) /
+      (previewComments.length || 1);
 
     return {
       id: 'preview-experience',
@@ -671,8 +718,8 @@ const CreateExperience = ({ mode = 'create', experienceData = null }) => {
       thumbnail,
       images,
       ratings: Number.isFinite(averageRating) ? averageRating : 0,
-      commentCount: PREVIEW_REVIEWS.length,
-      comments: PREVIEW_REVIEWS,
+      commentCount: previewComments.length,
+      comments: previewComments,
       organizers: [
         {
           id: userDetails?.id || 'preview-organizer',
@@ -922,9 +969,11 @@ const CreateExperience = ({ mode = 'create', experienceData = null }) => {
         if (item.kind === 'template') {
           const ruleType = String(item.ruleType || 'cron').trim();
           if (ruleType === 'cron') {
-            const cron = item.ruleCron || buildCronExpression({ recurrenceType: item.ruleType || 'weekly', time: item._time || formData.scheduleTime, weekDays: item._weekDays || formData.scheduleDays });
+            const cron = item.ruleCron || buildCronExpression({ recurrenceType: item._recurrenceType || 'weekly', time: item._time || formData.scheduleTime, weekDays: item._weekDays || formData.scheduleDays });
             if (!cron) {
-              return `Schedule ${i} is improperly configured.`;
+              return item._recurrenceType === 'daily'
+                ? `Schedule ${i + 1}: choose a start time.`
+                : `Schedule ${i + 1}: choose a start time and at least one weekday.`;
             }
           }
           if (ruleType === 'datetime' && !item.ruleDateTime) {
@@ -1656,7 +1705,7 @@ const CreateExperience = ({ mode = 'create', experienceData = null }) => {
       schedules: (formData.schedules || []).map((s) => {
         if (!s) return null;
         if (s.kind === 'template') {
-          const computedRuleCron = s.ruleCron || buildCronExpression({ recurrenceType: s.ruleType || 'weekly', time: s._time || formData.scheduleTime, weekDays: s._weekDays || formData.scheduleDays });
+          const computedRuleCron = s.ruleCron || buildCronExpression({ recurrenceType: s._recurrenceType || 'weekly', time: s._time || formData.scheduleTime, weekDays: s._weekDays || formData.scheduleDays });
           return {
             kind: 'template',
             name: s.name || null,
@@ -1664,6 +1713,8 @@ const CreateExperience = ({ mode = 'create', experienceData = null }) => {
             ruleCron: computedRuleCron || null,
             ruleDateTime: s.ruleDateTime || null,
             timezone: s.timezone || schedulePreviewTimezone || 'UTC',
+            startDate: s.startDate || null,
+            endDate: s.endDate || null,
             durationMinutes:
               s.durationMinutes != null && String(s.durationMinutes).trim() !== ''
                 ? Number(s.durationMinutes)
@@ -2206,8 +2257,128 @@ const CreateExperience = ({ mode = 'create', experienceData = null }) => {
             >
               {EXPERIENCE_DETAILS_TEMPLATES.map(({ value, label }) => <option key={value} value={value}>{label}</option>)}
             </select>
-            <p className="mt-1 text-xs text-slate-500">Party uses one free occurrence. Food tour uses uploaded hero media and pinned reviews.</p>
+            <p className="mt-1 text-xs text-slate-500">Party uses one event occurrence with free or paid ticket tiers. Food tour uses uploaded hero media. Pinned reviews can be used with any template.</p>
           </div>
+          <details className="md:col-span-2 rounded border border-slate-200 bg-slate-50 p-3">
+            <summary className="cursor-pointer font-medium text-slate-700">Customize template text</summary>
+            <p className="mt-1 text-xs text-slate-500">Replace the default wording used by this template. Leave any field unchanged to keep its default. Each text field supports up to 500 characters.</p>
+            <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3">
+              {(EXPERIENCE_TEMPLATE_COPY[formData.detailsMetadata.template] || []).map(({ key, label, defaultValue }) => (
+                <div key={key}>
+                  <label htmlFor={`template-copy-${key}`} className="block text-xs font-medium text-slate-700 mb-1">{label}</label>
+                  <textarea
+                    id={`template-copy-${key}`}
+                    className="border rounded px-3 py-2 w-full min-h-16"
+                    maxLength={500}
+                    value={resolveTemplateCopy(formData.detailsMetadata, formData.detailsMetadata.template)[key] ?? defaultValue}
+                    onChange={(event) => setField('detailsMetadata', {
+                      ...formData.detailsMetadata,
+                      overrides: {
+                        ...formData.detailsMetadata.overrides,
+                        copy: {
+                          ...formData.detailsMetadata.overrides?.copy,
+                          [key]: event.target.value,
+                        },
+                      },
+                    })}
+                  />
+                </div>
+              ))}
+            </div>
+          </details>
+          <section className="md:col-span-2 rounded border border-slate-200 bg-slate-50 p-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <h3 className="font-medium text-slate-700">Pinned reviews</h3>
+              {isEditMode && pinnableComments.length > 0 && (
+                <span className="rounded-full bg-white px-2.5 py-1 text-xs font-medium text-slate-600">
+                  {(formData.detailsMetadata.overrides.pinnedCommentIds || []).length} of 3 selected
+                </span>
+              )}
+            </div>
+            <p className="mt-1 text-xs text-slate-500">Choose up to three five-star experience reviews to feature on any details template. Pins are saved with this experience.</p>
+            {isEditMode && pinnableComments.length > 0 ? (
+              <div className="mt-3">
+                <label htmlFor="pinned-review-search" className="mb-1 block text-xs font-medium text-slate-700">
+                  Find a review
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    id="pinned-review-search"
+                    type="search"
+                    className="min-w-0 flex-1 rounded border border-slate-300 bg-white px-3 py-2 text-sm"
+                    placeholder="Search review titles or comments"
+                    value={pinnedCommentSearch}
+                    onChange={(event) => setPinnedCommentSearch(event.target.value)}
+                  />
+                  {pinnedCommentSearch && (
+                    <button
+                      type="button"
+                      className="rounded border border-slate-300 bg-white px-3 py-2 text-sm text-slate-600 hover:bg-slate-100"
+                      onClick={() => setPinnedCommentSearch('')}
+                    >
+                      Clear
+                    </button>
+                  )}
+                </div>
+                <p className="mt-1 text-xs text-slate-500">
+                  Showing {filteredPinnableComments.length} of {pinnableComments.length} reviews
+                  {(formData.detailsMetadata.overrides.pinnedCommentIds || []).length >= 3
+                    ? ' · Unpin a review to choose another.'
+                    : ''}
+                </p>
+                {filteredPinnableComments.length > 0 ? (
+                  <div className="mt-3 space-y-2">
+                    {filteredPinnableComments.map((comment) => {
+                      const pinnedIds = formData.detailsMetadata.overrides.pinnedCommentIds || [];
+                      const isPinned = pinnedIds.includes(comment.id);
+                      return (
+                        <label
+                          key={comment.id}
+                          className={`flex items-start gap-2 rounded border bg-white p-3 ${
+                            isPinned ? 'border-amber-300 ring-1 ring-amber-100' : 'border-slate-200'
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isPinned}
+                            disabled={!isPinned && pinnedIds.length >= 3}
+                            onChange={(event) => {
+                              const nextPinnedIds = event.target.checked
+                                ? [...pinnedIds, comment.id]
+                                : pinnedIds.filter((id) => id !== comment.id);
+                              setField('detailsMetadata', {
+                                ...formData.detailsMetadata,
+                                overrides: {
+                                  ...formData.detailsMetadata.overrides,
+                                  pinnedCommentIds: nextPinnedIds,
+                                },
+                              });
+                            }}
+                          />
+                          <span className="min-w-0">
+                            <span className="block text-sm font-medium text-slate-800">
+                              ★★★★★ {comment.title || 'Five-star review'}
+                            </span>
+                            <span className="block text-sm text-slate-600">{comment.comment}</span>
+                          </span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <p className="mt-3 rounded border border-dashed border-slate-300 bg-white p-3 text-sm text-slate-600">
+                    No reviews match “{pinnedCommentSearch}”.
+                  </p>
+                )}
+              </div>
+            ) : (
+              <p className="mt-2 text-sm text-slate-600">
+                {isEditMode
+                  ? 'There are no eligible five-star reviews to pin yet.'
+                  : 'Save this experience first. Once it has five-star reviews, you can pin them here by editing the experience.'}
+              </p>
+            )}
+          </section>
           <div>
             <label className="block text-xs font-medium text-slate-700 mb-1">Subtitle</label>
             <input

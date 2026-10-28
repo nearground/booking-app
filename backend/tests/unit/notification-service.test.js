@@ -62,10 +62,28 @@ describe('sendNotification', () => {
     const result = await sendNotification({ template: 'test', to: 'a@b.com', payload: {} });
     expect(result).toEqual({ sent: true, provider: 'smtp' });
     expect(mockSendMail).toHaveBeenCalledTimes(1);
+    expect(mockSendMail).toHaveBeenCalledWith(expect.objectContaining({
+      to: 'martin@puertovallarta.today',
+      text: expect.stringMatching(/^To: a@b\.com\n\n/),
+    }));
     expect(nodemailer.createTransport).toHaveBeenCalledWith(expect.objectContaining({
       connectionTimeout: 10000,
       greetingTimeout: 10000,
       socketTimeout: 15000,
+    }));
+  });
+
+  test('smtp does not add a recipient header when the recipient is already the override', async () => {
+    process.env.NOTIFICATIONS_PROVIDER = 'smtp';
+    process.env.NOTIFICATIONS_FROM_EMAIL = SMTP_BASE_ENV.NOTIFICATIONS_FROM_EMAIL;
+    process.env.SPACEMAIL_HOST = SMTP_BASE_ENV.SPACEMAIL_HOST;
+    await sendNotification({
+      template: 'test',
+      to: 'martin@puertovallarta.today',
+      payload: { text: 'Original message' },
+    });
+    expect(mockSendMail).toHaveBeenCalledWith(expect.objectContaining({
+      text: 'Original message',
     }));
   });
 
@@ -79,7 +97,7 @@ describe('sendNotification', () => {
     expect(result.sent).toBe(false);
     expect(result.provider).toBe('smtp');
     expect(result.reason).toBe('ECONNREFUSED');
-    expect(result.to).toBe('us**@b.com');
+    expect(result.to).toBe('ma****@puertovallarta.today');
   });
 
   test('resend without API key returns missing_api_key', async () => {

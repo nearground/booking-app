@@ -112,6 +112,7 @@ import {
 } from '../../server/models/index.js';
 import { sendNotification } from '../../server/services/Notification.service.js';
 import { createManualBookingService } from '../../server/services/Organizer.service.js';
+import OrderModel from '../../server/models/Order.model.js';
 
 const OrganizationMembers = sequelize.models.OrganizationMembers;
 
@@ -223,6 +224,36 @@ describe('createManualBookingService', () => {
             await sequelize.transaction.mock.results[0].value;
         expect(Order.create).not.toHaveBeenCalled();
         expect(activeTransaction.rollback).toHaveBeenCalled();
+    });
+
+    test('creates a manual guest order that passes real model validation', async () => {
+        Order.create.mockImplementationOnce(async (values) => {
+            const order = OrderModel.build({ ...values, id: 51 });
+            await order.validate();
+            return order;
+        });
+
+        const result = await createManualBookingService({
+            userId: 10,
+            sessionId: 31,
+            booking,
+        });
+        const activeTransaction =
+            await sequelize.transaction.mock.results[0].value;
+
+        expect(result.orderNumber).toMatch(/^ORD-\d{8}-[A-Z0-9]{4}$/);
+        expect(activeTransaction.commit).toHaveBeenCalled();
+        expect(activeTransaction.rollback).not.toHaveBeenCalled();
+        expect(OrderItem.create).toHaveBeenCalledWith(
+            expect.objectContaining({ OrderId: 51, ExperienceReservationId: 41 }),
+            expect.objectContaining({ transaction: activeTransaction })
+        );
+        expect(sendNotification).toHaveBeenCalledWith(
+            expect.objectContaining({
+                to: booking.email,
+                payload: expect.objectContaining({ orderNumber: result.orderNumber }),
+            })
+        );
     });
 
     test('rejects phone delivery without a phone number', async () => {

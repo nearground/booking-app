@@ -64,9 +64,11 @@ export const getPublicExperienceAttendance = async ({
         return { status: 404, errors: ['Session not found'], data: null };
     }
 
-    // "attended" is the existing reservation-level check-in state, not a booking count.
-    const where = { ScheduledExperienceId: session.id, status: 'attended' };
-    const checkedInCount =
+    const where = {
+        ScheduledExperienceId: session.id,
+        status: ['confirmed', 'attended'],
+    };
+    const attendeeCount =
         Number(
             await ExperienceReservation.sum('numberOfAttendees', { where })
         ) || 0;
@@ -78,7 +80,6 @@ export const getPublicExperienceAttendance = async ({
                 model: User,
                 as: 'Customer',
                 attributes: ['id', 'firstName', 'lastName', 'profilePicture'],
-                where: { isRegistered: true },
                 required: true,
             },
             {
@@ -107,5 +108,5 @@ export const getPublicExperienceAttendance = async ({
         attendees.push({ name, avatar: resolveMediaUrl(user.profilePicture) });
     }
 
-    return { status: 200, errors: [], data: { checkedInCount, attendees } };
+    return { status: 200, errors: [], data: { attendeeCount, attendees } };
 };

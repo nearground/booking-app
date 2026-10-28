@@ -2,6 +2,9 @@ import React from 'react';
 import FoodTourExperienceHero from './FoodTourExperienceHero';
 import OrganizerCard from '../components/OrganizerCard';
 import { resolveDetailsMedia, selectPinnedComments } from '../experienceDetailsTemplate';
+import { resolveTemplateCopy } from '../experienceDetailsCopy';
+import PinnedExperienceComments from '../components/PinnedExperienceComments';
+import { isValidOrganizationSiteSlug, resolveAppUrl } from '../../organization-site/organizationSiteResolver';
 import './FoodTourExperience.css';
 
 const FONT_CLASSES = {
@@ -32,16 +35,6 @@ export const selectFoodTourPinnedComments = (comments) => {
   }).slice(0, 3);
 };
 
-const reviewerName = (comment) => {
-  if (Number(comment.anonymity ?? 0) === 0) return 'Anonymous';
-  const reviewer = comment.commenter || comment.user || {};
-  if (Number(comment.anonymity) === 1) return reviewer.firstName || 'Guest';
-  return reviewer.name
-    || [reviewer.firstName, reviewer.lastName].filter(Boolean).join(' ')
-    || comment.commenterName
-    || 'Guest';
-};
-
 const FoodTourExperience = ({
   experience,
   metadata,
@@ -51,8 +44,10 @@ const FoodTourExperience = ({
   reviews,
   onSelectOrganizer,
   onOpenGallery,
+  showPinnedComments = true,
 }) => {
   const ux = presentation.uxOverrides || {};
+  const copy = resolveTemplateCopy(metadata || experience.detailsMetadata, 'food-tour');
   const media = resolveDetailsMedia(metadata || experience.detailsMetadata);
   const pinnedComments = selectFoodTourPinnedComments(
     presentation.pinnedComments || selectPinnedComments(experience.comments, metadata || experience.detailsMetadata)
@@ -81,8 +76,17 @@ const FoodTourExperience = ({
         videoUrl={presentation.heroVideoUrl || experience.detailsMedia?.heroVideoUrl || media.heroVideoUrl}
         posterUrl={presentation.heroPosterUrl || experience.detailsMedia?.heroPosterUrl || media.heroPosterUrl || experience.thumbnail}
         onOpenGallery={onOpenGallery}
+        copy={copy}
       />
       <div className="food-tour-experience__content">
+        {isValidOrganizationSiteSlug(experience.Organization?.slug) && (
+          <a
+            href={resolveAppUrl(`/o/${encodeURIComponent(experience.Organization.slug)}`)}
+            className="inline-block py-2 font-semibold underline underline-offset-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+          >
+            View {experience.Organization.name || 'organization'} profile
+          </a>
+        )}
         {children ?? (
           <div className="food-tour-details">
             <div>
@@ -90,14 +94,14 @@ const FoodTourExperience = ({
                 ★ {Number(experience.ratings || 0).toFixed(2)} ({experience.commentCount || 0} comments)
               </p>
               <section aria-label="Tour description">
-                <h2>What You'll Do</h2>
-                {(experience.description || 'Full experience details will be shared soon.')
+                <h2>{copy.descriptionHeading}</h2>
+                {(experience.description || copy.descriptionFallback)
                   .split(/\n\s*\n/).filter((paragraph) => paragraph.trim()).map((paragraph, index) => (
                     <p key={index}>{paragraph}</p>
                   ))}
               </section>
               <section aria-label="Tour organizers">
-                <h2>Meet your local hosts</h2>
+                <h2>{copy.hostsHeading}</h2>
                 <div className="food-tour-details__hosts">
                   {(Array.isArray(experience.organizers) ? experience.organizers : []).map((organizer) => (
                     <OrganizerCard
@@ -110,38 +114,25 @@ const FoodTourExperience = ({
                 </div>
               </section>
               <section aria-label="Meeting location">
-                <h2>Where we'll meet</h2>
-                <p>{experience.Location?.name || 'Location details unavailable'}</p>
+                <h2>{copy.locationHeading}</h2>
+                <p>{experience.Location?.name || copy.locationFallback}</p>
                 <p>{[
                   experience.Location?.street, experience.Location?.city, experience.Location?.state,
                   experience.Location?.zipCode, experience.Location?.country,
                 ].filter(Boolean).join(', ')}</p>
               </section>
             </div>
-            <aside aria-label="Book this food tour">{booking}</aside>
+            <aside aria-label={copy.bookingLabel}>{booking}</aside>
           </div>
         )}
         {reviews}
       </div>
-      {pinnedComments.length > 0 && (
-        <section className="food-tour-pins" aria-label="Pinned experience comments">
-          <p className="food-tour-eyebrow">From our guests</p>
-          <h2>A taste of what guests love</h2>
-          <div className="food-tour-pins__grid">
-            {pinnedComments.map((comment) => (
-              <article className="food-tour-pins__card" key={comment.id} data-testid="food-tour-pinned-comment">
-                <p className="food-tour-pins__label">Pinned experience review</p>
-                <p className="food-tour-pins__stars" aria-label="5 out of 5 stars">
-                  <span aria-hidden="true">★★★★★</span>
-                </p>
-                {comment.title && <h3>{comment.title}</h3>}
-                <blockquote>{comment.comment}</blockquote>
-                <p className="food-tour-pins__author">{reviewerName(comment)}</p>
-              </article>
-            ))}
-          </div>
-        </section>
-      )}
+      {showPinnedComments && pinnedComments.length > 0 ? (
+        <PinnedExperienceComments
+          selectedComments={pinnedComments}
+          metadata={metadata || experience.detailsMetadata || { version: 1, template: 'food-tour', overrides: {} }}
+        />
+      ) : null}
     </div>
   );
 };

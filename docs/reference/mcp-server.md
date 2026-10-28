@@ -149,6 +149,17 @@ recommended starting point is to retain MCP and add agent orchestration only
 when conversational behavior is required. LangChain does not supply booking
 identity, consent, authorization or safe checkout automatically.
 
+The public website chat sidebar now uses a LangChain `ChatOpenAI` model with the
+OpenAI API, and calls the existing MCP public experience tools in-process over
+an in-memory MCP transport. Configure `OPENAI_API_KEY` in the backend
+environment; `OPENAI_MODEL` defaults to `gpt-4o-mini`. This is a separate API
+integration and billing account from Copilot. The assistant can search public
+experiences and read their details and dates, but has no booking, payment,
+account, or private-data tools. The public `POST /api/chat` endpoint limits
+conversation size and requests per IP; browser conversation history is sent
+with each message and is not stored by this backend. Chat messages and public
+tool results are sent to OpenAI to generate replies.
+
 ### Transport and hosting options
 
 | Option | Suitable use | Considerations |

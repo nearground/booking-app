@@ -19,6 +19,7 @@ const mockExperienceCreate = jest.fn();
 const mockLocationFindOne = jest.fn();
 const mockOrganizationFindByPk = jest.fn();
 const mockTierBulkCreate = jest.fn();
+const mockCommentFindAll = jest.fn();
 
 jest.mock('../../server/models/index.js', () => {
   const mockExperience = { findByPk: (...args) => mockFindByPk(...args), create: (...args) => mockExperienceCreate(...args) };
@@ -33,7 +34,7 @@ jest.mock('../../server/models/index.js', () => {
     User: {},
     ScheduledExperience: { findAll: (...args) => mockSessionFindAll(...args), create: (...args) => mockSessionCreate(...args) },
     ExperienceReservation: {},
-    Comment: {},
+    Comment: { findAll: (...args) => mockCommentFindAll(...args) },
     sequelize: {
       models: {
         OrganizationMembers: mockOrganizationMembers,
@@ -53,7 +54,7 @@ jest.mock('../../server/models/index.js', () => {
       User: {},
       ScheduledExperience: { findAll: (...args) => mockSessionFindAll(...args), create: (...args) => mockSessionCreate(...args) },
       ExperienceReservation: {},
-      Comment: {},
+      Comment: { findAll: (...args) => mockCommentFindAll(...args) },
       sequelize: {
         models: {
           OrganizationMembers: mockOrganizationMembers,
@@ -113,6 +114,10 @@ describe('getExperienceForEdit', () => {
   beforeAll(async () => {
     const ctrl = await import('../../server/controllers/ExperienceManage.controller.js');
     getExperienceForEdit = ctrl.getExperienceForEdit;
+  });
+
+  beforeEach(() => {
+    mockCommentFindAll.mockResolvedValue([]);
   });
 
   describe('details metadata management writes', () => {
@@ -220,7 +225,6 @@ describe('getExperienceForEdit', () => {
 
     test.each([
       { dates: ['2027-01-01T18:00:00Z', '2027-01-02T18:00:00Z'], price: 0, sessions: [] },
-      { dates: ['2027-01-01T18:00:00Z'], price: 12, sessions: [] },
       { dates: ['2027-01-01T18:00:00Z'], price: 0, sessions: [{ dateTime: '2027-01-01T18:00:00Z' }, { dateTime: '2027-01-02T18:00:00Z' }] },
       { dates: ['2027-01-02T18:00:00Z'], price: 0, sessions: [{ dateTime: '2027-01-01T18:00:00Z' }] },
     ])('rejects invalid party writes transactionally %j', async ({ dates, price, sessions }) => {
@@ -242,29 +246,32 @@ describe('getExperienceForEdit', () => {
       expect(mockSessionCreate).not.toHaveBeenCalled();
     });
 
-    test.each([true, false])('party update preserves or transactionally creates its sole session (existing=%s)', async (existing) => {
-      const { updateExperience } = await import('../../server/controllers/ExperienceManage.controller.js');
-      const dateTime = '2027-01-01T18:00:00Z';
-      const record = {
-        id: 10, OrganizationId: 3, capacity: 20, duration: 60,
-        detailsMetadata: { version: 1, template: 'party', overrides: {} },
-      };
-      record.update = jest.fn(async (payload) => Object.assign(record, payload));
-      mockFindByPk.mockResolvedValue(record);
-      mockFindOne.mockResolvedValue({ isAdmin: true });
-      mockTemplateFindAll.mockResolvedValue([]);
-      mockPickFindAll.mockResolvedValue([{ dateTime }]);
-      mockTierFindAll.mockResolvedValue([{ price: 0 }]);
-      mockSessionFindAll.mockResolvedValue(existing ? [{ dateTime }] : []);
-      const res = mockRes();
-      await updateExperience({ params: { experienceId: '10' }, user: { id: 1 }, body: {} }, res);
-      expect(res.status).toHaveBeenCalledWith(200);
-      expect(record.autoSyncEnabled).toBe(false);
-      expect(mockSessionCreate).toHaveBeenCalledTimes(existing ? 0 : 1);
-      if (!existing) expect(mockSessionCreate).toHaveBeenCalledWith(expect.objectContaining({
-        ExperienceId: 10, dateTime, availableSpots: 20, status: 'scheduled',
-      }), expect.objectContaining({ transaction: expect.any(Object) }));
-    });
+    test.each([[true, 0], [false, 0], [true, 12], [false, 12]])(
+      'party update preserves or transactionally creates its sole session (existing=%s, price=%s)',
+      async (existing, price) => {
+        const { updateExperience } = await import('../../server/controllers/ExperienceManage.controller.js');
+        const dateTime = '2027-01-01T18:00:00Z';
+        const record = {
+          id: 10, OrganizationId: 3, capacity: 20, duration: 60,
+          detailsMetadata: { version: 1, template: 'party', overrides: {} },
+        };
+        record.update = jest.fn(async (payload) => Object.assign(record, payload));
+        mockFindByPk.mockResolvedValue(record);
+        mockFindOne.mockResolvedValue({ isAdmin: true });
+        mockTemplateFindAll.mockResolvedValue([]);
+        mockPickFindAll.mockResolvedValue([{ dateTime }]);
+        mockTierFindAll.mockResolvedValue([{ price }]);
+        mockSessionFindAll.mockResolvedValue(existing ? [{ dateTime }] : []);
+        const res = mockRes();
+        await updateExperience({ params: { experienceId: '10' }, user: { id: 1 }, body: {} }, res);
+        expect(res.status).toHaveBeenCalledWith(200);
+        expect(record.autoSyncEnabled).toBe(false);
+        expect(mockSessionCreate).toHaveBeenCalledTimes(existing ? 0 : 1);
+        if (!existing) expect(mockSessionCreate).toHaveBeenCalledWith(expect.objectContaining({
+          ExperienceId: 10, dateTime, availableSpots: 20, status: 'scheduled',
+        }), expect.objectContaining({ transaction: expect.any(Object) }));
+      }
+    );
 
     test('rejects unsafe metadata on create before writing', async () => {
       const { createExperience } = await import('../../server/controllers/ExperienceManage.controller.js');
@@ -397,6 +404,9 @@ describe('getExperienceForEdit', () => {
 
     mockFindByPk.mockResolvedValue(experienceRecord);
     mockFindOne.mockResolvedValue({ id: 1, isAdmin: true }); // admin membership found
+    mockCommentFindAll.mockImplementation(async ({ where }) => (
+      where.id ? [{ id: 3, stars: 5, title: 'Pinned', comment: 'A helpful five-star review.' }] : []
+    ));
 
     await getExperienceForEdit(req, res);
 
@@ -412,5 +422,17 @@ describe('getExperienceForEdit', () => {
     expect(responseData.data.experience.TicketTiers).toHaveLength(1);
     expect(responseData.data.experience.TicketTiers[0].title).toBe('Adult');
     expect(responseData.data.experience.Organizers).toHaveLength(1);
+    expect(responseData.data.experience.pinnableComments).toEqual([
+      { id: 3, stars: 5, title: 'Pinned', comment: 'A helpful five-star review.' },
+    ]);
+    expect(mockCommentFindAll).toHaveBeenCalledWith(expect.objectContaining({
+      where: expect.objectContaining({
+        CommentableId: 10,
+        CommentableType: 'Experience',
+        ParentId: null,
+        stars: 5,
+      }),
+      attributes: ['id', 'stars', 'title', 'comment'],
+    }));
   });
 });

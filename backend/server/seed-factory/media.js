@@ -15,6 +15,7 @@ export function createMediaPipelineUploader({
         bytes,
         contentType = 'image/png',
         kind = 'asset',
+        uploadId,
     }) {
         const url = new URL(defaultApiPath, apiBaseUrl);
         url.searchParams.set('ownerType', 'user');
@@ -25,8 +26,10 @@ export function createMediaPipelineUploader({
             headers: {
                 Cookie: `_token=${encodeURIComponent(accessToken)}`,
                 'Content-Type': contentType,
+                ...(uploadId ? { 'X-Seed-Upload-Id': uploadId } : {}),
             },
             body: bytes,
+            signal: AbortSignal.timeout(15000),
         });
         const body = await response.json();
         if (!response.ok || body.errors?.length || !body.data?.objectKey) {

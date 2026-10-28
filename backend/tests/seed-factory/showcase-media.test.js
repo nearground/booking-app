@@ -8,7 +8,6 @@ describe('showcase media materialization', () => {
         originalEnv = { ...process.env };
         process.env.R2_DEV_TOKEN = 'fixture-worker-token';
         process.env.R2_WORKER_BASE_URL = 'http://worker.example/';
-        delete process.env.SHOWCASE_MEDIA_ASSETS_DIR;
     });
 
     afterEach(() => {
@@ -40,6 +39,21 @@ describe('showcase media materialization', () => {
         expect(await prepareShowcaseMedia({ ownerId: 42, fetchImpl })).toEqual(first);
         const otherOwner = await prepareShowcaseMedia({ ownerId: 43, fetchImpl });
         expect(otherOwner.heroVideo).toBe(first.heroVideo.replace('users/42/', 'users/43/'));
+    });
+
+    test('journals unique media keys before each storage upload', async () => {
+        const fetchImpl = jest.fn().mockResolvedValue({ ok: true });
+        const journaled = [];
+        const media = await prepareShowcaseMedia({
+            ownerIds: { party: 51, food: 52, default: 53 },
+            keySuffix: 'run-123',
+            beforeUpload: async ({ objectKey }) => journaled.push(objectKey),
+            fetchImpl,
+        });
+        const keys = [...media.partyImages, ...media.foodImages, ...media.defaultImages, media.heroVideo, media.heroPoster];
+        expect(journaled).toEqual(keys);
+        expect(fetchImpl.mock.calls.map(([url]) => url)).toEqual(keys.map((key) => `http://worker.example/objects/${key}`));
+        expect(keys.every((key) => key.includes('-run-123.'))).toBe(true);
     });
 
     test.each([undefined, 0, -1, 1.1, '42'])('rejects invalid owner %p before uploading', async (ownerId) => {

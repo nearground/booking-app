@@ -283,6 +283,13 @@ export const checkoutCart = async (cartId, customerId, billingInfo, contactInfo 
         let emailStatus = 'failed';
         if (result && result.mainContactEmail) {
             const items = Array.isArray(result.Items) ? result.Items : [];
+            const publicAttendanceOptIn = items.some((item) =>
+                item.ProductType === 'Experience' &&
+                Array.isArray(item.metadata?.reservationAnswers) &&
+                item.metadata.reservationAnswers.some((answer) =>
+                    answer?.questionKey === 'publicAttendance' && answer.answerText === 'true'
+                )
+            );
             try {
                 const notification = await sendNotification({
                     template: 'booking-confirmation',
@@ -297,6 +304,12 @@ export const checkoutCart = async (cartId, customerId, billingInfo, contactInfo 
                             totalPrice: i.totalPrice,
                             confirmationCode: i.metadata?.confirmationCode || null,
                         })),
+                        isGuest: !customerId,
+                        publicAttendanceOptIn,
+                        ...(guestReceipt && publicAttendanceOptIn ? {
+                            loginUrl: `${String(process.env.FRONTEND_BASE_URL || process.env.FRONTEND_URL || 'http://localhost:8080').trim().replace(/\/+$/, '')}/login`,
+                            registerUrl: `${String(process.env.FRONTEND_BASE_URL || process.env.FRONTEND_URL || 'http://localhost:8080').trim().replace(/\/+$/, '')}/register`,
+                        } : {}),
                     },
                 });
                 if (notification.sent && !['console', 'disabled'].includes(notification.provider)) {

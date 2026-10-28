@@ -10,7 +10,15 @@ import { sendNotification } from './Notification.service.js';
 const bcrypt = require('bcrypt');
 const crypto = require('crypto');
 
-const { User, PasswordReset, EmailVerificationToken, Order } = modelRegistry;
+const {
+    User,
+    PasswordReset,
+    EmailVerificationToken,
+    Order,
+    OrderItem,
+    ExperienceReservation,
+    ExperienceReservationAnswer,
+} = modelRegistry;
 
 class UserService {
     async createUser(payload) {
@@ -70,6 +78,72 @@ class UserService {
 
         const token = generateNewToken(user);
         return { token, user };
+    }
+
+    async claimGuestOrdersForUser(user, transaction) {
+        const normalizedEmail = String(user.email || '').trim().toLowerCase();
+        if (!normalizedEmail) return 0;
+        const guestOrders = await Order.findAll({
+            where: {
+                CustomerId: null,
+                [Op.and]: where(fn('LOWER', fn('TRIM', col('mainContactEmail'))), normalizedEmail),
+            },
+            transaction,
+        });
+        const claimableOrders = guestOrders.filter((order) => order.metadata?.saveBookingForLater !== false);
+        for (const order of claimableOrders) {
+            await order.update({ CustomerId: user.id }, { transaction });
+        }
+
+        const orderIds = guestOrders.map((order) => order.id).filter((id) => Number.isSafeInteger(Number(id)));
+        if (orderIds.length > 0) {
+            const orderItems = await OrderItem.findAll({
+                where: {
+                    OrderId: { [Op.in]: orderIds },
+                    ProductType: 'Experience',
+                    ExperienceReservationId: { [Op.ne]: null },
+                },
+                attributes: ['ExperienceReservationId'],
+                transaction,
+            });
+            const reservationIds = [...new Set(orderItems.map((item) => item.ExperienceReservationId).filter(Boolean))];
+            if (reservationIds.length > 0) {
+                const consentedAnswers = await ExperienceReservationAnswer.findAll({
+                    where: {
+                        ExperienceReservationId: { [Op.in]: reservationIds },
+                        questionKey: 'publicAttendance',
+                        answerText: 'true',
+                    },
+                    attributes: ['ExperienceReservationId'],
+                    transaction,
+                });
+                const consentedReservationIds = [...new Set(
+                    consentedAnswers.map((answer) => answer.ExperienceReservationId).filter(Boolean)
+                )];
+                if (consentedReservationIds.length > 0) {
+                    await ExperienceReservation.update(
+                        { CustomerId: user.id },
+                        {
+                            where: { id: { [Op.in]: consentedReservationIds }, CustomerId: null },
+                            transaction,
+                        }
+                    );
+                }
+            }
+        }
+        return claimableOrders.length;
+    }
+
+    async claimGuestOrders(user) {
+        const transaction = await modelRegistry.sequelize.transaction();
+        try {
+            const claimedOrderCount = await this.claimGuestOrdersForUser(user, transaction);
+            await transaction.commit();
+            return claimedOrderCount;
+        } catch (error) {
+            if (!transaction.finished) await transaction.rollback();
+            throw error;
+        }
     }
 
     async getUserById(userId) {
@@ -175,24 +249,13 @@ class UserService {
                 return { valid: false };
             }
             await user.update({ isEmailVerified: true }, { transaction });
-            const normalizedEmail = String(user.email || '').trim().toLowerCase();
-            const guestOrders = await Order.findAll({
-                where: {
-                    CustomerId: null,
-                    [Op.and]: where(fn('LOWER', fn('TRIM', col('mainContactEmail'))), normalizedEmail),
-                },
-                transaction,
-            });
-            const claimableOrders = guestOrders.filter((order) => order.metadata?.saveBookingForLater !== false);
-            for (const order of claimableOrders) {
-                await order.update({ CustomerId: user.id }, { transaction });
-            }
+            const claimedOrderCount = await this.claimGuestOrdersForUser(user, transaction);
             await EmailVerificationToken.update(
                 { usedAt: new Date() },
                 { where: { email: record.email, usedAt: null }, transaction }
             );
             await transaction.commit();
-            return { valid: true, claimedOrderCount: claimableOrders.length };
+            return { valid: true, claimedOrderCount };
         } catch (error) {
             if (!transaction.finished) await transaction.rollback();
             throw error;

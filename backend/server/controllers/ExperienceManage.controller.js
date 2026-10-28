@@ -1116,6 +1116,36 @@ const getExperienceForEdit = async (req, res) => {
             });
         }
 
+        const pinnedCommentIds = normalizeDetailsMetadata(experience.detailsMetadata).metadata.overrides.pinnedCommentIds || [];
+        const reviewWhere = {
+            CommentableId: experience.id,
+            CommentableType: 'Experience',
+            ParentId: null,
+            stars: 5,
+        };
+        const [recentReviews, pinnedReviews] = await Promise.all([
+            Comment.findAll({
+                where: reviewWhere,
+                attributes: ['id', 'stars', 'title', 'comment'],
+                order: [['createdAt', 'DESC']],
+                limit: 100,
+            }),
+            pinnedCommentIds.length
+                ? Comment.findAll({
+                    where: { ...reviewWhere, id: { [Op.in]: pinnedCommentIds } },
+                    attributes: ['id', 'stars', 'title', 'comment'],
+                })
+                : Promise.resolve([]),
+        ]);
+        const pinnableComments = [...new Map(
+            [...pinnedReviews, ...recentReviews].map((comment) => [comment.id, comment])
+        ).values()].map((comment) => ({
+            id: comment.id,
+            stars: comment.stars,
+            title: comment.title || '',
+            comment: comment.comment,
+        }));
+
         return res.status(200).json({
             errors: [],
             data: {
@@ -1125,6 +1155,7 @@ const getExperienceForEdit = async (req, res) => {
                     subtitle: experience.subtitle || '',
                     description: experience.description || '',
                     detailsMetadata: normalizeDetailsMetadata(experience.detailsMetadata).metadata,
+                    pinnableComments,
                     thumbnail: experience.thumbnail || '',
                     capacity: experience.capacity,
                     duration: experience.duration,

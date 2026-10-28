@@ -61,7 +61,7 @@ beforeEach(() => {
   networkAdapter.get.mockResolvedValue({
     data: {
       session,
-      checkedInCount: 12,
+      attendeeCount: 12,
       attendees: [
         {
           name: 'Alex Rivera',
@@ -75,16 +75,31 @@ beforeEach(() => {
 });
 
 describe('PartyExperience', () => {
-  test('shows a dedicated single-event page and public checked-in identities without organizer bios or contact data', async () => {
+  test('links to the organization profile', () => {
+    render(<PartyExperience isPreview experience={{
+      ...experience, Organization: { name: 'House Party', slug: 'house-party' },
+    }} />);
+    expect(screen.getByRole('link', { name: 'View House Party profile' }))
+      .toHaveAttribute('href', `${window.location.origin}/o/house-party`);
+  });
+
+  test.each([undefined, 'bad/slug', 'admin'])('omits the organization profile link for invalid slug %s', (slug) => {
+    render(<PartyExperience isPreview experience={{
+      ...experience, Organization: { name: 'House Party', slug },
+    }} />);
+    expect(screen.queryByRole('link', { name: 'View House Party profile' })).not.toBeInTheDocument();
+  });
+
+  test('shows a dedicated single-event page and public attendees without organizer bios or contact data', async () => {
     render(<PartyExperience experience={experience} />);
-    expect(await screen.findByText('12 checked in')).toBeInTheDocument();
+    expect(await screen.findByText('12 attending')).toBeInTheDocument();
     expect(
       screen.getByRole('heading', { name: 'After Dark' })
     ).toBeInTheDocument();
     expect(screen.getByText('Nightfall Collective')).toBeInTheDocument();
     expect(screen.getByText('Alex Rivera')).toBeInTheDocument();
     expect(
-      screen.getByText(/Only checked-in registered guests/)
+      screen.getByText(/Registered guests who opted in/)
     ).toBeInTheDocument();
     expect(screen.queryByText('private@example.com')).not.toBeInTheDocument();
     expect(
@@ -107,7 +122,7 @@ describe('PartyExperience', () => {
     expect(screen.getByText('Session 91')).toBeInTheDocument();
     expect(
       screen.getByText(
-        /Show my registered profile name and avatar publicly after I check in/
+        /I consent to show my registered name and profile picture/
       )
     ).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Close booking' }));
@@ -130,7 +145,7 @@ describe('PartyExperience', () => {
     ],
   ])('does not register unavailable sessions', async (event, label) => {
     networkAdapter.get.mockResolvedValue({
-      data: { session: event, checkedInCount: 0, attendees: [] },
+      data: { session: event, attendeeCount: 0, attendees: [] },
     });
 
     render(<PartyExperience experience={experience} />);
@@ -146,7 +161,7 @@ describe('PartyExperience', () => {
           dateTime: new Date(Date.now() - 60000).toISOString(),
           endDateTime: new Date(Date.now() + 60000).toISOString(),
         },
-        checkedInCount: 0,
+        attendeeCount: 0,
         attendees: [],
       },
     });
@@ -156,21 +171,17 @@ describe('PartyExperience', () => {
     ).toBeEnabled();
   });
 
-  test('does not advertise a paid ticket as a free registration', async () => {
+  test('allows paid admission through the existing booking modal', async () => {
     render(
       <PartyExperience
         experience={{ ...experience, TicketTiers: [{ id: 3, price: '10' }] }}
       />
     );
-    expect(
-      await screen.findByRole('button', { name: 'Registration unavailable' })
-    ).toBeDisabled();
-    expect(
-      screen.queryByText('One night · Free entry')
-    ).not.toBeInTheDocument();
-    expect(
-      screen.queryByRole('heading', { name: 'Free registration' })
-    ).not.toBeInTheDocument();
+    fireEvent.click(await screen.findByRole('button', { name: 'Register for event' }));
+    expect(screen.getByRole('dialog', { name: 'Existing booking flow' })).toBeInTheDocument();
+    expect(screen.getByText('One night · Paid entry')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Event registration' })).toBeInTheDocument();
+    expect(screen.queryByText('No payment required.')).not.toBeInTheDocument();
   });
 
   test('shows a safe unavailable state rather than a false zero count on failure', async () => {
@@ -180,10 +191,10 @@ describe('PartyExperience', () => {
     });
     render(<PartyExperience experience={experience} />);
     expect(await screen.findByRole('alert')).toHaveTextContent(
-      'Event details are temporarily unavailable'
+      'Attendee details are temporarily unavailable'
     );
-    expect(screen.getByText('Check-ins unavailable')).toBeInTheDocument();
-    expect(screen.queryByText('0 checked in')).not.toBeInTheDocument();
+    expect(screen.getByText('Attendee list unavailable')).toBeInTheDocument();
+    expect(screen.queryByText('0 attending')).not.toBeInTheDocument();
   });
 
   test('keeps preview non-transactional and does not fetch live attendance', async () => {
@@ -214,16 +225,16 @@ describe('PartyExperience', () => {
     const interval = vi.spyOn(window, 'setInterval');
     const clear = vi.spyOn(window, 'clearInterval');
     const { unmount } = render(<PartyExperience experience={experience} />);
-    await screen.findByText('12 checked in');
+    await screen.findByText('12 attending');
     const refresh = interval.mock.calls[0][0];
     networkAdapter.get.mockResolvedValue({
-      data: { session, checkedInCount: 13, attendees: [] },
+      data: { session, attendeeCount: 13, attendees: [] },
     });
     await act(async () => {
       await refresh();
     });
     await waitFor(() =>
-      expect(screen.getByText('13 checked in')).toBeInTheDocument()
+      expect(screen.getByText('13 attending')).toBeInTheDocument()
     );
     unmount();
     expect(clear).toHaveBeenCalled();

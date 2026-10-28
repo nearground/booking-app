@@ -23,8 +23,10 @@ import LightboxOverlay from '../../components/image-gallery-modal/LightboxOverla
 import ReviewSidebar from './components/ReviewSidebar';
 import GuestCommentPrompt from '../../components/comments/GuestCommentPrompt';
 import { resolveDetailsMetadata, selectPinnedComments } from './experienceDetailsTemplate';
+import { resolveTemplateCopy } from './experienceDetailsCopy';
 import PartyExperienceTemplate from './templates/PartyExperience';
 import FoodTourExperienceTemplate from './templates/FoodTourExperience';
+import PinnedExperienceComments from './components/PinnedExperienceComments';
 import {
   buildExperienceGalleryImages,
   getOrganizerGalleryImages,
@@ -138,6 +140,10 @@ const ExperienceDetails = ({ previewData = null, isPreview = false }) => {
 
   const experienceData = experienceDetails.data;
   const detailsMetadata = useMemo(() => resolveDetailsMetadata(experienceData?.detailsMetadata), [experienceData?.detailsMetadata]);
+  const templateCopy = useMemo(
+    () => resolveTemplateCopy(detailsMetadata, detailsMetadata.template),
+    [detailsMetadata]
+  );
   const comments = useMemo(() => experienceData?.comments || [], [experienceData]);
   const organizerImages = useMemo(
     () => getOrganizerGalleryImages(experienceData),
@@ -212,9 +218,7 @@ const ExperienceDetails = ({ previewData = null, isPreview = false }) => {
   
   const commentsPreview = useMemo(() => {
     const topLevel = Array.isArray(comments) ? comments.filter((c) => !c.ParentId) : [];
-    const pinnedIds = new Set(detailsMetadata.template === 'food-tour'
-      ? selectPinnedComments(comments, detailsMetadata).map((comment) => comment.id)
-      : []);
+    const pinnedIds = new Set(selectPinnedComments(comments, detailsMetadata).map((comment) => comment.id));
     return topLevel.filter((comment) => !pinnedIds.has(comment.id)).slice(0, 6);
   }, [comments, detailsMetadata]);
   const organizers = useMemo(() => experienceData?.organizers || [], [experienceData]);
@@ -369,7 +373,7 @@ const ExperienceDetails = ({ previewData = null, isPreview = false }) => {
   );
   const renderRightColumnContent = () => (
     <>
-      <p className="text-base font-semibold text-slate-700">Hosted By</p>
+      <p className="text-base font-semibold text-slate-700">{templateCopy.hostedBy}</p>
       {isValidOrganizationSiteSlug(experienceData.Organization?.slug) && (
         <Link
           to={`/o/${encodeURIComponent(experienceData.Organization.slug)}`}
@@ -390,7 +394,7 @@ const ExperienceDetails = ({ previewData = null, isPreview = false }) => {
           ))}
         </div>
       ) : (
-        <p className="text-base text-slate-600 mt-1">Organizer details coming soon</p>
+        <p className="text-base text-slate-600 mt-1">{templateCopy.organizerFallback}</p>
       )}
 
       <button
@@ -402,7 +406,7 @@ const ExperienceDetails = ({ previewData = null, isPreview = false }) => {
           }
         }}
       >
-        {experienceData.Location?.name || 'Location details unavailable'}
+        {experienceData.Location?.name || templateCopy.locationFallback}
       </button>
       
       {booking}
@@ -418,14 +422,14 @@ const ExperienceDetails = ({ previewData = null, isPreview = false }) => {
         </h2>
         {comments.length > 6 && (
           <button onClick={() => setIsCommentsModalOpen(true)} className="text-base text-blue-600 hover:underline font-semibold">
-            Show All Reviews
+            {templateCopy.reviewsButton}
           </button>
         )}
       </div>
       <div className="mt-4">
         {!userDetails ? <GuestCommentPrompt /> : justPostedReview ? (
           <div className="transition-opacity duration-300">
-            <div className="bg-green-50 border border-green-400 text-green-800 p-4 rounded mb-4">Thank you for your review!</div>
+            <div className="bg-green-50 border border-green-400 text-green-800 p-4 rounded mb-4">{templateCopy.reviewThanks}</div>
             <Suspense fallback={null}>
               <FullCommentCard
                 comment={{ ...justPostedReview, commenter: userDetails, target: { type: 'experience', id: experienceData.id, name: experienceData.title } }}
@@ -493,7 +497,7 @@ const ExperienceDetails = ({ previewData = null, isPreview = false }) => {
             </div>
           </Suspense>
         ) : (
-          <p className="mt-3 text-base text-slate-600">No comments yet for this experience.</p>
+          <p className="mt-3 text-base text-slate-600">{templateCopy.noComments}</p>
         )}
       </div>
     </div>
@@ -518,6 +522,7 @@ const ExperienceDetails = ({ previewData = null, isPreview = false }) => {
           reviews={renderReviews()}
           onSelectOrganizer={setSelectedOrganizer}
           onOpenGallery={openGallery}
+          showPinnedComments={false}
         />
       ) : (
       <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_360px] gap-4 lg:gap-6">
@@ -556,7 +561,7 @@ const ExperienceDetails = ({ previewData = null, isPreview = false }) => {
                   openGallery();
                 }}
                 className="absolute bottom-3 right-3 h-12 w-12 rounded-full bg-black/75 text-white flex items-center justify-center shadow-sm hover:bg-black/85"
-                aria-label="Open photos gallery"
+                aria-label={templateCopy.galleryLabel}
               >
                 <FontAwesomeIcon icon={faImages} className="text-lg" />
               </button>
@@ -564,7 +569,7 @@ const ExperienceDetails = ({ previewData = null, isPreview = false }) => {
           </div>
 
           <div className="mt-6">
-            <h2 className="text-2xl font-semibold text-slate-800">What You'll Do</h2>
+            <h2 className="text-2xl font-semibold text-slate-800">{templateCopy.descriptionHeading}</h2>
             <div className="mt-2 space-y-3">
               {descriptionParagraphs.length > 0 ? (
                 descriptionParagraphs.map((paragraph, index) => (
@@ -574,7 +579,7 @@ const ExperienceDetails = ({ previewData = null, isPreview = false }) => {
                 ))
               ) : (
                 <p className="text-base text-slate-700 leading-7">
-                  Full experience details will be shared soon.
+                  {templateCopy.descriptionFallback}
                 </p>
               )}
             </div>
@@ -596,11 +601,11 @@ const ExperienceDetails = ({ previewData = null, isPreview = false }) => {
         )}
 
         <div className="order-5 lg:order-4 lg:col-start-1 mt-8" ref={mapSectionRef}>
-            <h2 className="text-2xl font-semibold text-slate-800 mb-4">Where we'll meet</h2>
+            <h2 className="text-2xl font-semibold text-slate-800 mb-4">{templateCopy.meetingHeading}</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <h3 className="text-lg font-medium text-slate-800">
-                  {experienceData.Location?.name || 'Location details unavailable'}
+                  {experienceData.Location?.name || templateCopy.locationFallback}
                 </h3>
                 <p className="text-base text-slate-700 leading-7 mt-2">
                   {[
@@ -616,12 +621,12 @@ const ExperienceDetails = ({ previewData = null, isPreview = false }) => {
                 <div className="rounded-xl overflow-hidden border border-slate-200 h-72 md:h-auto relative bg-slate-100">
                   {!isMapIframeLoaded && !isMapLoadTimedOut ? (
                     <div className="absolute inset-0 flex items-center justify-center text-sm text-slate-600 bg-slate-100">
-                      Loading map...
+                      {templateCopy.mapLoading}
                     </div>
                   ) : null}
                   {isMapLoadTimedOut && !isMapIframeLoaded ? (
                     <div className="absolute inset-0 flex items-center justify-center text-sm text-slate-600 bg-slate-100 px-4 text-center">
-                      Map is taking longer than usual to load. Please wait a moment.
+                      {templateCopy.mapSlow}
                     </div>
                   ) : null}
                   <iframe
@@ -642,6 +647,10 @@ const ExperienceDetails = ({ previewData = null, isPreview = false }) => {
         {renderReviews()}
       </div>
       )}
+
+      <div className="container mx-auto px-4">
+        <PinnedExperienceComments comments={comments} metadata={detailsMetadata} />
+      </div>
 
       {activeImage ? (
         <LightboxOverlay

@@ -13,6 +13,7 @@ const ALLOWED_UPLOAD_CONTENT_TYPES = new Set([
   'image/webp',
   'image/gif',
   'image/avif',
+  'video/mp4',
 ]);
 const MAX_UPLOAD_BYTES = 6 * 1024 * 1024;
 

@@ -20,7 +20,7 @@ describe('Experience Browse', () => {
   });
 
   it('displays known seeded experience titles', function () {
-    cy.fixture('experiences').then((experiences) => {
+    cy.task('seedCatalog').then((experiences) => {
       const titles = experiences.seededExperiences.map((e) => e.title);
 
       // At least one seeded title should appear

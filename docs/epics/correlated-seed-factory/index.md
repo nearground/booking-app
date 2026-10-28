@@ -55,11 +55,17 @@ Expansion was explicitly requested. Both Stories and their implementation Tasks 
 
 - Factories should serve dev/demo seeds, backend tests and Cypress; confirm whether Cypress resets the DB between specs.
 - Is a new package acceptable (e.g. `@faker-js/faker` MIT plus an in-house graph builder)? Recommendation: yes for faker; build the correlation layer in-house on Sequelize models.
-- Actual media upload requires r2-local and an authenticated `_token` cookie. The merged organization-site media route now accepts MP4 as well as images; the app still has no standalone Media table. The spike stores object-key references in `Experience.images`; durable SQL/media materialization remains follow-on work, not part of this research release.
+- Actual media upload requires r2-local and an authenticated `_token` cookie. The app has no standalone Media table; references remain in `Experience.images`. The subsequent rework adds durable SQL/media ownership without introducing a new application Media entity.
 
 ## Verification and completion evidence
 
-Spike reproducibility and schema-reference checks grounded in `backend/server/models/index.js`; media adapter contract stub-tested. Actual media upload, SQL materialization and user review remain follow-up verification.
+Original Wave 1 evidence: spike reproducibility and schema-reference checks grounded in `backend/server/models/index.js`, with a stub-tested media adapter. SQL and actual media verification were deferred at that point; the subsequent rework below now exercises both.
+
+### Subsequently authorized full rework
+
+The user subsequently approved completing the full development/test rewrite. The legacy seeder bodies are now replaced by factory entry points. A durable Sequelize store records exact ownership/digests, serializes writers, and implements transactional skip/replace/cleanup with external-reference protection. Named startup/demo scenarios preserve the public examples and use configured credentials. Cypress resets now require a disposable test database and share the factory catalog.
+
+Real authenticated PNG/MP4 upload and storage deletion are exercised with pre-upload journaling, rollback compensation and retryable cleanup. The local worker's MIME allowlist now matches Express for MP4. No production data, DNS/tunnel activation or new migration is involved. See the [current factory contract and commands](../../reference/contracts/seed-factory.md); the original Wave 1 research acceptance above remains historical.
 
 ## Progress and decisions
 
@@ -67,6 +73,13 @@ Spike reproducibility and schema-reference checks grounded in `backend/server/mo
 - Wave 1 closeout: all scoped research/spike deliverables are complete and merged. The full seeder rewrite and durable SQL adapter are explicitly non-goals of this Epic, not unfinished Wave 1 implementation; they remain follow-on work under the published plan.
 - Spike verification: `backend/tests/seed-factory/seed-factory.test.js` passes (5 tests). Actual media upload and SQL materialization are not run; see contract limitations.
 - 2026-10-28 showcase follow-up: prioritize the existing demo seed's three organization cases ahead of a general seeder rewrite. Delivery order is the hero Epic's metadata contract, parallel party/food/default renderers, then correlated media and seed integration. The full factory rewrite remains separate; it is not a prerequisite for this bounded showcase.
-- The demo graph now assigns `testcompany1` two free, single-occurrence private-venue parties, `testcompany2` the food tour with three specifically pinned five-star reviews and a video/poster, and `testcompany3` the default coastal experience with uploaded gallery photos. Existing seeded experience identities are retained when the two party titles change. Party examples include three consenting registered checked-in guests per event; guest identities are not inferred from billing details.
+- The demo graph now assigns `testcompany1` a free and a paid-admission single-occurrence private-venue party, `testcompany2` the food tour with three specifically pinned five-star reviews and a video/poster, and `testcompany3` the default coastal experience with uploaded gallery photos. Existing seeded experience identities are retained when party titles change. Party examples include three consenting registered guests per event; guest identities are not inferred from billing details.
 - Verification: parent-owned seed regression suites pass (2 suites, 6 tests), covering organization preferences, uploaded-key persistence, review association, zero-price tiers, one party session, consent answers and remaining capacity. These are mocked SQL/storage contract tests, not evidence that a live database or R2 bucket has been populated.
 - Security review: changed files passed secret scanning. The JavaScript CodeQL pass reported three reviewed false positives: two React image `src` bindings (escaped DOM properties, not HTML parsing; the food poster additionally passes URL validation) and upload `bytes.length` (guarded by `Buffer.isBuffer` in both the HTTP controller and shared storage service). No executable HTML is introduced by these paths.
+- Integration follow-up: the upstream showcase implementation is integrated with
+  the authorized durable factory rewrite. At the user's request, the original
+  generic demos are retained and `showcase` adds three extra organizations at
+  `/o/house-party`, `/o/food-tours`, and `/o/default-tours`, with a separate
+  ownership manifest and journaled real media uploads. The earlier
+  `testcompany1`/`testcompany2`/`testcompany3` showcase assignment above describes
+  the upstream implementation before this additive integration.

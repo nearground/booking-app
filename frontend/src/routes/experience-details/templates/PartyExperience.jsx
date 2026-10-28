@@ -1,6 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { networkAdapter } from 'services/NetworkAdapter';
 import ExperienceSessionBookingModal from '../../../components/experience-session-booking-modal/ExperienceSessionBookingModal';
+import { isValidOrganizationSiteSlug, resolveAppUrl } from '../../organization-site/organizationSiteResolver';
+import { resolveTemplateCopy } from '../experienceDetailsCopy';
 import './PartyExperience.css';
 
 const publicAttendanceQuestion = {
@@ -8,11 +10,12 @@ const publicAttendanceQuestion = {
   type: 'boolean',
   required: false,
   prompt:
-    'Show my registered profile name and avatar publicly after I check in. Optional; other guests on my booking stay private.',
+    'I consent to show my registered name and profile picture on the public attendee list after my booking is confirmed. This is optional; only my own profile is shared.',
 };
 
 const PartyExperience = ({
   experience,
+  metadata,
   isPreview = false,
   initialCartEdit = null,
 }) => {
@@ -40,7 +43,7 @@ const PartyExperience = ({
         if (active) {
           setAttendance(null);
           setLoadError(
-            'Event details are temporarily unavailable. Please try again shortly.'
+            'Attendee details are temporarily unavailable. Please try again shortly.'
           );
         }
       } finally {
@@ -58,7 +61,7 @@ const PartyExperience = ({
         Array.isArray(previewSessions) && previewSessions.length === 1
           ? previewSessions[0]
           : null;
-      setAttendance({ session, checkedInCount: 0, attendees: [] });
+      setAttendance({ session, attendeeCount: 0, attendees: [] });
       return () => {
         active = false;
       };
@@ -87,11 +90,15 @@ const PartyExperience = ({
         String(tier.price).trim() !== '' &&
         Number(tier.price) === 0
     );
+  const validTickets = ticketTiers.length > 0 && ticketTiers.every(
+    (tier) => Number.isFinite(Number(tier.price)) && Number(tier.price) >= 0
+  );
+  const copy = resolveTemplateCopy(metadata || experience.detailsMetadata, 'party');
   const verifiedFreeEvent = Boolean(session && freeTickets && !loadError);
   const registrationDeadline = session?.endDateTime || session?.dateTime;
   const canRegister = Boolean(
     session &&
-      freeTickets &&
+      validTickets &&
       session.status !== 'cancelled' &&
       session.status !== 'completed' &&
       session.status !== 'waitlisted' &&
@@ -146,13 +153,13 @@ const PartyExperience = ({
     ? 'Registration preview'
     : isLoading
       ? 'Loading event…'
-      : !session || !freeTickets
+      : !session || !validTickets
         ? 'Registration unavailable'
         : Number(session.availableSpots) === 0
           ? 'Event full'
           : !canRegister
             ? 'Registration closed'
-            : 'Register for free';
+            : freeTickets ? copy.freeRegisterButton : copy.paidRegisterButton;
 
   return (
     <main className="party-experience">
@@ -164,10 +171,18 @@ const PartyExperience = ({
           <p className="party-experience__eyebrow">
             {experience.Organization?.name || 'Private venue party'}
           </p>
+          {isValidOrganizationSiteSlug(experience.Organization?.slug) && (
+            <a
+              href={resolveAppUrl(`/o/${encodeURIComponent(experience.Organization.slug)}`)}
+              className="inline-block py-2 font-semibold underline underline-offset-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+            >
+              View {experience.Organization.name || 'organization'} profile
+            </a>
+          )}
           <span className="party-experience__badge">
             {verifiedFreeEvent
-              ? 'One night · Free entry'
-              : 'Private venue event'}
+              ? copy.freeBadge
+              : copy.paidBadge}
           </span>
           <h1>{experience.title}</h1>
           {experience.subtitle ? (
@@ -187,12 +202,12 @@ const PartyExperience = ({
           aria-labelledby="party-about"
         >
           <p className="party-experience__eyebrow">
-            Good people. One unforgettable night.
+            {copy.storyEyebrow}
           </p>
-          <h2 id="party-about">The party</h2>
+          <h2 id="party-about">{copy.storyHeading}</h2>
           {(
             experience.description ||
-            'Join us for a one-off celebration at a private venue.'
+            copy.descriptionFallback
           )
             .split(/\n\s*\n/)
             .map((paragraph, index) => (
@@ -201,7 +216,7 @@ const PartyExperience = ({
               </p>
             ))}
           <div className="party-experience__venue">
-            <h3>The venue</h3>
+            <h3>{copy.venueHeading}</h3>
             <p>{venue.name || 'Private venue'}</p>
             {venue.city ? (
               <p>
@@ -210,8 +225,7 @@ const PartyExperience = ({
               </p>
             ) : null}
             <p>
-              Register before you arrive. Your booking confirmation is your
-              entry reference.
+              {copy.arrivalInstructions}
             </p>
           </div>
         </section>
@@ -220,14 +234,14 @@ const PartyExperience = ({
           className="party-experience__registration"
           aria-labelledby="party-registration"
         >
-          <p className="party-experience__eyebrow">You are invited</p>
+          <p className="party-experience__eyebrow">{copy.registrationEyebrow}</p>
           <h2 id="party-registration">
-            {verifiedFreeEvent ? 'Free registration' : 'Event registration'}
+            {verifiedFreeEvent ? copy.freeRegistrationHeading : copy.paidRegistrationHeading}
           </h2>
           <p>
             {verifiedFreeEvent
-              ? 'One event. No date selection. Reserve your place through our regular booking checkout.'
-              : 'Registration is available here only for a single free event.'}
+              ? copy.freeRegistrationDescription
+              : copy.paidRegistrationDescription}
           </p>
           {session ? (
             <p className="party-experience__date">{dateLabel}</p>
@@ -247,8 +261,8 @@ const PartyExperience = ({
             {registrationLabel}
           </button>
           <p className="party-experience__privacy">
-            {verifiedFreeEvent ? 'No payment required. ' : ''}
-            Your contact details are never shown on this page.
+            {verifiedFreeEvent ? `${copy.freePaymentNotice} ` : ''}
+            {copy.privacyNotice}
           </p>
           {loadError ? <p role="alert">{loadError}</p> : null}
         </aside>
@@ -259,8 +273,8 @@ const PartyExperience = ({
         >
           <div className="party-experience__attendance-heading">
             <div>
-              <p className="party-experience__eyebrow">At the venue</p>
-              <h2 id="party-attendance">Who is here</h2>
+              <p className="party-experience__eyebrow">{copy.attendanceEyebrow}</p>
+              <h2 id="party-attendance">{copy.attendanceHeading}</h2>
             </div>
             <p
               role="status"
@@ -268,20 +282,17 @@ const PartyExperience = ({
               className="party-experience__count"
             >
               {isLoading
-                ? 'Loading check-ins…'
+                ? 'Loading attendee list…'
                 : loadError
-                  ? 'Check-ins unavailable'
-                  : `${Number(attendance?.checkedInCount || 0)} checked in`}
+                  ? 'Attendee list unavailable'
+                  : `${Number(attendance?.attendeeCount || 0)} attending`}
             </p>
           </div>
-          <p>
-            Only checked-in registered guests who chose to share their profile
-            appear here. Everyone else stays private.
-          </p>
+          <p>{copy.attendanceDescription}</p>
           {attendees.length > 0 ? (
             <ul
               className="party-experience__guests"
-              aria-label="Public checked-in guests"
+              aria-label="Public attendees"
             >
               {attendees.map((attendee, index) => (
                 <li key={`${attendee.name}-${index}`}>
@@ -300,7 +311,7 @@ const PartyExperience = ({
               ))}
             </ul>
           ) : !isLoading && !loadError ? (
-            <p>No public check-ins yet. See you on the dance floor.</p>
+            <p>{copy.emptyAttendance}</p>
           ) : null}
         </section>
       </div>

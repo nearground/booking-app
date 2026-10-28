@@ -1,6 +1,8 @@
+import { EXPERIENCE_TEMPLATE_COPY } from './experienceDetailsCopy';
+
 export const EXPERIENCE_DETAILS_TEMPLATES = [
   { value: 'default', label: 'Default — gallery and calendar' },
-  { value: 'party', label: 'Party — single date, free admission' },
+  { value: 'party', label: 'Party — single date, paid or free admission' },
   { value: 'food-tour', label: 'Food tour — video and featured reviews' },
 ];
 
@@ -16,6 +18,13 @@ export function resolveDetailsMetadata(value) {
     !EXPERIENCE_DETAILS_TEMPLATES.some(({ value: template }) => template === value.template)) return fallback;
   const input = isRecord(value.overrides) ? value.overrides : {};
   const overrides = {};
+  const copyKeys = new Set(Object.values(EXPERIENCE_TEMPLATE_COPY).flat().map(({ key }) => key));
+  if (isRecord(input.copy)) {
+    const copy = Object.fromEntries(Object.entries(input.copy).filter(
+      ([key, text]) => copyKeys.has(key) && typeof text === 'string' && text.length <= 500
+    ));
+    if (Object.keys(copy).length) overrides.copy = copy;
+  }
   if (isMediaKey(input.heroVideoKey, ['mp4'])) overrides.heroVideoKey = input.heroVideoKey;
   if (isMediaKey(input.heroPosterKey, ['jpg', 'jpeg', 'png', 'webp', 'avif'])) overrides.heroPosterKey = input.heroPosterKey;
   if (Array.isArray(input.pinnedCommentIds)) {

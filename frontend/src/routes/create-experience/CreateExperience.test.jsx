@@ -51,6 +51,9 @@ describe('CreateExperience — create mode (default)', () => {
     expect(selector).toHaveValue('default');
     fireEvent.change(selector, { target: { value: 'party' } });
     expect(selector).toHaveValue('party');
+    expect(screen.getByText(/one event occurrence with free or paid ticket tiers/)).toBeInTheDocument();
+    fireEvent.click(screen.getByText('Customize template text'));
+    expect(screen.getByLabelText('Paid registration button')).toHaveValue('Register for event');
   });
   test('renders "Create New Experience" title in create mode', async () => {
     renderComponent();
@@ -125,6 +128,49 @@ describe('CreateExperience — edit mode', () => {
   test('renders "Preview Changes" submit button in edit mode', () => {
     renderComponent({ mode: 'edit', experienceData });
     expect(screen.getByRole('button', { name: 'Preview Changes' })).toBeInTheDocument();
+  });
+
+  test('lets organizers pin and unpin eligible reviews while editing', () => {
+    const data = {
+      ...experienceData,
+      detailsMetadata: { version: 1, template: 'default', overrides: { pinnedCommentIds: [10] } },
+      pinnableComments: [
+        { id: 10, stars: 5, title: 'Already featured', comment: 'A review currently pinned.' },
+        { id: 20, stars: 5, title: 'New favorite', comment: 'A review to feature.' },
+      ],
+    };
+    renderComponent({ mode: 'edit', experienceData: data });
+    const featuredReview = screen.getByLabelText(/New favorite/);
+    expect(screen.getByLabelText(/Already featured/)).toBeChecked();
+    expect(featuredReview).not.toBeChecked();
+    fireEvent.click(featuredReview);
+    expect(featuredReview).toBeChecked();
+  });
+
+  test('filters pinned review choices without changing hidden selections', () => {
+    const data = {
+      ...experienceData,
+      detailsMetadata: { version: 1, template: 'default', overrides: { pinnedCommentIds: [10] } },
+      pinnableComments: [
+        { id: 10, stars: 5, title: 'Already featured', comment: 'A review currently pinned.' },
+        { id: 20, stars: 5, title: 'New favorite', comment: 'A review to feature.' },
+      ],
+    };
+    renderComponent({ mode: 'edit', experienceData: data });
+
+    const search = screen.getByRole('searchbox', { name: 'Find a review' });
+    fireEvent.change(search, { target: { value: 'NEW FAVORITE' } });
+    expect(screen.queryByLabelText(/Already featured/)).not.toBeInTheDocument();
+    const newFavorite = screen.getByLabelText(/New favorite/);
+    fireEvent.click(newFavorite);
+    expect(newFavorite).toBeChecked();
+
+    fireEvent.change(search, { target: { value: 'nothing matches' } });
+    expect(screen.getByText(/No reviews match/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Clear' }));
+    expect(screen.getByLabelText(/Already featured/)).toBeChecked();
+    expect(screen.getByLabelText(/New favorite/)).toBeChecked();
+    expect(screen.getByText('2 of 3 selected')).toBeInTheDocument();
   });
 
   test('pre-populates the title field from experienceData', () => {

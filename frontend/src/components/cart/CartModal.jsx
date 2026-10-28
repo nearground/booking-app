@@ -40,6 +40,17 @@ const CartModal = () => {
   const [contact, setContact] = useState({ fullName: '', phone: '', email: '' });
   const [contactErrors, setContactErrors] = useState({});
   const [saveBookingForLater, setSaveBookingForLater] = useState(true);
+  const hasPublicAttendanceOptIn = cartItems.some((item) =>
+    item.ProductType === 'Experience' &&
+    Array.isArray(item.metadata?.reservationAnswers) &&
+    item.metadata.reservationAnswers.some((answer) =>
+      answer?.questionKey === 'publicAttendance' && answer.answerText === 'true'
+    )
+  );
+
+  useEffect(() => {
+    if (hasPublicAttendanceOptIn) setSaveBookingForLater(true);
+  }, [hasPublicAttendanceOptIn]);
 
   useEffect(() => {
     if (!isAuthenticated || !userDetails) return;

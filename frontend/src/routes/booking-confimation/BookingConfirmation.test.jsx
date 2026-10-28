@@ -311,4 +311,15 @@ describe('BookingConfirmation', () => {
     expect(screen.getByText(/you chose not to link this booking/i)).toBeInTheDocument();
     expect(screen.queryByText(/saved to your receipt email for later registration/i)).not.toBeInTheDocument();
   });
+
+  test('guides opted-in guest attendees to create an account or sign in with their booking email', () => {
+    renderWithState(makeConfirmationData({
+      guestReceiptToken: 'guest-capability',
+      publicAttendanceOptIn: true,
+      saveBookingForLater: false,
+    }));
+    expect(screen.getByText(/sign in to an account registered with this booking email, or create and verify an account/i)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /create an account to link this booking/i })).toHaveAttribute('href', '/register');
+    expect(screen.getByRole('link', { name: /sign in to your account/i })).toHaveAttribute('href', '/login');
+  });
 });

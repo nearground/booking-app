@@ -94,7 +94,7 @@ const resolveMediaUrl = (value) => {
     const built = buildMediaUrl(normalized);
     try {
         _resolveCache.set(normalized, built);
-        setTimeout(() => _resolveCache.delete(normalized), _RESOLVE_CACHE_TTL_MS);
+        setTimeout(() => _resolveCache.delete(normalized), _RESOLVE_CACHE_TTL_MS).unref();
     } catch (e) {
         /* ignore */
     }

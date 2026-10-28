@@ -133,6 +133,7 @@ const loginUser = async (req, res) => {
             organizationUsername: organizationUsername || undefined,
             existingToken,
         });
+        await UserService.claimGuestOrders(user);
         await mergeGuestCart({ sessionToken: req.cookies?._cart_session, customerId: user.id });
 
         res.cookie('_token', token, cookieOptions);

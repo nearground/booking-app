@@ -1,5 +1,5 @@
 import { defineConfig } from 'cypress';
-import { execFileSync, execSync } from 'child_process';
+import { execFileSync } from 'child_process';
 
 export default defineConfig({
   component: {
@@ -22,13 +22,44 @@ export default defineConfig({
 
     setupNodeEvents(on, config) {
       const repoRoot = config.projectRoot.replace(/[\\/]frontend$/, '');
-      // Reseeding changes record IDs, so flush the dev Redis afterwards to drop stale
-      // API response caches and the auth rate-limit counters that repeated logins trip.
-      const flushRedis = () => {
-        execSync('docker compose exec -T redis redis-cli FLUSHDB', { cwd: repoRoot, stdio: 'pipe', timeout: 30000 });
+      const backendArgs = process.env.CYPRESS_SEED_BACKEND_CONTAINER
+        ? ['exec', '-i', process.env.CYPRESS_SEED_BACKEND_CONTAINER]
+        : ['compose', 'exec', '-T', 'backend'];
+      const runBackend = (script) => execFileSync('docker', [
+        ...backendArgs, 'node', '--input-type=module', '-e', script,
+      ], { cwd: repoRoot, encoding: 'utf8', timeout: 120000 });
+      const seedTestDatabase = () => {
+        runBackend(`
+          import db from './server/models/index.js';
+          import redis from './server/utils/ioredis-client.js';
+          import { resetSeedTestDatabase } from './server/seed-factory/test-database.js';
+          import { runSeedScenario } from './server/seed-factory/runner.js';
+          db.sequelize.options.logging = false;
+          try {
+            await resetSeedTestDatabase(db);
+            await runSeedScenario(db, { scenario: 'startup' });
+            await runSeedScenario(db, { scenario: 'demo' });
+            await redis.flushdb();
+          } finally {
+            await db.sequelize.close();
+            redis.disconnect();
+          }
+        `);
+        return null;
       };
 
       on('task', {
+        seedCatalog() {
+          return JSON.parse(runBackend(`
+            import { demoCatalog } from './server/seed-factory/catalog.js';
+            console.log(JSON.stringify({
+              seededExperiences: demoCatalog.map(({ title, duration, capacity, prices }) => ({
+                title, durationMinutes: duration, capacity,
+                tiers: prices.map((price, i) => ({ title: ['Adult', 'Adult', 'Student', 'Child'][i], price })),
+              })),
+            }));
+          `));
+        },
         passwordResetFixture(operation) {
           if (!['read', 'expire', 'restore', 'verifyUniqueEmail'].includes(operation)) {
             throw new Error('Unsupported password-reset fixture operation');
@@ -38,7 +69,9 @@ export default defineConfig({
               import PasswordReset from './server/models/PasswordReset.model.js';
               import sequelize from './server/models/database.js';
               import bcrypt from 'bcrypt';
-              if (process.env.NODE_ENV !== 'development') throw new Error('Fixture tasks require a development backend');
+              import { assertSeedEnvironment } from './server/seed-factory/store.js';
+              assertSeedEnvironment(sequelize);
+              if (!/^seed_factory_test_[a-z0-9_]+$/.test(sequelize.config.database)) throw new Error('Fixture tasks require an isolated seed database');
               sequelize.options.logging = false;
               const email = 'reset-e2e@example.invalid';
               try {
@@ -76,53 +109,11 @@ export default defineConfig({
                 await sequelize.close();
               }
             `;
-          const output = execFileSync('docker', [
-            'compose', 'exec', '-T', 'backend', 'node', '--input-type=module', '-e', script,
-          ], {
-            cwd: repoRoot,
-            encoding: 'utf8',
-            timeout: 30000,
-          });
-          return JSON.parse(output.trim());
+          const output = runBackend(script);
+          return JSON.parse(output.trim().split('\n').at(-1));
         },
-        seedDb() {
-          try {
-            execSync(
-              'docker compose exec -T backend sh -c "npx sequelize db:seed:undo:all && npx sequelize db:seed:all && npm run --silent schedule:sync"',
-              { cwd: repoRoot, stdio: 'pipe', timeout: 60000 }
-            );
-            flushRedis();
-          } catch (error) {
-            console.error(`Failed to seed database: ${error.message}. Ensure the backend container is running and the database is accessible.`);
-            if (error.stdout) {
-              console.error(error.stdout.toString());
-            }
-            if (error.stderr) {
-              console.error(error.stderr.toString());
-            }
-            throw error;
-          }
-          return null;
-        },
-        resetDb() {
-          try {
-            execSync(
-              'docker compose exec -T backend sh -c "npx sequelize db:migrate:undo:all && npx sequelize db:migrate && npx sequelize db:seed:all && npm run --silent schedule:sync"',
-              { cwd: repoRoot, stdio: 'pipe', timeout: 60000 }
-            );
-            flushRedis();
-          } catch (error) {
-            console.error(`Failed to reset database: ${error.message}. Ensure the backend container is running and migrations are available.`);
-            if (error.stdout) {
-              console.error(error.stdout.toString());
-            }
-            if (error.stderr) {
-              console.error(error.stderr.toString());
-            }
-            throw error;
-          }
-          return null;
-        },
+        seedDb: seedTestDatabase,
+        resetDb: seedTestDatabase,
         log(message) {
           console.log(message);
           return null;

@@ -53,6 +53,10 @@ describe('guest receipt capability', () => {
     test('returns an unclaimed guest order only with its valid, unexpired capability', async () => {
         const token = 'capability-token';
         const order = {
+            Items: [{
+                ProductType: 'Experience',
+                metadata: { reservationAnswers: [{ questionKey: 'publicAttendance', answerText: 'true' }] },
+            }],
             metadata: {
                 guestReceiptTokenHash: crypto.createHash('sha256').update(token).digest('hex'),
                 guestReceiptExpiresAt: new Date(Date.now() + 60000).toISOString(),
@@ -67,6 +71,7 @@ describe('guest receipt capability', () => {
 
         expect(mockFindOrder).toHaveBeenCalledWith(expect.objectContaining({ where: { orderNumber: 'ORD-1', CustomerId: null } }));
         expect(order.setDataValue).toHaveBeenCalledWith('metadata', null);
+        expect(order.setDataValue).toHaveBeenCalledWith('publicAttendanceOptIn', true);
         expect(order.setDataValue).toHaveBeenCalledWith('confirmationEmail', { status: 'failed', attemptedAt: '2026-10-27T04:00:00Z' });
         expect(res.status).toHaveBeenCalledWith(200);
         expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ data: { order } }));

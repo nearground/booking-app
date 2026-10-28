@@ -47,7 +47,7 @@ chmod +x docker-manager.sh
 
 ### Showcase seed media
 
-The demo seeder uploads the checked-in showcase images, hero video, and poster to
+The separate showcase seeder uploads the checked-in experience images, hero video, and poster to
 the same R2 storage worker used by API media uploads. Start `r2-local` and configure
 matching `R2_DEV_TOKEN` values before seeding; no running API or login is required.
 Development Compose mounts `frontend/public` read-only at `/demo-assets` and sets
@@ -63,13 +63,15 @@ fixtures use deterministic, owner-scoped keys and safely overwrite the same obje
 For a disposable development database, apply migrations and populate the demo graph:
 
 ```bash
-docker compose exec backend npx sequelize-cli db:migrate
-docker compose exec backend npx sequelize-cli db:seed:all
+docker compose up -d --wait database r2-local redis
+docker compose run --rm --no-deps -e SEED_FACTORY_ENABLED=true backend sh -c "npx sequelize-cli db:migrate && npx sequelize-cli db:seed:all"
 ```
 
-Reseeding replaces demo sessions, ticket tiers, reviews and host assignments; do not
-run it against live bookings. Visit `/o/testcompany1` for free private-venue parties,
-`/o/testcompany2` for the branded video-led taco tour, and `/o/testcompany3` for the
+Seeding applies separate startup, generic demo, and showcase manifests and skips
+already-applied scenarios. Do not run development seeds against live bookings.
+The original `/o/testcompany1` through `/o/testcompany3` remain unchanged.
+Visit `/o/house-party` for free private-venue parties,
+`/o/food-tours` for the branded video-led taco tour, and `/o/default-tours` for the
 default coastal experience and uploaded-photo hero carousel. Follow each site's
 experience links to compare the layouts. The party fixtures include three checked-in
 registered demo guests who have opted into the public guest list; real guests remain

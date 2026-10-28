@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
 import { Faker, en } from '@faker-js/faker';
+import { normalizeDetailsMetadata } from '../utils/experience-details-metadata.js';
 
 export const SEED_SCHEMA = Object.freeze({
     organization: { model: 'Organization', refs: {} },
@@ -9,6 +10,16 @@ export const SEED_SCHEMA = Object.freeze({
         model: 'OrganizationMembers',
         refs: { OrganizationId: 'organization', UserId: 'members' },
     },
+    organizers: { model: 'Organizer', refs: { UserId: 'members' } },
+    experienceOrganizers: {
+        model: 'ExperienceOrganizers',
+        refs: { ExperienceId: 'experiences', UserId: 'members' },
+    },
+    organizerComments: {
+        model: 'Comment',
+        refs: { CommentableId: 'organizers', UserId: 'members' },
+    },
+    picks: { model: 'PickedOccurrence', refs: { ExperienceId: 'experiences' } },
     experiences: {
         model: 'Experience',
         refs: {
@@ -25,7 +36,19 @@ export const SEED_SCHEMA = Object.freeze({
         model: 'ScheduledExperience',
         refs: { ExperienceId: 'experiences', ScheduleTemplateId: 'schedules' },
     },
+    pickedSessions: {
+        model: 'ScheduledExperience',
+        refs: { ExperienceId: 'experiences', PickedOccurrenceId: 'picks' },
+    },
     ticketTiers: { model: 'TicketTier', refs: { ExperienceId: 'experiences' } },
+    experienceReservations: {
+        model: 'ExperienceReservation',
+        refs: { ScheduledExperienceId: ['sessions', 'pickedSessions'], CustomerId: 'members' },
+    },
+    reservationAnswers: {
+        model: 'ExperienceReservationAnswer',
+        refs: { ExperienceReservationId: 'experienceReservations' },
+    },
     orders: { model: 'Order', refs: { CustomerId: 'members' } },
     orderItems: {
         model: 'OrderItem',
@@ -64,6 +87,9 @@ function createRecord(type, index, attributes, refs = {}) {
 }
 
 export function validateSeedGraph(graph) {
+    if (!graph || !Array.isArray(graph.records) || graph.records.length > 5000) {
+        throw new Error('Seed graph must contain at most 5000 records');
+    }
     const keys = new Map(graph.records.map((record) => [record.key, record]));
     if (keys.size !== graph.records.length)
         throw new Error('Seed graph contains duplicate record keys');
@@ -82,16 +108,51 @@ export function validateSeedGraph(graph) {
             }
         }
         for (const [field, targetType] of Object.entries(relation.refs)) {
+            if (Object.hasOwn(record.attributes, field)) throw new Error(`${record.key} must declare ${field} as a reference`);
             const targetKey = record.refs[field];
+            const targetTypes = Array.isArray(targetType) ? targetType : [targetType];
             if (!targetKey || !keys.has(targetKey)) {
                 throw new Error(
-                    `${record.key}.${field} references missing ${targetType} record`
+                    `${record.key}.${field} references missing ${targetTypes.join(' or ')} record`
                 );
             }
-            if (keys.get(targetKey).type !== targetType) {
+            if (!targetTypes.includes(keys.get(targetKey).type)) {
                 throw new Error(
-                    `${record.key}.${field} must reference a ${targetType} record`
+                    `${record.key}.${field} must reference a ${targetTypes.join(' or ')} record`
                 );
+            }
+            if (record.model === 'Experience' && record.attributes.autoSyncEnabled !== false) {
+                throw new Error('Seeded experiences must disable automatic schedule synchronization');
+            }
+            if (record.model === 'OrderItem' && record.attributes.ProductType !== 'Experience') {
+                throw new Error('Seed order items must reference Experience products');
+            }
+            if (record.model === 'Comment' && record.attributes.CommentableType !== (record.type === 'organizerComments' ? 'Organizer' : 'Experience')) {
+                throw new Error('Comment target type does not match its reference');
+            }
+        }
+        if (record.model === 'Experience' && record.attributes.detailsMetadata !== undefined) {
+            const { errors } = normalizeDetailsMetadata(record.attributes.detailsMetadata);
+            if (errors.length) throw new Error(`${record.key} has invalid details metadata: ${errors.join('; ')}`);
+        }
+        if (graph.scenario === 'showcase' && record.model === 'Experience' &&
+            record.attributes.detailsMetadata === undefined) {
+            throw new Error(`${record.key} is missing showcase details metadata`);
+        }
+        if (record.type === 'experienceReservations' &&
+            (!Number.isFinite(Number(record.attributes.totalPrice)) ||
+                Number(record.attributes.totalPrice) < 0 ||
+                record.attributes.status !== 'attended')) {
+            throw new Error('Showcase reservations must have a valid price and be checked in');
+        }
+        if (record.type === 'reservationAnswers' &&
+            (record.attributes.questionKey !== 'publicAttendance' || record.attributes.answerText !== 'true')) {
+            throw new Error('Showcase reservation answers must opt in to public attendance');
+        }
+        for (const link of graph.links || []) {
+            if (!keys.has(link.key) || keys.get(link.key).model !== 'Organization' ||
+                Object.keys(link.refs).length !== 1 || keys.get(link.refs.LocationId)?.type !== 'location') {
+                throw new Error('Only organization headquarters links are supported');
             }
         }
     }
@@ -145,6 +206,7 @@ export function generateSeedGraph({
             effective('organization', {
                 name: `${rng.company.name()} ${seedLabel}`,
                 organizationUsername: `seed${seedLabel}`,
+                slug: `seed${seedLabel}`,
                 email: `seed-${seedLabel}@example.test`,
             })
         )
@@ -158,7 +220,7 @@ export function generateSeedGraph({
                 name: 'Seeded experience location',
                 coordinates: {
                     type: 'Point',
-                    coordinates: [-105.9367, 21.1619],
+                    coordinates: [-105.21986, 20.64453],
                 },
                 country: 'Mexico',
                 state: 'Jalisco',
@@ -382,17 +444,7 @@ export function generateSeedGraph({
                     unitPrice: '25.00',
                     quantity: 1,
                     totalPrice: '25.00',
-                    metadata: {
-                        ticketTierKey:
-                            totals.ticketTiersPerExperience > 0
-                                ? keyFor(
-                                      'ticketTiers',
-                                      (index %
-                                          totals.ticketTiersPerExperience) +
-                                          1
-                                  )
-                                : null,
-                    },
+                    metadata: {},
                 },
                 { OrderId: orderKey, ProductId: experienceKey }
             )
@@ -414,7 +466,7 @@ export function generateSeedGraph({
 export async function materializeSeedGraph(
     graph,
     store,
-    { mode = 'skip' } = {}
+    { mode = 'skip', prepare } = {}
 ) {
     if (
         !store ||
@@ -434,7 +486,12 @@ export async function materializeSeedGraph(
     validateSeedGraph(graph);
     return store.transaction(async (transaction) => {
         const existing = await store.findSeed(graph.seedKey, transaction);
-        if (existing && mode === 'skip') return { ...existing, skipped: true };
+        if (existing && mode === 'skip') {
+            if (existing.scenario !== graph.scenario || existing.version !== graph.version) {
+                throw new Error('Seed manifest scenario/version differs; use a new seed or a reviewed replacement');
+            }
+            return { ...existing, skipped: true };
+        }
         if (existing && mode !== 'replace')
             throw new Error(`Seed ${graph.seedKey} already exists`);
         if (existing) await store.deleteSeed(graph.seedKey, transaction);
@@ -456,9 +513,18 @@ export async function materializeSeedGraph(
             });
             persisted.set(record.key, row);
         }
+        for (const link of graph.links || []) {
+            if (typeof store.update !== 'function') throw new Error('Store must implement update for graph links');
+            const attributes = Object.fromEntries(Object.entries(link.refs).map(([field, key]) => [field, persisted.get(key).id]));
+            await store.update(persisted.get(link.key), attributes, transaction);
+        }
         const manifest = {
             seedKey: graph.seedKey,
+            scenario: graph.scenario,
+            version: graph.version,
+            generatedAt: graph.generatedAt,
             records: Array.from(persisted.values()),
+            media: prepare ? await prepare(persisted, transaction) : [],
         };
         await store.saveSeed(graph.seedKey, manifest, transaction);
         return { ...manifest, skipped: false };

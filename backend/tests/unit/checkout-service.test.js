@@ -514,6 +514,43 @@ describe('checkoutCart – booking confirmation email', () => {
         });
     });
 
+    test('includes account-linking instructions in guest email after public-list consent', async () => {
+        setupCart([makeCartItem('Experience', {
+            reservationAnswers: [{ questionKey: 'publicAttendance', answerText: 'true' }],
+        })]);
+        Order.findByPk.mockResolvedValue({
+            id: 1,
+            orderNumber: 'ORD-TEST-0001',
+            status: 'pending',
+            mainContactEmail: 'guest@example.com',
+            mainContactName: 'Jane Doe',
+            totalAmount: 100,
+            Items: [{
+                ProductType: 'Experience',
+                metadata: { reservationAnswers: [{ questionKey: 'publicAttendance', answerText: 'true' }] },
+            }],
+            metadata: { guestReceiptTokenHash: 'receipt-hash' },
+            setDataValue: jest.fn(function setDataValue(key, value) { this[key] = value; }),
+            update: jest.fn().mockResolvedValue({}),
+        });
+
+        await checkoutCart(1, null, makeBillingInfo(), {}, 'guest-session', {
+            tokenHash: 'receipt-hash',
+            expiresAt: new Date(Date.now() + 60000).toISOString(),
+            saveBookingForLater: true,
+        });
+
+        expect(sendNotification).toHaveBeenCalledWith(expect.objectContaining({
+            template: 'booking-confirmation',
+            payload: expect.objectContaining({
+                isGuest: true,
+                publicAttendanceOptIn: true,
+                loginUrl: expect.stringMatching(/\/login$/),
+                registerUrl: expect.stringMatching(/\/register$/),
+            }),
+        }));
+    });
+
     test('checkout succeeds even when email notification fails', async () => {
         sendNotification.mockRejectedValueOnce(new Error('SMTP down'));
         setupCart([makeCartItem('Experience')]);

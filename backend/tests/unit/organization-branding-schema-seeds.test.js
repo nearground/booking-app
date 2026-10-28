@@ -7,8 +7,7 @@ const require = createRequire(import.meta.url);
 const Sequelize = require('sequelize');
 const baseline = require('../../server/migrations/20260305120000-create-baseline-schema.js');
 const organizationSchema = require('../../server/migrations/20260417130000-add-organization-username.js');
-const startupSeeder = require('../../server/seeders/20260212222654-startup-org-and-admin.js');
-const demoSeeder = require('../../server/seeders/20260214193720-demo-experiences.js');
+import { generateScenario } from '../../server/seed-factory/scenarios.js';
 
 const brandingFields = ['slug', 'logoMediaKey', 'coverMediaKey', 'coverMediaType', 'primaryColor', 'accentColor', 'font', 'tagline', 'about', 'socialLinks', 'contactLinks', 'layoutTemplate'];
 
@@ -52,30 +51,18 @@ describe('initial organization branding schema', () => {
 
 describe('branded organization demo seeds', () => {
   test.each([
-    ['startup', startupSeeder, ['martinllc'], ['classic']],
-    ['demo', demoSeeder, ['testcompany1', 'testcompany2', 'testcompany3'], ['classic', 'editorial', 'classic']],
-  ])('%s organization inserts contain valid, complete branding', async (_name, seeder, slugs, templates) => {
-    const stopAfterOrganizations = new Error('Captured organization insert');
-    let organizations;
-    const queryInterface = {
-      bulkInsert: jest.fn(async (table, rows) => {
-        if (table === 'Organizations') {
-          organizations = rows;
-          throw stopAfterOrganizations;
-        }
-      }),
-      bulkUpdate: jest.fn(),
-      sequelize: { query: jest.fn(async (sql) => {
-        if (sql.includes("WHERE name LIKE 'Test Location %'")) return [Array.from({ length: 7 }, (_, index) => ({ id: index + 1, name: `Test Location ${index + 1}` })), {}];
-        if (sql.includes("WHERE city = 'Puerto Vallarta'")) return [[{ id: 1 }], {}];
-        return [[], {}];
-      }) },
-    };
-    await expect(seeder.up(queryInterface, Sequelize)).rejects.toBe(stopAfterOrganizations);
+    ['startup', ['martinllc'], ['classic']],
+    ['demo', ['testcompany1', 'testcompany2', 'testcompany3'], ['classic', 'editorial', 'immersive']],
+  ])('%s organization inserts contain valid, complete branding', async (scenario, slugs, templates) => {
+    const graph = generateScenario({
+      scenario, clock: '2026-10-27', adminEmail: 'admin@example.invalid',
+      passwordHash: '$2b$10$mrRYiTpW5hXrqqd0Pds9Wu7YtfBpN7ZukE.AkuZscpKqX5BBuEu.a',
+    });
+    const organizations = graph.records.filter(({ model }) => model === 'Organization').map(({ attributes }) => attributes);
     expect(organizations.map((org) => org.slug)).toEqual(slugs);
     expect(organizations.map((org) => org.layoutTemplate)).toEqual(templates);
     for (const organization of organizations) {
-      const branding = { ...organization, socialLinks: JSON.parse(organization.socialLinks), contactLinks: JSON.parse(organization.contactLinks) };
+      const branding = organization;
       expect(validateOrganizationBranding(branding)).toBeNull();
       expect(organization.logoMediaKey).toBeNull();
       expect(organization.coverMediaKey).toBeNull();

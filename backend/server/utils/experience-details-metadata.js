@@ -18,7 +18,7 @@ export const normalizeDetailsMetadata = (value) => {
     if (!EXPERIENCE_DETAILS_TEMPLATES.includes(value.template)) errors.push('detailsMetadata.template is unsupported');
     const overrides = value.overrides === undefined ? {} : value.overrides;
     if (!isRecord(overrides)) return { metadata: fallback, errors: [...errors, 'detailsMetadata.overrides must be an object'] };
-    if (Object.keys(overrides).some((key) => !['heroVideoKey', 'heroPosterKey', 'pinnedCommentIds'].includes(key))) {
+    if (Object.keys(overrides).some((key) => !['heroVideoKey', 'heroPosterKey', 'pinnedCommentIds', 'copy'].includes(key))) {
         errors.push('detailsMetadata.overrides contains unsupported fields');
     }
     const safeOverrides = {};
@@ -33,6 +33,28 @@ export const normalizeDetailsMetadata = (value) => {
             errors.push('detailsMetadata.overrides.pinnedCommentIds must contain at most three unique positive integer ids');
         } else safeOverrides.pinnedCommentIds = [...ids];
     }
+    if (overrides.copy !== undefined) {
+        const copyFields = new Set([
+            'galleryLabel', 'descriptionHeading', 'descriptionFallback', 'meetingHeading', 'locationFallback',
+            'mapLoading', 'mapSlow', 'hostedBy', 'organizerFallback', 'reviewsButton', 'reviewThanks', 'noComments',
+            'freeBadge', 'paidBadge', 'storyEyebrow', 'storyHeading', 'venueHeading', 'arrivalInstructions',
+            'registrationEyebrow', 'freeRegistrationHeading', 'paidRegistrationHeading',
+            'freeRegistrationDescription', 'paidRegistrationDescription', 'freeRegisterButton', 'paidRegisterButton', 'freePaymentNotice',
+            'privacyNotice', 'attendanceEyebrow', 'attendanceHeading', 'attendanceDescription', 'emptyAttendance',
+            'pinnedReviewsEyebrow', 'pinnedReviewsHeading',
+            'heroEyebrow', 'playVideo', 'pauseVideo', 'galleryButton', 'hostsHeading', 'locationHeading',
+            'bookingLabel', 'reviewsEyebrow', 'reviewsHeading', 'pinnedReviewLabel',
+        ]);
+        if (!isRecord(overrides.copy)) {
+            errors.push('detailsMetadata.overrides.copy must be an object');
+        } else if (Object.entries(overrides.copy).some(([key, text]) =>
+            !copyFields.has(key) || typeof text !== 'string' || text.length > 500
+        )) {
+            errors.push('detailsMetadata.overrides.copy contains unsupported fields or text longer than 500 characters');
+        } else {
+            safeOverrides.copy = { ...overrides.copy };
+        }
+    }
     return {
         metadata: errors.length ? fallback : { version: 1, template: value.template, overrides: safeOverrides },
         errors,
@@ -44,8 +66,8 @@ export const validatePartyConfiguration = ({ templates = [], picks = [], tiers =
     if (templates.some((template) => template.ruleType !== 'datetime') || templates.length + picks.length !== 1) {
         errors.push('Party experiences require exactly one non-recurring event date');
     }
-    if (!tiers.length || tiers.some((tier) => !Number.isFinite(Number(tier.price)) || Number(tier.price) !== 0)) {
-        errors.push('Party experiences require free ticket tiers');
+    if (!tiers.length || tiers.some((tier) => !Number.isFinite(Number(tier.price)) || Number(tier.price) < 0)) {
+        errors.push('Party experiences require valid ticket tiers');
     }
     const occurrence = picks[0] || templates[0] || {};
     const dateTime = occurrence.dateTime || occurrence.ruleDateTime;

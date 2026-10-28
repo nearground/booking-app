@@ -32,7 +32,7 @@ const parseTime = (timeValue) => {
  *   "M H * * D[,D…]"  (weekly)
  * Returns { hour, minute, recurrenceType, weekDays } or null on failure.
  */
-const parseCronExpression = (cron) => {
+export const parseCronExpression = (cron) => {
   if (!cron || typeof cron !== 'string') {
     return null;
   }

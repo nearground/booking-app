@@ -14,7 +14,7 @@ jest.mock('../../server/utils/media-storage.js', () => ({
     resolveMediaUrl: jest.fn((value) => value || null),
 }));
 
-describe('public checked-in attendance', () => {
+describe('public registered attendance', () => {
     beforeEach(() => {
         jest.spyOn(ScheduledExperience, 'findOne').mockResolvedValue({
             id: 12,
@@ -28,7 +28,7 @@ describe('public checked-in attendance', () => {
     });
     afterEach(() => jest.restoreAllMocks());
 
-    test('counts checked-in guests but only queries explicitly opted-in registered identities', async () => {
+    test('counts confirmed attendees and only queries explicitly opted-in registered identities', async () => {
         ExperienceReservation.findAll.mockResolvedValue([
             {
                 Customer: {
@@ -55,7 +55,7 @@ describe('public checked-in attendance', () => {
         expect(ExperienceReservation.sum).toHaveBeenCalledWith(
             'numberOfAttendees',
             {
-                where: { ScheduledExperienceId: 12, status: 'attended' },
+            where: { ScheduledExperienceId: 12, status: ['confirmed', 'attended'] },
             }
         );
         expect(ExperienceReservation.findAll).toHaveBeenCalledWith(
@@ -65,7 +65,6 @@ describe('public checked-in attendance', () => {
                     expect.objectContaining({
                         model: User,
                         as: 'Customer',
-                        where: { isRegistered: true },
                         required: true,
                     }),
                     expect.objectContaining({
@@ -80,11 +79,16 @@ describe('public checked-in attendance', () => {
                 limit: 50,
             })
         );
+        expect(
+            ExperienceReservation.findAll.mock.calls[0][0].include.find(
+                (include) => include.as === 'Customer'
+            ).where
+        ).toBeUndefined();
         expect(result).toEqual({
             status: 200,
             errors: [],
             data: {
-                checkedInCount: 8,
+                attendeeCount: 8,
                 attendees: [
                     { name: 'Alex Rivera', avatar: '/images/alex.jpg' },
                 ],
@@ -100,7 +104,7 @@ describe('public checked-in attendance', () => {
                     sessionId: 12,
                 })
             ).data
-        ).toEqual({ checkedInCount: 8, attendees: [] });
+        ).toEqual({ attendeeCount: 8, attendees: [] });
     });
 
     test('normalizes empty counts', async () => {
@@ -111,7 +115,7 @@ describe('public checked-in attendance', () => {
                     experienceCode: 2,
                     sessionId: 12,
                 })
-            ).data.checkedInCount
+            ).data.attendeeCount
         ).toBe(0);
     });
 
@@ -122,7 +126,7 @@ describe('public checked-in attendance', () => {
             status: 'in-progress',
             dateTime: '2026-10-28T00:00:00Z',
         });
-        expect(result.data.checkedInCount).toBe(8);
+        expect(result.data.attendeeCount).toBe(8);
         expect(ScheduledExperience.findAll).toHaveBeenCalledWith(
             expect.objectContaining({ limit: 2 })
         );

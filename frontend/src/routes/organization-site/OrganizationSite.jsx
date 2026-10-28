@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { networkAdapter } from 'services/NetworkAdapter';
 import { resolveAppUrl } from './organizationSiteResolver';
 import OrganizationHero from './OrganizationHero';
+import ChatSidebar from 'components/chat-sidebar/ChatSidebar';
 import './organization-site.scss';
 
 const fontFamilies = {
@@ -86,7 +87,12 @@ const OrganizationSite = ({ slug: providedSlug }) => {
     return <TemplateLayout organization={siteData.organization} experiences={siteData.experiences || []} />;
   }, [error, loading, siteData]);
 
-  return content;
+  return (
+    <>
+      {content}
+      <ChatSidebar />
+    </>
+  );
 };
 
 export { TemplateLayout };

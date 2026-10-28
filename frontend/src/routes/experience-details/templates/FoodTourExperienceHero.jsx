@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { resolveTemplateCopy } from '../experienceDetailsCopy';
 
 const safeMediaUrl = (value) => {
   if (typeof value !== 'string' || /[\\\s]/.test(value)) return '';
@@ -11,7 +12,8 @@ const safeMediaUrl = (value) => {
   }
 };
 
-const FoodTourExperienceHero = ({ title, subtitle, videoUrl, posterUrl, onOpenGallery }) => {
+const FoodTourExperienceHero = ({ title, subtitle, videoUrl, posterUrl, onOpenGallery, copy }) => {
+  const text = copy || resolveTemplateCopy(null, 'food-tour');
   const videoRef = useRef(null);
   const [failed, setFailed] = useState(false);
   const [paused, setPaused] = useState(true);
@@ -84,17 +86,17 @@ const FoodTourExperienceHero = ({ title, subtitle, videoUrl, posterUrl, onOpenGa
       )}
       <div className="food-tour-hero__shade" />
       <div className="food-tour-hero__copy">
-        <p className="food-tour-eyebrow">Local flavors. Lasting memories.</p>
+        <p className="food-tour-eyebrow">{text.heroEyebrow}</p>
         <h1 data-testid="experience-details__title">{title}</h1>
         {subtitle && <p data-testid="experience-details__subtitle">{subtitle}</p>}
       </div>
       <div className="food-tour-hero__actions">
         {showVideo && (
           <button type="button" onClick={togglePlayback}>
-            {paused ? 'Play background video' : 'Pause background video'}
+            {paused ? text.playVideo : text.pauseVideo}
           </button>
         )}
-        {onOpenGallery && <button type="button" onClick={onOpenGallery}>View tour photos</button>}
+        {onOpenGallery && <button type="button" onClick={onOpenGallery}>{text.galleryButton}</button>}
       </div>
     </header>
   );

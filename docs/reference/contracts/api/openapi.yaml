@@ -104,6 +104,71 @@
         }
       }
     },
+    "/api/chat": {
+      "post": {
+        "operationId": "chatWithExperienceAssistant",
+        "summary": "Chat with the public experience discovery assistant",
+        "description": "Public; rate limited per IP (20 requests per 15 minutes by default). Messages are sent to OpenAI to generate a response. Conversation must alternate user/assistant, end with a user message, and contain at most 15 messages of up to 1200 characters each and 6000 characters total. The assistant can search public experiences, details, and dates only; it cannot book, take payment, access accounts, or read private data. Conversation is not persisted.",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["messages"],
+                "additionalProperties": false,
+                "properties": {
+                  "messages": {
+                    "type": "array",
+                    "minItems": 1,
+                    "maxItems": 15,
+                    "items": {
+                      "type": "object",
+                      "required": ["role", "content"],
+                      "additionalProperties": false,
+                      "properties": {
+                        "role": { "type": "string", "enum": ["user", "assistant"] },
+                        "content": { "type": "string", "minLength": 1, "maxLength": 1200 }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Generated assistant reply.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "allOf": [
+                    { "$ref": "#/components/schemas/Envelope" },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "data": {
+                          "type": "object",
+                          "required": ["message"],
+                          "properties": { "message": { "type": "string" } }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": { "description": "Invalid, oversized, or incorrectly ordered conversation." },
+          "429": { "description": "Chat request rate limit exceeded." },
+          "502": { "description": "Chat model or public experience service is unavailable." },
+          "503": { "description": "OpenAI API key is not configured." },
+          "default": { "$ref": "#/components/responses/ErrorEnvelope" }
+        }
+      }
+    },
     "/api/users/register": {
       "put": {
         "operationId": "registerUser",

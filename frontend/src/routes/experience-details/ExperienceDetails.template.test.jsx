@@ -54,6 +54,14 @@ test('party dispatch does not render the shared date picker or organizer bios', 
   expect(screen.queryByText('Hosted By')).not.toBeInTheDocument();
 });
 
+test('pinned five-star reviews render on the party template', () => {
+  renderDetails({ version: 1, template: 'party', overrides: { pinnedCommentIds: [1] } }, [
+    { id: 1, stars: 5, title: 'A featured review', comment: 'A great event from beginning to end.' },
+  ]);
+  expect(screen.getByRole('region', { name: 'Pinned experience comments' })).toBeInTheDocument();
+  expect(screen.getByText('A featured review')).toBeInTheDocument();
+});
+
 test('food-tour dispatch receives the existing booking component', () => {
   renderDetails({ version: 1, template: 'food-tour', overrides: {} });
   expect(screen.getByTestId('food-tour-template')).toHaveTextContent('Template preview');

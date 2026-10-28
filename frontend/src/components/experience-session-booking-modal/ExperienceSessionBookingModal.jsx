@@ -42,6 +42,31 @@ const parsePriceValue = (priceValue) => {
   return Number.isFinite(parsed) ? parsed : 0;
 };
 
+const normalizeReservationAnswers = (answers) => {
+  if (Array.isArray(answers)) {
+    return Object.fromEntries(
+      answers
+        .filter((answer) => answer?.questionKey)
+        .map((answer) => [answer.questionKey, answer.answerText ?? ''])
+    );
+  }
+  return answers && typeof answers === 'object' ? answers : {};
+};
+
+const normalizeTierAnswers = (answers) => {
+  if (Array.isArray(answers)) {
+    return answers.reduce((result, answer) => {
+      if (!answer?.tierKey || !answer?.questionKey) return result;
+      result[answer.tierKey] = {
+        ...(result[answer.tierKey] || {}),
+        [answer.questionKey]: answer.answerText ?? '',
+      };
+      return result;
+    }, {});
+  }
+  return answers && typeof answers === 'object' ? answers : {};
+};
+
 const ExperienceSessionBookingModal = ({
   isOpen,
   onClose,
@@ -123,11 +148,11 @@ const ExperienceSessionBookingModal = ({
   }, [initialCartEdit]);
 
   const initialReservationAnswers = useMemo(() => {
-    return initialCartEdit?.metadata?.reservationAnswers || {};
+    return normalizeReservationAnswers(initialCartEdit?.metadata?.reservationAnswers);
   }, [initialCartEdit]);
 
   const initialTierAnswers = useMemo(() => {
-    return initialCartEdit?.metadata?.questionnaireAnswers || {};
+    return normalizeTierAnswers(initialCartEdit?.metadata?.questionnaireAnswers);
   }, [initialCartEdit]);
 
   const editingCartItemId = initialCartEdit?.id || null;
@@ -180,6 +205,12 @@ const ExperienceSessionBookingModal = ({
   const totalPrice = normalizedTiers.reduce((acc, tier) => {
     return acc + Number(tierQuantities[tier.key] || 0) * tier.price;
   }, 0);
+  const publicAttendanceQuestion = (experienceUserQuestionnary || []).find(
+    (question) => question.questionKey === 'publicAttendance'
+  );
+  const reservationQuestions = (experienceUserQuestionnary || []).filter(
+    (question) => question.questionKey !== 'publicAttendance'
+  );
 
   // Collect per-tier questions that are active (tier has tickets selected)
   const activeTierQuestions = normalizedTiers
@@ -416,13 +447,31 @@ const ExperienceSessionBookingModal = ({
                 ))}
 
                 {/* Experience-level questionnaire */}
-                {totalSelectedTickets > 0 && (experienceUserQuestionnary || []).length > 0 ? (
+                {totalSelectedTickets > 0 && reservationQuestions.length > 0 ? (
                   <QuestionnaireSection
                     title="Reservation Questions"
-                    questions={experienceUserQuestionnary}
+                    questions={reservationQuestions}
                     answers={reservationAnswers}
                     onChange={handleReservationAnswerChange}
                   />
+                ) : null}
+                {totalSelectedTickets > 0 && publicAttendanceQuestion ? (
+                  <section className="rounded-lg border border-slate-200 bg-slate-50 p-4" aria-labelledby="public-attendance-title">
+                    <h3 id="public-attendance-title" className="text-sm font-semibold text-slate-800">Public attendee list (optional)</h3>
+                    <p className="mt-1 text-sm text-slate-600">Choose whether your registered name and profile picture may appear publicly after your booking is confirmed. This choice never shares other people on your booking.</p>
+                    {!isAuthenticated ? (
+                      <p className="mt-2 text-sm text-slate-600">Booking as a guest? After checkout, sign in to the account registered with this email, or create and verify an account using it, to link your reservation and appear on the list.</p>
+                    ) : null}
+                    <label className="mt-3 flex items-start gap-3 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={reservationAnswers[publicAttendanceQuestion.questionKey] === 'true' || reservationAnswers[publicAttendanceQuestion.questionKey] === true}
+                        onChange={(event) => handleReservationAnswerChange(publicAttendanceQuestion.questionKey, event.target.checked ? 'true' : 'false')}
+                        className="mt-0.5 h-4 w-4 rounded border-slate-300 text-slate-800 focus:ring-slate-500"
+                      />
+                      <span className="text-sm text-slate-700">{publicAttendanceQuestion.prompt}</span>
+                    </label>
+                  </section>
                 ) : null}
 
                 {/* Main contact form (shown when tickets selected) */}

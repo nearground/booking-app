@@ -17,6 +17,18 @@ describe('experience template resolution', () => {
       heroVideoKey: 'users/1/asset/123-abc.mp4',
     } })).toEqual({ heroVideoUrl: '/api/media/object/users/1/asset/123-abc.mp4', heroPosterUrl: null });
   });
+  test('retains validated custom text for each template', () => {
+    const metadata = { version: 1, template: 'party', overrides: { copy: {
+      paidBadge: 'Tickets from $10',
+      storyHeading: 'A new event heading',
+      unknown: 'ignored',
+      descriptionFallback: 42,
+    } } };
+    expect(resolveDetailsMetadata(metadata).overrides.copy).toEqual({
+      paidBadge: 'Tickets from $10',
+      storyHeading: 'A new event heading',
+    });
+  });
   test('only pins matching five-star top-level comments in configured order', () => {
     const comments = [{ id: 1, stars: 4 }, { id: 2, stars: 5, ParentId: 7 }, { id: 3, stars: '5' }];
     expect(selectPinnedComments(comments, { version: 1, template: 'food-tour', overrides: {

@@ -19,7 +19,8 @@ describe('VerifyEmail', () => {
   test('confirms token and reports claimed guest bookings', async () => {
     networkAdapter.post.mockResolvedValue({ data: { emailVerified: true, claimedOrderCount: 2 }, errors: [] });
     renderWithToken();
-    await waitFor(() => expect(screen.getByText('2 guest bookings added to your account.')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText(/2 guest bookings added to your account/)).toBeInTheDocument());
+    expect(screen.getByText(/Reservations you opted to share can now appear/)).toBeInTheDocument();
     expect(networkAdapter.post).toHaveBeenCalledWith('/api/users/email-verification/confirm', { token: 'verification-token' });
     expect(screen.getByRole('link', { name: /log in to view bookings/i })).toHaveAttribute('href', '/login');
   });
@@ -34,5 +35,11 @@ describe('VerifyEmail', () => {
     renderWithToken('');
     expect(await screen.findByRole('alert')).toHaveTextContent('missing a token');
     expect(networkAdapter.post).not.toHaveBeenCalled();
+  });
+
+  test('surfaces a network failure instead of leaving verification loading', async () => {
+    networkAdapter.post.mockRejectedValue(new Error('network unavailable'));
+    renderWithToken();
+    expect(await screen.findByRole('alert')).toHaveTextContent('could not verify your email');
   });
 });

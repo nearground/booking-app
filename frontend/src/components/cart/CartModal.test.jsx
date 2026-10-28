@@ -13,6 +13,44 @@ vi.mock('services/NetworkAdapter', () => ({
 afterEach(() => cleanup());
 
 describe('CartModal guest checkout', () => {
+  it('re-enables save-for-later when public attendance consent is added to the cart', async () => {
+    const renderCart = (cartItems) => (
+      <AuthContext.Provider value={{ isAuthenticated: false, userDetails: null }}>
+        <CartContext.Provider value={{
+          cart: { id: 7 },
+          cartItems,
+          isCartOpen: true,
+          isLoading: false,
+          cartNotice: null,
+          dismissCartNotice: vi.fn(),
+          closeCart: vi.fn(),
+          removeFromCart: vi.fn(),
+          refreshCart: vi.fn(),
+        }}>
+          <MemoryRouter>
+            <CartModal />
+          </MemoryRouter>
+        </CartContext.Provider>
+      </AuthContext.Provider>
+    );
+    const { rerender } = render(renderCart([
+      { id: 3, ProductType: 'Experience', metadata: { reservationAnswers: [] } },
+    ]));
+    const saveBooking = screen.getByTestId('cart-modal__save-booking');
+    fireEvent.click(saveBooking);
+    expect(saveBooking).not.toBeChecked();
+
+    rerender(renderCart([{
+      id: 3,
+      ProductType: 'Experience',
+      metadata: {
+        reservationAnswers: [{ questionKey: 'publicAttendance', answerText: 'true' }],
+      },
+    }]));
+
+    await waitFor(() => expect(saveBooking).toBeChecked());
+  });
+
   it.each([true, false])('submits guest checkout with save-for-later=%s without collecting payment card data', async (saveForLater) => {
     const refreshCart = vi.fn().mockResolvedValue();
     const closeCart = vi.fn();

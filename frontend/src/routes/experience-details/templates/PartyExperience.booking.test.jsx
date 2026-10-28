@@ -12,7 +12,7 @@ vi.mock('services/NetworkAdapter', () => ({
 
 describe('PartyExperience existing booking integration', () => {
   test.each([false, true])(
-    'adds a free fixed-session ticket with explicit consent=%s',
+    'adds a free fixed-session ticket with explicit attendee-list consent=%s',
     async (shareProfile) => {
       const addToCart = vi.fn().mockResolvedValue({});
       const openCart = vi.fn();
@@ -24,7 +24,7 @@ describe('PartyExperience existing booking integration', () => {
             status: 'scheduled',
             availableSpots: 4,
           },
-          checkedInCount: 0,
+          attendeeCount: 0,
           attendees: [],
         },
       });
@@ -54,7 +54,7 @@ describe('PartyExperience existing booking integration', () => {
         screen.getByRole('button', { name: 'Increase Free entry quantity' })
       );
       const consent = screen.getByRole('checkbox', {
-        name: /Show my registered profile name and avatar publicly/,
+        name: /I consent to show my registered name and profile picture/,
       });
       expect(consent).not.toBeChecked();
       if (shareProfile) fireEvent.click(consent);
@@ -92,4 +92,71 @@ describe('PartyExperience existing booking integration', () => {
       await waitFor(() => expect(openCart).toHaveBeenCalledTimes(1));
     }
   );
+
+  test('preserves attendee-list consent when editing a cart item', async () => {
+    const updateCartItem = vi.fn().mockResolvedValue({});
+    const openCart = vi.fn();
+    networkAdapter.get.mockResolvedValue({
+      data: {
+        session: {
+          id: 91,
+          dateTime: '2099-12-20T21:00:00Z',
+          status: 'scheduled',
+          availableSpots: 4,
+        },
+        attendeeCount: 0,
+        attendees: [],
+      },
+    });
+    render(
+      <AuthContext.Provider
+        value={{
+          isAuthenticated: true,
+          userDetails: { firstName: 'Alex', phoneNumber: '5551234567' },
+        }}
+      >
+        <CartContext.Provider value={{ updateCartItem, openCart }}>
+          <PartyExperience
+            experience={{
+              id: 7,
+              title: 'After Dark',
+              duration: 180,
+              TicketTiers: [{ id: 3, title: 'Free entry', price: '0.00' }],
+            }}
+            initialCartEdit={{
+              id: 88,
+              metadata: {
+                ScheduledExperienceId: 91,
+                ticketSelections: [{ ticketTierId: 3, quantity: 1 }],
+                reservationAnswers: [
+                  { questionKey: 'publicAttendance', answerText: 'true' },
+                ],
+              },
+            }}
+          />
+        </CartContext.Provider>
+      </AuthContext.Provider>
+    );
+
+    const consent = await screen.findByRole('checkbox', {
+      name: /I consent to show my registered name and profile picture/,
+    });
+    expect(consent).toBeChecked();
+    fireEvent.click(screen.getByRole('button', { name: 'Add To Cart' }));
+    await waitFor(() => expect(updateCartItem).toHaveBeenCalledTimes(1));
+    expect(updateCartItem).toHaveBeenCalledWith(
+      88,
+      expect.objectContaining({
+        metadata: expect.objectContaining({
+          reservationAnswers: [
+            expect.objectContaining({
+              questionKey: 'publicAttendance',
+              answerText: 'true',
+            }),
+          ],
+        }),
+      })
+    );
+    expect(openCart).toHaveBeenCalledTimes(1);
+  });
 });

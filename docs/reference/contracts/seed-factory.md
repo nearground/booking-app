@@ -1,111 +1,171 @@
-# Seed factory decision and seeder rewrite plan
+# Deterministic seed factory
 
-**Status:** Spike recommendation; implementation of existing production/development seeders is a follow-on.
-**Scope:** Development/demo and test data only. Never run destructive cleanup against production.
-**Code baseline inspected:** `backend/server/models/index.js`, model files, both `backend/server/seeders/*.js`, `backend/server/routes/media.js`, `backend/server/controllers/Media.controller.js`, `r2-local/src/index.js`, and `frontend/cypress/fixtures/*.json`.
+**Status:** Durable development/test implementation. The Wave 1 Epic delivered the original research/spike; the subsequently authorized rework replaces both legacy seeders.
 
-## Decision
+## Architecture
 
-Adopt **`@faker-js/faker` (MIT) for synthetic values plus an in-house, schema-driven correlation/persistence layer over the existing Sequelize models**. Pin the Faker release and seed explicitly; keep graph structure, references, overrides, traits, idempotency, and cleanup policy in the application-owned layer. The spike pins `@faker-js/faker` 9.9.0 and adds no third-party factory or ORM dependency.
+Pinned `@faker-js/faker` 9.9.0 (MIT) provides synthetic values. The application owns the graph, reference validation, scenario definitions, Sequelize persistence and cleanup. No additional factory/ORM dependency is needed. Fishery would still require this persistence layer; factory-girl's adapter would not solve polymorphic links, ownership, scheduling hooks or media compensation.
 
-This split matches this app better than adopting an all-purpose ORM factory abstraction: the current graph includes a Sequelize many-to-many organization membership through `OrganizationMembers`, polymorphic comments, schedule templates and generated sessions, loosely typed order item product links, JSON media references, and a scheduler hook. Those behaviors need explicit repository semantics; Faker can provide synthetic values without owning associations or database lifecycle.
+Implementation:
 
-### Alternatives considered
+- [Graph API](../../../backend/server/seed-factory/index.js): `generateSeedGraph`, `validateSeedGraph`, `materializeSeedGraph`, `cleanupSeedGraph`.
+- [Scenarios](../../../backend/server/seed-factory/scenarios.js) and [stable catalog](../../../backend/server/seed-factory/catalog.js).
+- [Sequelize store](../../../backend/server/seed-factory/store.js), [runner](../../../backend/server/seed-factory/runner.js) and [CLI](../../../backend/server/scripts/seed.js).
 
-| Option | Strengths | Trade-offs for this repository | Decision |
-| --- | --- | --- | --- |
-| Faker + in-house correlation layer | Small surface; explicit Sequelize calls and relationship order; explicit locale/seed; MIT; no ORM adapter dependency | Team maintains graph descriptors, validators and persistence/cleanup code; Faker is a value generator, not a model factory | **Recommended.** Spike proves the shape and keeps model rules visible. |
-| Fishery + Faker | Modern composable JS/TS factory primitives, traits and transient params; MIT; can return Sequelize instances if the project writes the adapter | Does not provide a built-in Sequelize persistence/association lifecycle; still need our correlation store, deterministic seed policy, ordering, and cleanup. Two abstractions instead of one for this repository | Reconsider if consumers need object-level factory composition in application tests; not justified for the current seeder graph. |
-| factory-girl + Sequelize adapter | Familiar persistence-oriented factories and a Sequelize adapter; can reduce boilerplate for individual model creation | Binds fixture behavior to a separate adapter and its maintenance/release compatibility; graph-wide idempotency, cleanup, polymorphic links and cross-seed reproducibility still need custom work. Verify repository health before adopting | Not selected; avoid assuming the adapter solves graph lifecycle. |
-| Raw Sequelize seed scripts + `Math.random()` | No added dependency and straightforward for one-off SQL inserts | Repeats relationship logic, offers no central schema contract, makes correlated samples non-reproducible, and makes reuse/cleanup inconsistent; the current demo seeder already demonstrates these limits | Retain only for one-time, non-repeatable migrations if needed, not ongoing demo/test fixtures. |
+### Scenarios and preserved examples
 
-Project links for license/maintenance verification: [Faker source and license](https://github.com/faker-js/faker), [Fishery source and license](https://github.com/thoughtbot/fishery), [factory-girl](https://github.com/aexmachina/factory-girl), and [factory-girl Sequelize adapter](https://github.com/aexmachina/factory-girl-sequelize). Confirm current releases and license obligations during dependency review; this recommendation does not promise a third party's future maintenance.
+| Scenario | Data |
+|---|---|
+| `startup` | Martin LLC, headquarters, configured administrator, organization membership and organizer profile |
+| `demo` | 25 users (24 `userN` accounts plus the dedicated password-reset account), 3 branded organizations, 7 locations, 22 organizer profiles, 4 named experiences, 16 ticket tiers, 96 experience reviews, 506 organizer reviews, organizer links and 90 days of explicit sessions |
+| `showcase` | Three additive organizations and four showcase experiences, three registered owners plus consenting guests, two one-date parties, two four-tier tour catalogs, 90-day tour schedules, pinned reviews, and owner-scoped images/video/poster |
 
-## Spike contract and API
+Each showcase Experience stores versioned `detailsMetadata` with a template (`party`, `food-tour`, or `default`) and validated per-template `overrides.copy`. The food-tour record additionally stores uploaded `heroVideoKey`, `heroPosterKey`, and ordered `pinnedCommentIds`; the party records demonstrate distinct free/paid ticket behavior and public-attendance consent. The free/paid distinction is booking data, not a layout flag.
 
-The spike lives only under `backend/server/seed-factory/`; existing seeders are unchanged. `generateSeedGraph({ seed, counts, traits, overrides })` returns normalized logical records with stable keys, model names, attributes and explicit references. Faker receives a hash of the supplied seed. A fixed generation clock and deterministic generated usernames/order numbers keep the output stable across repeated calls. Missing seeds and excessive/invalid counts fail early.
+The four experience titles, capacities, durations, public image paths, ticket prices, age/ID questions, organization routes and three branding layouts remain stable. Synthetic names/coordinates/reviews are now reproducible rather than using `Math.random()`. Descriptions are curated catalog data. Mixology retains three picked occurrences; the other examples retain their daily/weekday cron schedules. Sessions are locked to their explicit source and automatic schedule synchronization is disabled for factory-owned experiences.
 
-Supported graph (topological insert order):
+The smaller configurable graph also supports draft orders/items. It does not pretend those drafts are completed bookings or create reservation/attendee rows implicitly. Tests of actual checkout create reservations through the real application.
 
-1. `Organization` and `Location`.
-2. `User` members and `OrganizationMembers` join records.
-3. `Experience` linked to organization/location/creator.
-4. `ScheduleTemplate` and `ScheduledExperience` rows linked to each experience.
-5. `TicketTier` rows linked to each experience.
-6. `Order` linked to a seeded customer and `OrderItem` linked to its order and experience product.
-7. `Comment` rows linked to an experience and member.
-
-`SEED_SCHEMA` describes the model and reference fields. `validateSeedGraph` checks unique logical keys, resolved references and expected target record types before persistence. Example:
+### Input and determinism
 
 ```js
 const graph = generateSeedGraph({
-  seed: 'pv-demo-2026-01',
+  seed: 'explicit-test-scenario',
   counts: { members: 4, experiences: 3, sessionsPerExperience: 2 },
   traits: { experience: { capacity: 8, autoSyncEnabled: false } },
-  overrides: { organization: { name: 'Local Demo Organization' } },
+  overrides: { experience: { title: 'Stable example', capacity: 10 } },
 });
 ```
 
-Traits and field overrides are data overlays by record type; explicit overrides are applied after traits. Count controls are bounded to avoid accidental bulk creation. Persist through `materializeSeedGraph(graph, store, { mode: 'skip' | 'replace' })`; the injected store owns transaction execution and durable seed manifests. `cleanupSeedGraph(seedKey, store)` must delete only rows listed by that seed's manifest and run transactionally. The spike tests these semantics against an in-memory store, not MySQL.
+Counts are bounded; graphs exceeding 5,000 records are rejected. References must resolve to the declared model type. Polymorphic comments/order products are allowlisted. Organization headquarters are explicit deferred links, resolving the organization/location cycle.
 
-### Production persistence adapter requirements (not implemented here)
+Named scenarios take `scenario`, `seed`, an explicit `clock`, administrator email and a bcrypt password hash. Equal inputs produce equal logical attributes/relationships. CLI clock defaults to the current UTC date; use `--clock=2026-10-27` for exact replay. The same scenario/seed identifies a durable run even when the clock advances: ordinary reruns **skip**, preserving the original dates and IDs. Different scenarios have different seed namespaces. Pin/change seed or explicitly replace to advance a demo's date window.
 
-Before replacing live seeders, implement and test a real Sequelize store with transaction support, model/field allowlists, deterministic graph dependency ordering, and an explicit durable `SeedRun` manifest (or equivalent dedicated seed ownership table). A durable manifest must retain exact created primary keys and generated media object keys; cleanup must refuse an unknown seed key and delete only manifest-owned rows, in reverse dependency order. Do not infer ownership by email/name, broad `LIKE` matching, timestamps, or generated IDs. Skip must return a prior completed manifest without duplicate inserts; replace must delete the old manifest-owned graph and insert the replacement atomically. If a failure occurs, roll back DB changes and clean up any uploaded object that was not committed. This needs a reviewed migration and an explicit environment guard; it is not part of this spike.
+Database-generated IDs/timestamps, salted password hashes and media upload IDs are intentionally not byte-identical across fresh materializations. Logical scenario determinism is not a promise of identical SQL dumps.
 
-Existing model hooks require special care: `Experience.afterCreate` asynchronously syncs schedules unless `autoSyncEnabled: false`; spike experiences disable it and sessions are explicit. `Order.beforeCreate` overwrites `orderNumber` using wall clock and `Math.random()`, so the future persistence adapter must either use an approved deterministic-safe persistence path (for example a bulk insert that deliberately bypasses hooks) or change that hook in a separately reviewed implementation. Never silently claim the current hook preserves seed determinism.
+## Ownership and safety
 
-The `OrderItem.ProductId` field is polymorphic rather than an enforced FK in `models/index.js`; the spike records the logical product key but the durable adapter must validate `ProductType` and resolve product IDs via an allowlisted product type. The current spike does not create booking reservations or attendees. Add those only when a consumer scenario requires them and account for the `ExperienceReservation` capacity hooks.
+Every mutating command requires all of:
 
-## Media pipeline decision and limitation
+- `NODE_ENV=development` or `test`; production is rejected without an override path.
+- `SEED_FACTORY_ENABLED=true`.
+- `SEED_DATABASE` equal to the exact configured `MYSQL_DATABASE`.
 
-Use the existing API, not direct object-store writes. The spike's injectable `createMediaPipelineUploader` sends the authenticated `PUT /api/media/upload?ownerType=user&ownerId=…&kind=asset` request with the `_token` cookie required by `authUser`. In deployed development, `Media.controller.js` validates the request, forwards bytes to `R2_WORKER_BASE_URL` (the Compose service is `r2-local`), and the worker stores the object through its bucket binding. The adapter persists the returned object key as a string in a persisted `Experience.images` JSON array, matching existing app storage; it returns URL/type/size metadata to the caller but does not store a descriptor object in that array. A stubbed test verifies both the route request contract and the database-model update seam without a network or DB.
+The store creates its own `SeedRuns` and `SeedAssets` bookkeeping tables directly from service definitions, without running or adding migrations. Application schema initialization uses model definitions only, and the `init` command refuses a nonempty application database. No automatic schema alteration/reset is performed on an existing development database.
 
-**Important model mismatch:** inspection found no standalone `Media` Sequelize model or media table. The current upload API stores an object in R2 and returns metadata; it does not create a relational Media row. This spike therefore persists an object-key reference on the Experience row, consistent with the existing `images` JSON format; it does not persist a normalized descriptor or separate media row. If “DB media record” is intended to mean a separate normalized `Media` row, that requires a product decision, schema migration and API ownership change outside this Epic; do not imply it already exists.
+`SeedRuns` stores exact primary keys (including composite join keys), record digests, scenario/version/clock and owned media keys. It stores no plaintext passwords or access tokens. A locked sentinel row serializes factory writers until transaction commit, including concurrent first materializations.
 
-At the spike baseline, upload accepted images only. The merged organization-site implementation now permits JPEG, PNG, WebP, GIF, AVIF and MP4 through the same authenticated, user-owned route with its 6 MiB limit. The `tacos-hero.mp4` follow-on seed must exercise that supported route and add durable media ownership/cleanup alongside the SQL store. The spike adapter itself remains stub-tested, not proof of a real SQL/media materialization. Do not bypass the API by writing directly to R2. The injectable adapter keeps graph generation separate from transport.
+- **skip:** return the existing completed manifest without duplicate inserts or rewriting user changes; incompatible scenario/version manifests fail explicitly.
+- **replace:** validate the old manifest, remove its exact rows and insert the replacement in one transaction. Failure restores the old graph and manifest.
+- **cleanup-preview:** inspect ownership and list the exact rows/object keys without deleting them.
+- **cleanup:** reject unknown manifests, changed/missing owned rows, unexpected row counts and external references. Never infer ownership from names, email, `LIKE` patterns or timestamps.
 
-## Full seeder/fixture rewrite plan
+The CLI emits the exact cleanup plan to stderr before deleting rows, including replacement runs. Library callers can provide an `onCleanupPlan` audit callback.
 
-The spike is intentionally not the migration. Execute follow-on work in order, preserving current behavior until each stage is verified:
+Cleanup checks database foreign keys, polymorphic product/comment references, email-based password-reset/verification records and external JSON/string media references. It deletes in reverse graph order and breaks only the known headquarters cycle. User-created bookings, reviews, carts or edits therefore block replacement instead of being silently discarded.
 
-| Current source / consumer | Replacement using the factory | Migration and rollback |
-| --- | --- | --- |
-| `backend/server/seeders/20260212222654-startup-org-and-admin.js` — Martin LLC HQ/location, organization, static admin account, membership and organizer; current lookup-and-insert flow | A `startup` scenario with stable explicit seed and safe per-environment overrides. Read admin email/password material from local secret/config input and hash passwords through existing auth utilities; never preserve the hard-coded sample password or hash as a shared account. Model the org-location relation and membership explicitly | First add manifest-backed store and dry-run diff; run against a disposable test DB. Back up or tag the legacy rows before migration. Rollback removes only manifest rows, with FK-safe reverse order; preserve user-owned data and require manual review for collisions. |
-| `backend/server/seeders/20260214193720-demo-experiences.js` — 24 demo users, seven locations, organization/experiences, sessions/tiers/comments and random coordinates/values | A `demo` schema with explicit seed, bounded counts, profile/location traits and stable date windows. Review all remaining lines in the legacy seeder during migration; keep individual graph properties in schema, not duplicated `Math.random()` loops | Generate a deterministic preview and compare record counts/associations; apply into an empty disposable DB, then a named demo namespace. Revert by manifest cleanup; leave legacy seeder executable until new results are accepted. |
-| `frontend/cypress/fixtures/experiences.json` — four named examples with durations, capacities and ticket tiers; `users.json`, `booking.json`, `profile.json` are additional Cypress payload fixtures | Convert DB-backed scenarios to schema/count/trait inputs with explicit seeds. Keep request/response payload snapshots that are not database records as ordinary Cypress fixtures. Preserve named experiences/prices as stable override inputs rather than randomizing assertions | Migrate one Cypress spec group at a time; compare exact asserted fields. Roll back by restoring its fixture loader/import while leaving the factory available. |
-| `backend/tests/integration/user-register.test.js`, Jest unit tests and `backend/tests/setup.js` | Use pure generated attributes for isolated unit tests; use a test-database adapter and disposable transaction/manifest for true relational integration tests. Do not create shared global fixture rows in setup | Introduce test store and independent test DB config first. Run focused tests, then full backend suite. Roll back test helper imports without changing runtime data. |
-| Cypress booking specs under `frontend/cypress/e2e/booking/**` | Seed required experience/session/tier/order records once per isolated spec or spec group; use unique explicit seeds and manifest cleanup; use fixture-only stubs for UI-only tests | Confirm Cypress DB reset/isolation policy before enabling parallel runs. Start serially; test cleanup and retries; keep live seeded rows out of shared dev DB. |
-| Future `EPIC-single-date-experience` | Schema trait sets `ScheduleTemplate.ruleType = 'datetime'` with one explicit date, plus one corresponding `ScheduledExperience`; validate date uniqueness/timezone | Integrate only after the factory contract is merged. Test normal schedule sync interaction; `autoSyncEnabled: false` where generated sessions are explicitly managed. |
-| Future `EPIC-pinned-experience-comments` | Comment overrides with exact target experience, `CommentableType: 'Experience'`, `CommentableId`, `UserId`, and optional ParentId only for actual replies | Test target associations and idempotent replacement; do not rely on random generated comments or commentsCount alone. |
-| Future `EPIC-hero-gallery-display-template` (`tacos-hero.mp4`) | Add media profile and `Experience.images` entry only after a supported authenticated video path exists; images use current pipeline now | Gate video seed on video MIME/size/security policy and durable manifest object cleanup; rollback deletes the owned object and DB descriptor. |
+The adapter validates model fields and values while bypassing application creation/update hooks deliberately: seeded schedules are explicit and deterministic order numbers must not be overwritten. Normal application hooks are unchanged.
 
-### Suggested implementation waves
+### Existing legacy databases
 
-1. **Foundation:** approve store manifest schema, environment guards, seed ownership, media record interpretation, and test DB isolation. Add and test the Sequelize store without changing either current seeder.
-2. **Startup scenario:** introduce deterministic startup graph in parallel with legacy rows; compare organization, location, user, membership and organizer links. Review secret handling and collisions before opting in.
-3. **Demo scenario:** migrate the broad demo seeder with fixed-seed snapshots, model validations, schedule sync disabled where explicit sessions are provided, and count/relationship checks.
-4. **Test adoption:** migrate backend integration tests and Cypress database-backed specs; retain request-only JSON fixtures. Verify per-test cleanup and worker safety before Cypress parallelization.
-5. **Feature examples:** single-date, pinned comments, then hero gallery after the video pipeline decision. Each follow-on Epic contributes named schema traits/overrides and tests; none edits the shared factory internals without contract coordination.
-6. **Retirement:** after a release window and reproducibility evidence, remove old seeder entry points in a dedicated change. Keep rollback manifests/backups until environment owners approve their expiry.
+Both original Sequelize seeder filenames remain as thin compatibility entry points into this factory; their former random generation and broad undo routines are removed. A separate child process closes its own Sequelize/Redis resources after each CLI entry point.
 
-### Rollback and safety gates
+Existing rows created by the old seeders have **no ownership manifest**. They are not adopted or deleted automatically. A colliding email/username/organization causes a transaction failure, leaving existing data intact. Use a fresh development database for the first factory population, or obtain explicit approval to discard/rebuild a legacy development database. The regular shared development database is not a test-reset target.
 
-- Never seed or clean production by default. Require `NODE_ENV`/environment allowlist and an explicit opt-in flag; reject production mode unless a separately reviewed policy exists.
-- The first rollout uses a disposable, isolated MySQL database and never the shared `react-booking-app` stack as a test database.
-- DB graph changes and manifest writes are transactional. R2 uploads cannot participate in SQL transactions; record object keys, delete uploaded but unreferenced objects on failed commit, and make cleanup retryable.
-- Cleanup is manifest-only, reverse dependency order, idempotent, and logs a dry-run list before deletion. Unknown manifests, external references, or row-count mismatch stop the cleanup rather than widening its target.
-- Keep legacy migration files until replacements pass count, association, stable-seed, repeat-run, failure rollback and fresh-database checks. Do not make a migration's `down` delete data it did not create.
+## Local commands
 
-## Risks, assumptions and user decisions
+Run from the repository root. Set bootstrap credentials in your local shell/secret configuration, not source code:
 
-1. **Media schema meaning:** current code has only `Experience.images` JSON and no Media row. Confirm whether that satisfies “DB media record,” or approve a separate Media table/API Epic.
-2. **Video upload:** current API only accepts image MIME types and 6 MiB. The hero video seed is blocked on an explicit upload policy and endpoint support.
-3. **Admin bootstrap secrets:** the current startup seeder contains a fixed development admin account/password hash. Decide local-only bootstrap credentials/secret source before replacing it.
-4. **Cypress reset model:** inspect existing Cypress tasks/CI setup before selecting per-spec seeding, shared scenario reuse or parallel workers; current fixtures are JSON input, not a proven DB reset contract.
-5. **DB materializer:** spike defines and tests a transactional persistence interface only. Durable manifest migration and a Sequelize adapter require a separate implementation and disposable DB validation.
-6. **Order hooks and IDs:** current order hook introduces runtime randomness; generic `ProductId` is not a declared FK. Resolve deterministic insert and product type validation in the adapter before migrating orders.
+- `SEED_ADMIN_EMAIL`, `SEED_ADMIN_PASSWORD` for `startup`.
+- `SEED_DEMO_PASSWORD` for `demo`.
+- `SEED_DEMO_PASSWORD` for `showcase`.
+- Passwords must contain at least 10 characters.
 
-## Verification evidence
+Pass these existing shell variables into Docker without embedding their values in commands:
 
-- `backend/tests/seed-factory/seed-factory.test.js`: 5 passing Jest tests (determinism, schema references, traits/overrides, in-memory idempotency/cleanup, stubbed media upload and Experience JSON persistence).
-- Not run: full backend suite, MySQL integration/materialization, actual Express/R2 upload, Cypress suite, or video upload. The shared development database/containers were not used.
+```powershell
+docker compose exec -T -e SEED_FACTORY_ENABLED=true -e SEED_DATABASE=staybooker -e SEED_ADMIN_EMAIL -e SEED_ADMIN_PASSWORD backend node server/scripts/seed.js preview startup
+docker compose exec -T -e SEED_FACTORY_ENABLED=true -e SEED_DATABASE=staybooker -e SEED_ADMIN_EMAIL -e SEED_ADMIN_PASSWORD backend node server/scripts/seed.js apply startup
+docker compose exec -T -e SEED_FACTORY_ENABLED=true -e SEED_DATABASE=staybooker -e SEED_DEMO_PASSWORD backend node server/scripts/seed.js apply demo --clock=2026-10-27
+docker compose exec -T -e SEED_FACTORY_ENABLED=true -e SEED_DATABASE=staybooker -e SEED_DEMO_PASSWORD backend node server/scripts/seed.js preview showcase
+docker compose exec -T -e SEED_FACTORY_ENABLED=true -e SEED_DATABASE=staybooker -e SEED_DEMO_PASSWORD backend node server/scripts/seed.js apply showcase
+docker compose exec -T -e SEED_FACTORY_ENABLED=true -e SEED_DATABASE=staybooker backend node server/scripts/seed.js cleanup-preview demo
+```
+
+Replace `staybooker` with the exact intended database. `init` creates model tables in an empty application database. `preview` prints only scenario identity/counts, never record/password attributes; it may create the two bookkeeping tables. Cleanup does not require the original credentials. A reviewed replacement is `apply demo --mode=replace`; preview cleanup first. Both operations still refuse edits/external references.
+
+## Media lifecycle
+
+Optional `--media=<local-json-path>` accepts:
+
+```json
+[
+  {
+    "recordKey": "experience-3",
+    "ownerId": 17,
+    "file": "/seed-media/tacos-hero.mp4",
+    "contentType": "video/mp4"
+  }
+]
+```
+
+Paths are local to the process/container. Configure `SEED_MEDIA_API_URL` and `SEED_MEDIA_ACCESS_TOKEN` for an existing authenticated upload owner, plus `R2_WORKER_BASE_URL`/`R2_DEV_TOKEN` for cleanup. Tokens stay in configuration and are never saved in manifests.
+
+Uploads use the real authenticated `PUT /api/media/upload`, not direct object-store writes. Images and MP4 share the 6 MiB limit in Express and the local R2 worker. No separate application Media entity is introduced: owned keys are attached to `Experience.images`.
+
+For development/test only, `X-Seed-Upload-Id` supplies a validated random upload identity. The normal owner/authentication/MIME/size guards remain in force; production rejects the header. The factory can journal the resulting exact key **before** transmitting bytes, covering a lost upload response or process crash.
+
+Successful graph commit marks assets active in the SQL transaction. Rollback queues their removal. Replacing/cleaning a graph queues its previous assets transactionally. Storage deletion uses the worker's authenticated DELETE and checks that no remaining application row references the key. Failures are explicit and retryable; committed SQL plus pending media cleanup is reported as such, not as a rollback.
+
+Run `node server/scripts/seed.js media-cleanup` to reclaim abandoned staged uploads and retry queued deletions. Tombstones are retained and swept again, so a delayed upload can be reconciled on the next sweep. SQL and object storage are not a distributed transaction; cleanup after a crash requires that recovery command. Do not remove bookkeeping tables while their media recovery is pending.
+
+## Backend and browser test adoption
+
+Pure factory tests need no database. Existing mocked HTTP request fixtures remain request fixtures rather than being converted to SQL records. Branding tests now inspect generated scenarios. Real relational coverage lives in [SQL lifecycle tests](../../../backend/tests/seed-factory/sql-lifecycle.test.mjs).
+
+The browser's `seedDb` and `resetDb` tasks now use factory scenarios and a guarded model-schema reset, **not migration/legacy seeder undo commands**. Both require `SEED_TEST_RESET=true`, exact database acknowledgement, and a `seed_factory_test_*` database. They refuse the regular development database. Pending factory media is cleaned before a disposable reset.
+
+The DB-backed experience JSON fixture is replaced by a `seedCatalog` task reading the same catalog as the factory. Request-only users/booking/profile fixtures remain unchanged.
+
+From the repository root:
+
+```powershell
+node scripts\seed-e2e.mjs --sql
+node scripts\seed-e2e.mjs "cypress/e2e/booking/**/*.cy.js,cypress/e2e/auth/password-reset.cy.js"
+```
+
+The runner starts uniquely named MySQL, Redis and local R2 worker containers, plus a temporary API/frontend for browser runs. It uses generated bootstrap secrets and console-only notifications, reuses installed application dependencies, and mounts `frontend/public` read-only as seed media. Its R2 state is private to the run. It removes its exact containers and anonymous data volumes afterward. It never resets or writes to the shared development database or storage worker. Keep tests within a run serial; separate runner invocations have separate databases, storage and caches.
+
+## Additive template showcases
+
+The `showcase` scenario is separate from `startup` and `demo`. It adds three
+organizations (`house-party`, `food-tours`, `default-tours`) without replacing
+the original `testcompany1` through `testcompany3` graph. Each scenario has an
+independent ownership manifest; repeated applies skip an existing manifest.
+
+The showcase integrates the experience templates delivered in PR #6: single-date
+parties with free and paid ticket examples and explicitly consenting checked-in
+guests, food tours with video/poster and pinned reviews, and a default coastal-tour
+photo carousel.
+Apply the experience metadata migration before seeding.
+
+Checked-in showcase images/video are uploaded by the trusted seed process through
+the shared storage transport; the known keys are journaled before uploads and
+included in the scenario's durable media ownership. Unlike optional `--media`
+inputs, this bootstrap path does not require a running API or a user login token.
+It requires the real local storage worker, its matching `R2_DEV_TOKEN`, and
+`SHOWCASE_MEDIA_ASSETS_DIR` (Compose mounts `frontend/public` at `/demo-assets`).
+Uploads are not simulated and missing assets/storage failures stop seeding.
+
+The Sequelize compatibility entry point is
+`backend/server/seeders/20261028020000-showcase-experience-details.js`; the usual
+`db:seed:all` sequence runs it after startup and generic demo seeding.
+With the development stack's storage and database running:
+
+```powershell
+docker compose run --rm --no-deps -e SEED_FACTORY_ENABLED=true backend node server/scripts/seed.js apply showcase
+```
+
+The usual migration + `db:seed:all` command includes the showcase after the
+startup and generic demo scenarios. Production DNS/tunnel activation and
+production fixture policy remain outside this rework.

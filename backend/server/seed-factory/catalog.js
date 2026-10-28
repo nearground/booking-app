@@ -1,0 +1,60 @@
+// Stable public examples shared by demo generation and database-backed browser tests.
+export const demoCatalog = [
+    {
+        title: 'Sierra Ridge Sunrise Hike',
+        subtitle: 'Guided morning trail adventure with panoramic bay views',
+        description: 'Begin before dawn with a safety orientation and hydration check, then climb moderate switchbacks to panoramic ridge viewpoints. Your local guide shares trail techniques and ecology insights, with photo pauses before a relaxed descent.',
+        capacity: 14, duration: 150, organization: 0, location: 3,
+        thumbnail: '/images/events/hiking/1.jpg',
+        images: [
+            '/images/events/hiking/Colorado-Dirt-Bike-Trails-1-2802882796.jpg',
+            '/images/events/hiking/Snapseed8-min-2242294099.jpg',
+        ],
+        cron: '0 6 * * *',
+        prices: [69.99, 54.99, 39.99, 24.99],
+    },
+    {
+        title: 'Rooftop Craft Mixology Session',
+        subtitle: 'Hands-on cocktail workshop with tropical ingredients',
+        description: 'Learn balance, dilution and aroma layering with tropical ingredients. Practice three drinks using professional tools and fresh citrus, then join a structured tasting with feedback on garnish, glassware and presentation.',
+        capacity: 12, duration: 120, organization: 0, location: 4,
+        thumbnail: '/images/events/mixology/Adobe_Stock_591027595_46a5f4e8da-3040219346.jpeg',
+        images: [
+            '/images/events/mixology/16185020296_6bef8f6155_z-2290716816.jpg',
+            '/images/events/mixology/Pacifico-beer-1345129699.jpeg',
+        ],
+        cron: null,
+        prices: [74.99, 59.99, 44.99, 29.99],
+    },
+    {
+        title: 'Los Arcos Coastal Sightseeing Tour',
+        subtitle: 'Scenic highlights and cultural landmarks in one route',
+        description: 'Explore waterfront landmarks, old-town streets and elevated overlooks. Guided stops combine cultural context, architecture and photo opportunities, with walking segments and short transfers through the bay.',
+        capacity: 20, duration: 180, organization: 1, location: 5,
+        thumbnail: '/images/events/sightseeing/los-arcos-malecón-3-1536x864-3329920682.jpg',
+        images: [
+            '/images/events/sightseeing/3979126-1490623130.jpg',
+            '/images/events/sightseeing/caballito-de-puerto-vallarta-3841453848.jpg',
+            '/images/events/sightseeing/optimizada_Discovering_the_Arts_of_Puerto_Vallarta-1608480040.jpg',
+            '/images/events/sightseeing/optimizada_puerto-vallarta-travel-guide-1246512186.jpg',
+            '/images/events/sightseeing/Puerto-Vallarta-Airport-Transfers-Old-Town-Romantic-Zone-2260430990.jpg',
+            '/images/events/sightseeing/Puerto-Vallarta-Ultimate-Guide-1-819x1024-2881566776.png',
+            '/images/events/sightseeing/visit-puerto-vallarta-2023-los-arcos-972559352.jpg',
+        ],
+        cron: '0 9,13,17 * * 1,3,5',
+        prices: [64.99, 49.99, 34.99, 19.99],
+    },
+    {
+        title: 'Old Town Taco Tour',
+        subtitle: 'Street taco crawl through neighborhood favorites',
+        description: 'Visit neighborhood taquerias and street stands to sample distinct taco styles. Learn about preparations, marinades and regional sauces from your host, meet local vendors and practice ordering confidently.',
+        capacity: 16, duration: 120, organization: 2, location: 6,
+        thumbnail: '/images/events/taco-tour/AdobeStock_205566472-3914830821.jpeg',
+        images: [
+            '/images/events/taco-tour/ArdHgW3PYzfXi8kZ6Pbxv7K6NphtB9Pb8cAB7UJjIxU-3713760731.jpg',
+            '/images/events/taco-tour/tacos-culture-in-puerto-vallarta-441282808.jpg',
+        ],
+        cron: '0 9,13,17 * * 1,3,5',
+        prices: [59.99, 44.99, 32.99, 17.99],
+    },
+];

@@ -9,18 +9,20 @@ jest.mock('../../server/utils/media-storage.js', () => ({
 }));
 
 describe('experience details metadata contract', () => {
-    test('party configuration accepts exactly one concrete date and free tiers', () => {
+    test('party configuration accepts exactly one concrete date and free or paid tiers', () => {
         expect(validatePartyConfiguration({
             picks: [{ dateTime: '2027-01-01T18:00:00Z' }], tiers: [{ price: '0.00' }],
+        }).errors).toEqual([]);
+        expect(validatePartyConfiguration({
+            picks: [{ dateTime: '2027-01-01T18:00:00Z' }], tiers: [{ price: '25.00' }],
         }).errors).toEqual([]);
     });
 
     test.each([
         { templates: [{ ruleType: 'cron', ruleCron: '* * * * *' }], tiers: [{ price: 0 }] },
         { picks: [{ dateTime: '2027-01-01T18:00:00Z' }, { dateTime: '2027-02-01T18:00:00Z' }], tiers: [{ price: 0 }] },
-        { picks: [{ dateTime: '2027-01-01T18:00:00Z' }], tiers: [{ price: 5 }] },
         { picks: [{ dateTime: '2027-01-01T18:00:00Z' }], tiers: [] },
-    ])('party configuration rejects recurring/multiple dates or paid/absent tiers %j', (configuration) => {
+    ])('party configuration rejects recurring/multiple dates or absent tiers %j', (configuration) => {
         expect(validatePartyConfiguration(configuration).errors.length).toBeGreaterThan(0);
     });
     test('public projection strips unsupported metadata rather than exposing it', () => {
@@ -64,6 +66,12 @@ describe('experience details metadata contract', () => {
         } };
         expect(normalizeDetailsMetadata(metadata)).toEqual({ metadata, errors: [] });
     });
+    test('roundtrips editable template copy', () => {
+        const metadata = { version: 1, template: 'party', overrides: {
+            copy: { paidBadge: 'Tickets from $25', storyHeading: 'The celebration' },
+        } };
+        expect(normalizeDetailsMetadata(metadata)).toEqual({ metadata, errors: [] });
+    });
 
     test.each([
         { version: 2, template: 'party' },
@@ -76,6 +84,8 @@ describe('experience details metadata contract', () => {
         { version: 1, template: 'food-tour', overrides: { pinnedCommentIds: [1, 1] } },
         { version: 1, template: 'food-tour', overrides: { pinnedCommentIds: [1, 2, 3, 4] } },
         { version: 1, template: 'party', overrides: [] },
+        { version: 1, template: 'party', overrides: { copy: { invalid: 'text' } } },
+        { version: 1, template: 'party', overrides: { copy: { storyHeading: 'x'.repeat(501) } } },
     ])('rejects unsafe/unsupported input %j', (value) => {
         const result = normalizeDetailsMetadata(value);
         expect(result.errors.length).toBeGreaterThan(0);

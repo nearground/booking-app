@@ -12,9 +12,17 @@ const imageContentTypes = { '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png':
 export async function prepareShowcaseMedia({
     ownerId,
     ownerIds = {},
+    keySuffix = '',
+    beforeUpload,
     assetsRoot = process.env.SHOWCASE_MEDIA_ASSETS_DIR || defaultAssetsRoot,
     fetchImpl = fetch,
 } = {}) {
+    if (keySuffix && !/^[a-zA-Z0-9-]{1,48}$/.test(keySuffix)) {
+        throw new TypeError('Showcase media keySuffix must be a short alphanumeric token');
+    }
+    if (beforeUpload !== undefined && typeof beforeUpload !== 'function') {
+        throw new TypeError('Showcase media beforeUpload must be a function');
+    }
     const owners = {
         partyImages: ownerIds.party ?? ownerId,
         foodImages: ownerIds.food ?? ownerId,
@@ -69,8 +77,9 @@ export async function prepareShowcaseMedia({
             .update(asset.bytes)
             .digest('hex');
         const extension = path.extname(asset.relativePath).toLowerCase();
-        const objectKey = `users/${owners[asset.group]}/asset/showcase-${digest}${extension}`;
+        const objectKey = `users/${owners[asset.group]}/asset/showcase-${digest}${keySuffix ? `-${keySuffix}` : ''}${extension}`;
         try {
+            if (beforeUpload) await beforeUpload({ objectKey, ...asset });
             await uploadMediaObject({
                 objectKey,
                 bytes: asset.bytes,

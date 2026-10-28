@@ -16,6 +16,21 @@ const review = (id, extra = {}) => ({
 const experience = { title: 'Market to table', subtitle: 'A local food adventure' };
 
 describe('FoodTourExperience', () => {
+  test('links to the organization profile even with custom content', () => {
+    render(<FoodTourExperience experience={{
+      ...experience, Organization: { name: 'Food Tours', slug: 'food-tours' },
+    }}><p>Custom tour content</p></FoodTourExperience>);
+    expect(screen.getByRole('link', { name: 'View Food Tours profile' }))
+      .toHaveAttribute('href', `${window.location.origin}/o/food-tours`);
+  });
+
+  test.each([undefined, 'bad/slug', 'admin'])('omits the organization profile link for invalid slug %s', (slug) => {
+    render(<FoodTourExperience experience={{
+      ...experience, Organization: { name: 'Food Tours', slug },
+    }} />);
+    expect(screen.queryByRole('link', { name: 'View Food Tours profile' })).not.toBeInTheDocument();
+  });
+
   test('loads the seeded Lato brand font alongside the existing Jost font', () => {
     const document = new DOMParser().parseFromString(documentHtml, 'text/html');
     const stylesheet = document.querySelector('link[href^="https://fonts.googleapis.com/css2"]');
@@ -88,6 +103,18 @@ describe('FoodTourExperience', () => {
     expect(screen.getAllByTestId('food-tour-pinned-comment').map((card) =>
       within(card).getByRole('heading', { level: 3 }).textContent
     )).toEqual(['Guest review 3', 'Guest review 1', 'Guest review 2']);
+  });
+
+  test('replaces template text from saved metadata', () => {
+    render(<FoodTourExperience
+      experience={{ ...experience, description: 'A short description.' }}
+      metadata={{ version: 1, template: 'food-tour', overrides: { copy: {
+        heroEyebrow: 'A custom hero message',
+        descriptionHeading: 'Your custom details',
+      } } }}
+    />);
+    expect(screen.getByText('A custom hero message')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Your custom details' })).toBeInTheDocument();
   });
 
   test('rejects replies, non-five-star reviews, organizer reviews, duplicates and extra pins', () => {

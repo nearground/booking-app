@@ -40,6 +40,23 @@ The application consists of five docker services:
    Cloudflare Tunnel, use the [hardened tunnel deployment](DEPLOYMENT.md#cloudflare-tunnel-deployment)
    instead of exposing the development server.
 
+   To run the fresh-database seeding command below, fill in the blank
+   `SEED_ADMIN_EMAIL`, `SEED_ADMIN_PASSWORD`, and `SEED_DEMO_PASSWORD` entries
+   in `.env`; leaving either password blank causes seeding to fail. Both
+   passwords must be at least 10 characters and should be distinct, local-only
+   credentials. `SEED_ADMIN_EMAIL` is the login for the seeded administrator;
+   the demo password is shared by seeded demo accounts. `SEED_DATABASE` is set
+   to the configured `MYSQL_DATABASE` by Compose. The seed command opts into
+   seeding for that run only; ordinary backend starts keep it disabled.
+
+   For example, generate two different passwords and paste the output into
+   `SEED_ADMIN_PASSWORD` and `SEED_DEMO_PASSWORD`:
+
+   ```bash
+   node -e "console.log(require('crypto').randomBytes(24).toString('hex'))"
+   node -e "console.log(require('crypto').randomBytes(24).toString('hex'))"
+   ```
+
 3. **Build and start all services**
    ```bash
    docker-compose up -d --build
@@ -115,14 +132,33 @@ docker-compose logs -f database
 # Remove everything (including volumes)
 docker-compose down -v
 
-#Run migrations and seed
-docker compose exec backend sh -c "npx sequelize db:migrate && npx sequelize db:seed:all"
+# Start seed dependencies, then apply startup, generic demo, and showcase scenarios
+docker compose up -d --wait database r2-local redis
+docker compose run --rm --no-deps -e SEED_FACTORY_ENABLED=true backend sh -c "npx sequelize-cli db:migrate && npx sequelize-cli db:seed:all"
 
-#one liner, One-Liner for getting everything up and running from scratch
-docker compose down -v; docker compose up --build -d; docker compose exec backend sh -c "npx sequelize db:migrate && npx sequelize db:seed:all"
+# Destructive: removes development volumes, then migrates, seeds all scenarios, and starts the stack
+# Bash / Git Bash
+docker compose down -v && docker compose build backend && docker compose up -d --wait database r2-local redis && docker compose run --rm --no-deps -e SEED_FACTORY_ENABLED=true backend sh -c "npx sequelize-cli db:migrate && npx sequelize-cli db:seed:all" && docker compose up --build -d
+
+# Windows PowerShell
+cmd.exe /c 'docker compose down -v && docker compose build backend && docker compose up -d --wait database r2-local redis && docker compose run --rm --no-deps -e SEED_FACTORY_ENABLED=true backend sh -c "npx sequelize-cli db:migrate && npx sequelize-cli db:seed:all" && docker compose up --build -d'
 
 
 ```
+
+The original `/o/testcompany1`, `/o/testcompany2`, and `/o/testcompany3` demos
+remain intact. Three additional organizations demonstrate the experience templates:
+
+| URL | Showcase |
+| --- | --- |
+| `/o/house-party` | Free private-venue parties, single evening sessions, and opted-in guest lists |
+| `/o/food-tours` | Food tour with uploaded hero video, poster, and pinned guest reviews |
+| `/o/default-tours` | Coastal tour with the default uploaded-photo carousel |
+
+Showcase media is uploaded to the local R2 worker, so `R2_DEV_TOKEN` must be
+configured and `r2-local` must be healthy before seeding. The showcase scenario
+has its own manifest: it can be added to an already-seeded development database
+without replacing the existing generic demo records.
 
 ## Service Details
 

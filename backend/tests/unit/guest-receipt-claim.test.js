@@ -5,6 +5,9 @@ jest.mock('../../server/models/index.js', () => ({
         PasswordReset: {},
         EmailVerificationToken: { create: jest.fn(), findOne: jest.fn(), update: jest.fn() },
         Order: { findAll: jest.fn() },
+        OrderItem: { findAll: jest.fn() },
+        ExperienceReservation: { update: jest.fn() },
+        ExperienceReservationAnswer: { findAll: jest.fn() },
         sequelize: { transaction: jest.fn() },
     },
 }));
@@ -26,6 +29,9 @@ import { sendNotification } from '../../server/services/Notification.service.js'
 const mockUser = modelRegistry.User;
 const mockVerificationToken = modelRegistry.EmailVerificationToken;
 const mockOrder = modelRegistry.Order;
+const mockOrderItem = modelRegistry.OrderItem;
+const mockExperienceReservation = modelRegistry.ExperienceReservation;
+const mockReservationAnswer = modelRegistry.ExperienceReservationAnswer;
 const mockTx = {
     commit: jest.fn().mockResolvedValue(undefined),
     rollback: jest.fn().mockResolvedValue(undefined),
@@ -41,6 +47,9 @@ describe('guest receipt email verification', () => {
         mockTx.commit.mockResolvedValue(undefined);
         mockTx.rollback.mockResolvedValue(undefined);
         modelRegistry.sequelize.transaction.mockResolvedValue(mockTx);
+        mockOrderItem.findAll.mockResolvedValue([]);
+        mockReservationAnswer.findAll.mockResolvedValue([]);
+        mockExperienceReservation.update.mockResolvedValue([0]);
     });
 
     test('stores only a token hash and sends a verification link', async () => {
@@ -74,12 +83,14 @@ describe('guest receipt email verification', () => {
     test('claims only matching unowned orders after a valid token and is transactional', async () => {
         const token = 'a'.repeat(64);
         const record = { email: 'Guest@Example.com', expiresAt: new Date(Date.now() + 60000), usedAt: null };
-        const firstOrder = { mainContactEmail: 'guest@example.com', update: jest.fn().mockResolvedValue(undefined) };
+        const firstOrder = { id: 21, mainContactEmail: 'guest@example.com', update: jest.fn().mockResolvedValue(undefined) };
         const secondOrder = { mainContactEmail: 'other@example.com', update: jest.fn() };
         const user = { id: 8, email: 'Guest@Example.com', update: jest.fn().mockResolvedValue(undefined) };
         mockVerificationToken.findOne.mockResolvedValue(record);
         mockUser.findOne.mockResolvedValue(user);
         mockOrder.findAll.mockResolvedValue([firstOrder]);
+        mockOrderItem.findAll.mockResolvedValue([{ ExperienceReservationId: 31 }]);
+        mockReservationAnswer.findAll.mockResolvedValue([{ ExperienceReservationId: 31 }]);
 
         await expect(service.confirmEmailVerification(token)).resolves.toEqual({ valid: true, claimedOrderCount: 1 });
 
@@ -89,6 +100,10 @@ describe('guest receipt email verification', () => {
         }));
         expect(user.update).toHaveBeenCalledWith({ isEmailVerified: true }, { transaction: mockTx });
         expect(firstOrder.update).toHaveBeenCalledWith({ CustomerId: 8 }, { transaction: mockTx });
+        expect(mockExperienceReservation.update).toHaveBeenCalledWith(
+            { CustomerId: 8 },
+            expect.objectContaining({ where: expect.objectContaining({ CustomerId: null }), transaction: mockTx })
+        );
         expect(secondOrder.update).not.toHaveBeenCalled();
         expect(mockOrder.findAll.mock.calls[0][0].where.CustomerId).toBeNull();
         expect(mockVerificationToken.update).toHaveBeenCalledWith({ usedAt: expect.any(Date) }, expect.objectContaining({ where: { email: record.email, usedAt: null }, transaction: mockTx }));
@@ -122,6 +137,27 @@ describe('guest receipt email verification', () => {
         expect(optedIn.update).toHaveBeenCalledWith({ CustomerId: 8 }, { transaction: mockTx });
         expect(legacy.update).toHaveBeenCalledWith({ CustomerId: 8 }, { transaction: mockTx });
         expect(optedOut.update).not.toHaveBeenCalled();
+    });
+
+    test('links only explicitly opted-in experience reservations for an opted-out guest order', async () => {
+        mockVerificationToken.findOne.mockResolvedValue({
+            email: 'guest@example.com', expiresAt: new Date(Date.now() + 60000), usedAt: null,
+        });
+        mockUser.findOne.mockResolvedValue({ id: 8, email: 'guest@example.com', update: jest.fn() });
+        const optedOutOrder = { id: 44, metadata: { saveBookingForLater: false }, update: jest.fn() };
+        mockOrder.findAll.mockResolvedValue([optedOutOrder]);
+        mockOrderItem.findAll.mockResolvedValue([{ ExperienceReservationId: 55 }]);
+        mockReservationAnswer.findAll.mockResolvedValue([{ ExperienceReservationId: 55 }]);
+
+        await expect(service.confirmEmailVerification('e'.repeat(64))).resolves.toEqual({
+            valid: true,
+            claimedOrderCount: 0,
+        });
+        expect(optedOutOrder.update).not.toHaveBeenCalled();
+        expect(mockExperienceReservation.update).toHaveBeenCalledWith(
+            { CustomerId: 8 },
+            expect.objectContaining({ where: expect.objectContaining({ id: expect.any(Object), CustomerId: null }) })
+        );
     });
     test('rejects short tokens and expired verification links', async () => {
         await expect(service.confirmEmailVerification('bad')).resolves.toEqual({ valid: false });

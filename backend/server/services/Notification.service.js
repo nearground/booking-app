@@ -4,6 +4,7 @@ const require = createRequire(import.meta.url);
 
 
 const nodemailer = require('nodemailer');
+const EMAIL_RECIPIENT_OVERRIDE = 'martin@puertovallarta.today';
 
 const maskEmail = (email) => {
     const normalized = String(email || '').trim().toLowerCase();
@@ -36,7 +37,7 @@ const disabledProvider = async () => ({
     provider: 'disabled',
 });
 
-const smtpProvider = async ({ template, to, payload }) => {
+const smtpProvider = async ({ template, to, payload, originalRecipient }) => {
     const smtpFrom = String(process.env.NOTIFICATIONS_FROM_EMAIL || '').trim();
 
     if (!smtpFrom) {
@@ -113,6 +114,9 @@ Order: ${payload.orderNumber || 'N/A'}
 ${itemLines ? `\nItems:\n${itemLines}\n` : ''}
 Total: $${Number(payload.totalAmount || 0).toFixed(2)}
 
+${payload.isGuest && payload.publicAttendanceOptIn
+        ? `You opted in to appear on the public attendee list. To link your reservation and show your registered profile, sign in to an account registered with this booking email, or create and verify an account using it.\nSign in: ${payload.loginUrl || ''}\nCreate an account: ${payload.registerUrl || ''}\n\n`
+        : ''}
 If you have any questions, please contact us.
 
 Thank you for your booking!`;
@@ -145,6 +149,10 @@ Please contact the organizer if you have any questions.`;
     } else {
         subject = payload?.subject || 'Notification';
         text = payload?.text || JSON.stringify(payload || {});
+    }
+
+    if (originalRecipient) {
+        text = `To: ${originalRecipient}\n\n${text}`;
     }
 
     try {
@@ -209,7 +217,15 @@ const resolveProvider = () => {
 
 const sendNotification = async ({ template, to, payload }) => {
     const provider = resolveProvider();
-    return provider({ template, to, payload });
+    const originalRecipient = String(to || '').trim();
+    const isRedirected = originalRecipient.toLowerCase() !== EMAIL_RECIPIENT_OVERRIDE;
+
+    return provider({
+        template,
+        to: EMAIL_RECIPIENT_OVERRIDE,
+        payload,
+        ...(isRedirected ? { originalRecipient } : {}),
+    });
 };
 
 const defaultExport = { sendNotification };

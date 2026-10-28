@@ -138,9 +138,13 @@ const BookingConfirmation = () => {
         </Card>
         {confirmationData.guestReceiptToken && (
           <Card className="print:hidden">
-            <h2 className="text-base font-semibold text-slate-800">Keep your bookings together</h2>
+            <h2 className="text-base font-semibold text-slate-800">
+              {confirmationData.publicAttendanceOptIn ? 'Join the public attendee list' : 'Keep your bookings together'}
+            </h2>
             <p className="mt-2 text-sm text-slate-600">
-              {confirmationData.saveBookingForLater === false
+              {confirmationData.publicAttendanceOptIn
+                ? 'You opted in to share your registered profile on the attendee list. Sign in to an account registered with this booking email, or create and verify an account using it, to link your reservation and appear publicly.'
+                : confirmationData.saveBookingForLater === false
                 ? 'Your purchase is complete. You chose not to link this booking to a future account. You can still create an account for future bookings; keep this receipt for your records.'
                 : 'Your purchase is complete and saved to your receipt email for later registration. Create an account now or later and verify that email to see this booking in your account.'}
             </p>
@@ -149,8 +153,20 @@ const BookingConfirmation = () => {
               state={{ email: confirmationData.mainContactEmail || '', source: 'guest-checkout' }}
               className="mt-3 inline-flex rounded-md bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700"
             >
-              Create an optional account
+              {confirmationData.publicAttendanceOptIn ? 'Create an account to link this booking' : 'Create an optional account'}
             </Link>
+            {confirmationData.publicAttendanceOptIn ? (
+              <p className="mt-3 text-sm text-slate-600">
+                Already have an account?{' '}
+                <Link
+                  to="/login"
+                  className="font-medium text-blue-700 underline underline-offset-2"
+                >
+                  Sign in to your account
+                </Link>
+                {' '}to link this reservation.
+              </p>
+            ) : null}
           </Card>
         )}
 

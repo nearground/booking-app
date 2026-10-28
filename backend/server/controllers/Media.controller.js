@@ -13,6 +13,7 @@ import {
     StorageUploadError,
     uploadMediaObject,
 } from '../services/media-upload.js';
+import { seedMediaKey } from '../utils/seed-media-key.js';
 
 const ALLOWED_KEY_PREFIXES = ['users/', 'orgs/', 'experiences/', 'hotels/'];
 const ALLOWED_UPLOAD_OWNER_TYPES = new Set(['user']);
@@ -109,8 +110,21 @@ const uploadMedia = async (req, res) => {
             });
         }
 
-        const randomSuffix = crypto.randomBytes(3).toString('hex');
-        const objectKey = `${normalizedOwnerType}s/${parsedOwnerId}/${normalizedKind}/${Date.now()}-${randomSuffix}.${extension}`;
+        const uploadId = req.headers['x-seed-upload-id'];
+        let objectKey;
+        if (uploadId !== undefined) {
+            if (!['development', 'test'].includes(process.env.NODE_ENV)) {
+                return res.status(403).json({ errors: ['Seed upload identities are disabled in production'], data: {} });
+            }
+            try {
+                objectKey = seedMediaKey({ uploadId, ownerId: parsedOwnerId, kind: normalizedKind, contentType });
+            } catch (error) {
+                return res.status(400).json({ errors: [error.message], data: {} });
+            }
+        } else {
+            const randomSuffix = crypto.randomBytes(3).toString('hex');
+            objectKey = `${normalizedOwnerType}s/${parsedOwnerId}/${normalizedKind}/${Date.now()}-${randomSuffix}.${extension}`;
+        }
 
         await uploadMediaObject({ objectKey, bytes: req.body, contentType });
 
