@@ -9,13 +9,16 @@ vi.mock('./templates/PartyExperience', () => ({
   default: ({ experience }) => <div data-testid="party-template">{experience.title}</div>,
 }));
 vi.mock('./templates/FoodTourExperience', () => ({
-  default: ({ experience, booking }) => <div data-testid="food-tour-template">{experience.title}{booking}</div>,
+  default: ({ experience, booking, reviews }) => <div data-testid="food-tour-template">{experience.title}{booking}<div data-testid="reviews-slot">{reviews}</div></div>,
 }));
 vi.mock('../../components/scheduled-experiences-list/ScheduledExperiencesList', () => ({
   default: () => <div data-testid="session-calendar" />,
 }));
 vi.mock('../../components/image-gallery-modal/ImageGalleryModal', () => ({ default: () => null }));
-vi.mock('../../components/comments/GuestCommentPrompt', () => ({ default: () => null }));
+vi.mock('../../components/comments/GuestCommentPrompt', () => ({ default: () => <div data-testid="guest-review-prompt" /> }));
+vi.mock('../../components/comments/CommentCard', () => ({
+  default: ({ comment }) => <div data-testid={`comment-${comment.id}`}>{comment.comment}</div>,
+}));
 
 beforeEach(() => {
   window.matchMedia = vi.fn(() => ({
@@ -23,12 +26,12 @@ beforeEach(() => {
   }));
 });
 
-const renderDetails = (detailsMetadata) => render(
+const renderDetails = (detailsMetadata, comments = []) => render(
   <AuthContext.Provider value={{ userDetails: null }}>
     <MemoryRouter>
       <ExperienceDetails isPreview previewData={{
         id: 1, title: 'Template preview', description: 'Description',
-        detailsMetadata, comments: [], organizers: [], images: [],
+        detailsMetadata, comments, organizers: [], images: [],
       }} />
     </MemoryRouter>
   </AuthContext.Provider>
@@ -55,4 +58,17 @@ test('food-tour dispatch receives the existing booking component', () => {
   renderDetails({ version: 1, template: 'food-tour', overrides: {} });
   expect(screen.getByTestId('food-tour-template')).toHaveTextContent('Template preview');
   expect(screen.getByTestId('session-calendar')).toBeInTheDocument();
+  expect(screen.getByTestId('reviews-slot')).toBeInTheDocument();
+  expect(screen.getByTestId('guest-review-prompt')).toBeInTheDocument();
+  expect(screen.getByTestId('food-tour-template').parentElement).not.toHaveClass('container');
+});
+
+test('food-tour ordinary review preview excludes pinned reviews without removing its review workflow', async () => {
+  renderDetails({ version: 1, template: 'food-tour', overrides: { pinnedCommentIds: [1] } }, [
+    { id: 1, stars: 5, comment: 'Pinned review' },
+    { id: 2, stars: 4, comment: 'Ordinary review' },
+  ]);
+  expect(await screen.findByTestId('comment-2')).toHaveTextContent('Ordinary review');
+  expect(screen.queryByTestId('comment-1')).not.toBeInTheDocument();
+  expect(screen.getByTestId('guest-review-prompt')).toBeInTheDocument();
 });

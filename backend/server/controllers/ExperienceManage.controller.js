@@ -565,7 +565,7 @@ const updateExperience = async (req, res) => {
                 : { tiers: await TicketTier.findAll({ where: { ExperienceId: experience.id }, transaction }), errors: [] };
             partyConfiguration = validatePartyConfiguration({ ...schedules, tiers: tiers.tiers || [] });
             const sessions = await ScheduledExperience.findAll({
-                where: { ExperienceId: experience.id, status: { [Op.ne]: 'cancelled' } },
+                where: { ExperienceId: experience.id },
                 limit: 2,
                 transaction,
             });

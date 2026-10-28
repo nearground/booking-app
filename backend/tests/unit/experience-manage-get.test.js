@@ -170,6 +170,29 @@ describe('getExperienceForEdit', () => {
       normalizeSchedules.mockReturnValue({ templates: [], picks: [], errors: [] });
     });
 
+    test('editing a cancelled party does not recreate its session', async () => {
+      const { updateExperience } = await import('../../server/controllers/ExperienceManage.controller.js');
+      const dateTime = '2027-01-01T18:00:00Z';
+      const record = {
+        id: 10, OrganizationId: 3, capacity: 20, duration: 60,
+        detailsMetadata: { version: 1, template: 'party', overrides: {} },
+      };
+      record.update = jest.fn(async (payload) => Object.assign(record, payload));
+      mockFindByPk.mockResolvedValue(record);
+      mockFindOne.mockResolvedValue({ isAdmin: true });
+      mockTemplateFindAll.mockResolvedValue([]);
+      mockPickFindAll.mockResolvedValue([{ dateTime }]);
+      mockTierFindAll.mockResolvedValue([{ price: 0 }]);
+      mockSessionFindAll.mockResolvedValue([{ id: 123, dateTime, status: 'cancelled' }]);
+      const res = mockRes();
+      await updateExperience({ params: { experienceId: '10' }, user: { id: 1 }, body: {} }, res);
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(mockSessionFindAll).toHaveBeenCalledWith(expect.objectContaining({
+        where: { ExperienceId: 10 },
+      }));
+      expect(mockSessionCreate).not.toHaveBeenCalled();
+    });
+
     test('party cannot re-enable background schedule generation', async () => {
       const { toggleAutoSync } = await import('../../server/controllers/ExperienceManage.controller.js');
       const record = {

@@ -22,7 +22,7 @@ import ImageGalleryModal from '../../components/image-gallery-modal/ImageGallery
 import LightboxOverlay from '../../components/image-gallery-modal/LightboxOverlay';
 import ReviewSidebar from './components/ReviewSidebar';
 import GuestCommentPrompt from '../../components/comments/GuestCommentPrompt';
-import { resolveDetailsMetadata } from './experienceDetailsTemplate';
+import { resolveDetailsMetadata, selectPinnedComments } from './experienceDetailsTemplate';
 import PartyExperienceTemplate from './templates/PartyExperience';
 import FoodTourExperienceTemplate from './templates/FoodTourExperience';
 import {
@@ -212,8 +212,11 @@ const ExperienceDetails = ({ previewData = null, isPreview = false }) => {
   
   const commentsPreview = useMemo(() => {
     const topLevel = Array.isArray(comments) ? comments.filter((c) => !c.ParentId) : [];
-    return topLevel.slice(0, 6);
-  }, [comments]);
+    const pinnedIds = new Set(detailsMetadata.template === 'food-tour'
+      ? selectPinnedComments(comments, detailsMetadata).map((comment) => comment.id)
+      : []);
+    return topLevel.filter((comment) => !pinnedIds.has(comment.id)).slice(0, 6);
+  }, [comments, detailsMetadata]);
   const organizers = useMemo(() => experienceData?.organizers || [], [experienceData]);
   const previewUpcomingSessions = useMemo(
     () => (Array.isArray(experienceData?.previewUpcomingSessions) ? experienceData.previewUpcomingSessions : []),
@@ -406,8 +409,98 @@ const ExperienceDetails = ({ previewData = null, isPreview = false }) => {
     </>
   );
 
+  const renderReviews = () => (
+    <div className="order-6 lg:order-5 lg:col-start-1 mt-8">
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-2xl font-semibold text-slate-800 flex items-center gap-2">
+          <FontAwesomeIcon icon={faStar} className="text-amber-500" />
+          {Number(experienceData.ratings || 0).toFixed(2)} ({experienceData.commentCount || 0})
+        </h2>
+        {comments.length > 6 && (
+          <button onClick={() => setIsCommentsModalOpen(true)} className="text-base text-blue-600 hover:underline font-semibold">
+            Show All Reviews
+          </button>
+        )}
+      </div>
+      <div className="mt-4">
+        {!userDetails ? <GuestCommentPrompt /> : justPostedReview ? (
+          <div className="transition-opacity duration-300">
+            <div className="bg-green-50 border border-green-400 text-green-800 p-4 rounded mb-4">Thank you for your review!</div>
+            <Suspense fallback={null}>
+              <FullCommentCard
+                comment={{ ...justPostedReview, commenter: userDetails, target: { type: 'experience', id: experienceData.id, name: experienceData.title } }}
+                userDetails={userDetails}
+                renderStars={renderStarsHelper}
+                formatCommentDate={formatCommentDateHelper}
+                loadComments={() => {
+                  setJustPostedReview(null);
+                  setReviewEligibility({ eligible: true, recentReview: null });
+                  refreshExperience();
+                }}
+                commentsTargetType="experience"
+              />
+            </Suspense>
+          </div>
+        ) : !reviewEligibility.eligible && reviewEligibility.recentReview ? (
+          <div className="transition-opacity duration-300">
+            <div className="bg-blue-50 border border-blue-400 text-blue-800 p-4 rounded mb-4">You have already recently posted a review for this experience.</div>
+            <Suspense fallback={null}>
+              <FullCommentCard
+                comment={{ ...reviewEligibility.recentReview, target: { type: 'experience', id: experienceData.id, name: experienceData.title } }}
+                userDetails={userDetails}
+                renderStars={renderStarsHelper}
+                formatCommentDate={formatCommentDateHelper}
+                loadComments={() => {
+                  setReviewEligibility({ eligible: true, recentReview: null });
+                  refreshExperience();
+                }}
+                commentsTargetType="experience"
+              />
+            </Suspense>
+          </div>
+        ) : (
+          <Suspense fallback={null}>
+            <AddCommentForm
+              commentableType="experience"
+              commentableId={experienceData.id}
+              uploaderUserId={userDetails?.id}
+              onSuccess={(data) => {
+                setJustPostedReview(data);
+                refreshExperience();
+              }}
+              onCancel={() => {}}
+            />
+          </Suspense>
+        )}
+        {comments.length > 0 ? (
+          <Suspense fallback={null}>
+            <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+              {commentsPreview.map((comment) => (
+                <FullCommentCard
+                  key={comment.id}
+                  comment={{
+                    ...comment,
+                    commenter: comment.commenter || comment.user,
+                    target: comment.target || { type: 'experience', id: experienceData.id, name: experienceData.title },
+                  }}
+                  userDetails={userDetails}
+                  renderStars={renderStarsHelper}
+                  formatCommentDate={formatCommentDateHelper}
+                  loadComments={() => refreshExperience()}
+                  commentsTargetType="experience"
+                />
+              ))}
+            </div>
+          </Suspense>
+        ) : (
+          <p className="mt-3 text-base text-slate-600">No comments yet for this experience.</p>
+        )}
+      </div>
+    </div>
+  );
+
   return (
-    <div className="container mx-auto px-4 py-6">
+    <div className={detailsMetadata.template === 'food-tour' ? 'w-full py-6' : 'container mx-auto px-4 py-6'}>
       {detailsMetadata.template === 'party' ? (
         <PartyExperienceTemplate
           experience={experienceData}
@@ -422,6 +515,7 @@ const ExperienceDetails = ({ previewData = null, isPreview = false }) => {
           experience={experienceData}
           metadata={detailsMetadata}
           booking={booking}
+          reviews={renderReviews()}
           onSelectOrganizer={setSelectedOrganizer}
           onOpenGallery={openGallery}
         />
@@ -545,104 +639,7 @@ const ExperienceDetails = ({ previewData = null, isPreview = false }) => {
             </div>
           </div>
 
-        <div className="order-6 lg:order-5 lg:col-start-1 mt-8">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-2xl font-semibold text-slate-800 flex items-center gap-2">
-                <FontAwesomeIcon icon={faStar} className="text-amber-500" />
-                {Number(experienceData.ratings || 0).toFixed(2)} ({experienceData.commentCount || 0})
-              </h2>
-              {comments.length > 6 && (
-                <button
-                  onClick={() => setIsCommentsModalOpen(true)}
-                  className="text-base text-blue-600 hover:underline font-semibold"
-                >
-                  Show All Reviews
-                </button>
-              )}
-            </div>
-
-            <div className="mt-4">
-              {!userDetails ? (
-                <GuestCommentPrompt />
-              ) : justPostedReview ? (
-                <div className="transition-opacity duration-300">
-                  <div className="bg-green-50 border border-green-400 text-green-800 p-4 rounded mb-4">
-                    Thank you for your review!
-                  </div>
-                  <Suspense fallback={null}>
-                    <FullCommentCard
-                      comment={{ ...justPostedReview, commenter: userDetails, target: { type: 'experience', id: experienceData.id, name: experienceData.title } }}
-                      userDetails={userDetails}
-                      renderStars={renderStarsHelper}
-                      formatCommentDate={formatCommentDateHelper}
-                      loadComments={() => {
-                        setJustPostedReview(null);
-                        setReviewEligibility({ eligible: true, recentReview: null });
-                        refreshExperience();
-                      }}
-                      commentsTargetType="experience"
-                    />
-                  </Suspense>
-                </div>
-              ) : !reviewEligibility.eligible && reviewEligibility.recentReview ? (
-                <div className="transition-opacity duration-300">
-                  <div className="bg-blue-50 border border-blue-400 text-blue-800 p-4 rounded mb-4">
-                    You have already recently posted a review for this experience.
-                  </div>
-                  <Suspense fallback={null}>
-                    <FullCommentCard
-                      comment={{ ...reviewEligibility.recentReview, target: { type: 'experience', id: experienceData.id, name: experienceData.title } }}
-                      userDetails={userDetails}
-                      renderStars={renderStarsHelper}
-                      formatCommentDate={formatCommentDateHelper}
-                      loadComments={() => {
-                        setReviewEligibility({ eligible: true, recentReview: null });
-                        refreshExperience();
-                      }}
-                      commentsTargetType="experience"
-                    />
-                  </Suspense>
-                </div>
-              ) : (
-                <Suspense fallback={null}>
-                  <AddCommentForm
-                    commentableType="experience"
-                    commentableId={experienceData.id}
-                    uploaderUserId={userDetails?.id}
-                    onSuccess={(data) => {
-                      setJustPostedReview(data);
-                      refreshExperience();
-                    }}
-                    onCancel={() => {}}
-                  />
-                </Suspense>
-              )}
-
-              {comments.length > 0 ? (
-                <Suspense fallback={null}>
-                  <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {commentsPreview.map((comment) => (
-                      <FullCommentCard
-                        key={comment.id}
-                        comment={{
-                          ...comment,
-                          commenter: comment.commenter || comment.user,
-                          target: comment.target || { type: 'experience', id: experienceData.id, name: experienceData.title },
-                        }}
-                        userDetails={userDetails}
-                        renderStars={renderStarsHelper}
-                        formatCommentDate={formatCommentDateHelper}
-                        loadComments={() => refreshExperience()}
-                        commentsTargetType="experience"
-                      />
-                    ))}
-                  </div>
-                </Suspense>
-              ) : (
-                <p className="mt-3 text-base text-slate-600">No comments yet for this experience.</p>
-              )}
-            </div>
-          </div>
+        {renderReviews()}
       </div>
       )}
 
