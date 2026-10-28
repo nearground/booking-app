@@ -65,6 +65,8 @@ describe('additive experience showcase scenario', () => {
     test('food and default tours are bookable with paid tickets and recurring future sessions', () => {
         const graph = generateScenario(options);
         const food = byType(graph, 'experiences').find(({ attributes }) => attributes.detailsMetadata.template === 'food-tour');
+        const pitillal = byType(graph, 'experiences').find(({ attributes }) => attributes.title === 'Pitillal Food Tours');
+        const pitillalLocation = byType(graph, 'location').find(({ key }) => key === 'showcase-location-food-pitillal');
         const defaults = byType(graph, 'experiences').find(({ attributes }) => attributes.detailsMetadata.template === 'default');
         const foodReviews = byType(graph, 'comments').filter(({ refs }) => refs.CommentableId === food.key);
         const now = new Date(`${clock}T00:00:00.000Z`);
@@ -76,7 +78,32 @@ describe('additive experience showcase scenario', () => {
             heroEyebrow: 'A taste of old town Vallarta',
             reviewsHeading: 'Stories from the table',
         }));
+        expect(food.attributes.detailsMetadata.overrides.commentsDisabled).toBe(true);
         expect(food.attributes.images).toEqual([]);
+        expect(pitillal.refs.OrganizationId).toBe(food.refs.OrganizationId);
+        expect(pitillal.attributes.detailsMetadata.template).toBe('food-tour');
+        expect(pitillal.attributes.duration).toBe(150);
+        expect(pitillalLocation.attributes).toMatchObject({
+            name: 'Pitillal Market Meeting Point',
+            street: 'Benito Juarez, El Pitillal',
+            city: 'Puerto Vallarta',
+        });
+        const [longitude, latitude] = pitillalLocation.attributes.coordinates.coordinates;
+        expect(longitude).toBeCloseTo(-105.2194, 2);
+        expect(latitude).toBeCloseTo(20.6671, 2);
+        const pitillalSchedule = byType(graph, 'schedules').find(({ refs }) => refs.ExperienceId === pitillal.key);
+        expect(pitillalSchedule.attributes.ruleCron).toBe('0 9 * * 5');
+        const pitillalSessions = byType(graph, 'sessions').filter(({ refs }) => refs.ExperienceId === pitillal.key);
+        expect(pitillalSessions.length).toBeGreaterThan(0);
+        expect(pitillalSessions.every(({ attributes }) => {
+            const date = new Date(attributes.dateTime);
+            return new Intl.DateTimeFormat('en-US', {
+                timeZone: 'America/Mexico_City',
+                weekday: 'short',
+                hour: '2-digit',
+                hour12: false,
+            }).format(date).startsWith('Fri, 09');
+        })).toBe(true);
         expect(defaults.attributes.title).toBe('Los Arcos Coastal Sightseeing Tour');
         expect(defaults.attributes.detailsMetadata.overrides.copy.galleryLabel).toBe('Explore coastal tour photos');
         expect(defaults.attributes.images).toEqual([]);

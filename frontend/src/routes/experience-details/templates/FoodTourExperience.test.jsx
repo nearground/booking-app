@@ -62,6 +62,16 @@ describe('FoodTourExperience', () => {
     expect(screen.queryByRole('region', { name: 'Pinned experience comments' })).not.toBeInTheDocument();
   });
 
+  test('hides rating and review content when comments are disabled', () => {
+    render(<FoodTourExperience
+      experience={{ ...experience, ratings: '5.00', commentCount: 3 }}
+      metadata={{ version: 1, template: 'food-tour', overrides: { commentsDisabled: true } }}
+      reviews={<p>Log in to comment</p>}
+    />);
+    expect(screen.queryByTestId('experience-details__rating')).not.toBeInTheDocument();
+    expect(screen.queryByText('Log in to comment')).not.toBeInTheDocument();
+  });
+
   test('integrates resolved backend media keys, booking, compact organizers and ordered pin IDs', () => {
     const organizer = { id: 8, name: 'Sofia', description: 'A market chef.' };
     const onSelectOrganizer = vi.fn();

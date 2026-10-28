@@ -9,7 +9,7 @@ vi.mock('./templates/EventExperience', () => ({
   default: ({ experience }) => <div data-testid="event-template">{experience.title}</div>,
 }));
 vi.mock('./templates/FoodTourExperience', () => ({
-  default: ({ experience, booking, reviews }) => <div data-testid="food-tour-template">{experience.title}{booking}<div data-testid="reviews-slot">{reviews}</div></div>,
+  default: ({ experience, booking, reviews, presentation, commentsDisabled }) => <div data-testid="food-tour-template" data-widescreen-hero={presentation?.widescreenHero || false} data-comments-disabled={commentsDisabled || false}>{experience.title}{booking}<div data-testid="reviews-slot">{commentsDisabled ? null : reviews}</div></div>,
 }));
 vi.mock('../../components/scheduled-experiences-list/ScheduledExperiencesList', () => ({
   default: () => <div data-testid="session-calendar" />,
@@ -37,6 +37,36 @@ const renderDetails = (detailsMetadata, comments = []) => render(
   </AuthContext.Provider>
 );
 
+const renderOrganizationExperienceDetails = (detailsMetadata) => render(
+  <AuthContext.Provider value={{ userDetails: null }}>
+    <MemoryRouter>
+      <ExperienceDetails
+        isPreview
+        isOrganizationEmbed
+        previewData={{
+          id: 1, title: 'Template preview', description: 'Description',
+          detailsMetadata, comments: [], organizers: [], images: [],
+        }}
+      />
+    </MemoryRouter>
+  </AuthContext.Provider>
+);
+
+const renderEventDetails = () => render(
+  <AuthContext.Provider value={{ userDetails: null }}>
+    <MemoryRouter>
+      <ExperienceDetails
+        isPreview
+        previewData={{
+          id: 1, title: 'Template preview', description: 'Description',
+          detailsMetadata: { version: 1, template: 'event', overrides: {} },
+          comments: [], organizers: [], images: [],
+        }}
+      />
+    </MemoryRouter>
+  </AuthContext.Provider>
+);
+
 test.each([undefined, { version: 99, template: 'food-tour' }])(
   'missing/unsupported metadata keeps the existing gallery and calendar', (metadata) => {
     renderDetails(metadata);
@@ -52,6 +82,13 @@ test('event dispatch does not render the shared date picker or organizer bios', 
   expect(screen.getByTestId('event-template')).toHaveTextContent('Template preview');
   expect(screen.queryByTestId('session-calendar')).not.toBeInTheDocument();
   expect(screen.queryByText('Hosted By')).not.toBeInTheDocument();
+});
+
+test('event display is full width without the default page inset wrapper', () => {
+  const { getByTestId } = renderEventDetails();
+  const eventTemplate = getByTestId('event-template');
+  expect(eventTemplate.parentElement).toHaveClass('w-full');
+  expect(eventTemplate.parentElement).not.toHaveClass('container', 'px-4', 'py-6');
 });
 
 test('pinned five-star reviews render on the event template', () => {
@@ -82,6 +119,11 @@ test('food-tour dispatch receives the existing booking component', () => {
   expect(screen.getByTestId('food-tour-template').parentElement).not.toHaveClass('container');
 });
 
+test('organization food-tour details request a widescreen hero', () => {
+  renderOrganizationExperienceDetails({ version: 1, template: 'food-tour', overrides: {} });
+  expect(screen.getByTestId('food-tour-template')).toHaveAttribute('data-widescreen-hero', 'true');
+});
+
 test('food-tour ordinary review preview excludes pinned reviews without removing its review workflow', async () => {
   renderDetails({ version: 1, template: 'food-tour', overrides: { pinnedCommentIds: [1] } }, [
     { id: 1, stars: 5, comment: 'Pinned review' },
@@ -90,4 +132,14 @@ test('food-tour ordinary review preview excludes pinned reviews without removing
   expect(await screen.findByTestId('comment-2')).toHaveTextContent('Ordinary review');
   expect(screen.queryByTestId('comment-1')).not.toBeInTheDocument();
   expect(screen.getByTestId('guest-review-prompt')).toBeInTheDocument();
+});
+
+test('disabled food-tour comments hide rating stats and the login/review workflow', () => {
+  renderDetails({ version: 1, template: 'food-tour', overrides: { commentsDisabled: true } }, [
+    { id: 1, stars: 5, comment: 'A pinned review' },
+  ]);
+  expect(screen.getByTestId('food-tour-template')).toHaveAttribute('data-comments-disabled', 'true');
+  expect(screen.queryByTestId('experience-details__rating')).not.toBeInTheDocument();
+  expect(screen.queryByTestId('guest-review-prompt')).not.toBeInTheDocument();
+  expect(screen.queryByTestId('reviews-slot')).toBeEmptyDOMElement();
 });

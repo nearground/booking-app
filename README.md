@@ -152,7 +152,7 @@ remain intact. Three additional organizations demonstrate the experience templat
 | URL | Showcase |
 | --- | --- |
 | `/o/house-party` | Free private-venue parties, single evening sessions, and opted-in guest lists |
-| `/o/food-tours` | Food tour with uploaded hero video, poster, and pinned guest reviews |
+| `/o/food-tours` | Food Tours home and experience tabs for Old Town Taco Tour and Friday-morning Pitillal Food Tours |
 | `/o/default-tours` | Coastal tour with the default uploaded-photo carousel |
 
 Showcase media is uploaded to the local R2 worker, so `R2_DEV_TOKEN` must be

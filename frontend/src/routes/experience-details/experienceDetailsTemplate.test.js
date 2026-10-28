@@ -5,6 +5,10 @@ describe('experience template resolution', () => {
     expect(resolveDetailsMetadata({ version: 1, template: 'party', overrides: {} }))
       .toEqual({ version: 1, template: 'event', overrides: {} });
   });
+  test('preserves the comments-disabled setting', () => {
+    expect(resolveDetailsMetadata({ version: 1, template: 'food-tour', overrides: { commentsDisabled: true } }))
+      .toEqual({ version: 1, template: 'food-tour', overrides: { commentsDisabled: true } });
+  });
   test.each([undefined, null, {}, { version: 2, template: 'event' }, { version: 1, template: 'injected' }])(
     'retains default layout for unsupported metadata %j', (value) => {
       expect(resolveDetailsMetadata(value)).toEqual({ version: 1, template: 'default', overrides: {} });

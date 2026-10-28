@@ -45,12 +45,15 @@ const FoodTourExperience = ({
   onSelectOrganizer,
   onOpenGallery,
   showPinnedComments = true,
+  commentsDisabled: commentsDisabledProp = false,
 }) => {
   const ux = presentation.uxOverrides || {};
-  const copy = resolveTemplateCopy(metadata || experience.detailsMetadata, 'food-tour');
-  const media = resolveDetailsMedia(metadata || experience.detailsMetadata);
+  const resolvedMetadata = metadata || experience.detailsMetadata;
+  const commentsDisabled = commentsDisabledProp || resolvedMetadata?.overrides?.commentsDisabled === true;
+  const copy = resolveTemplateCopy(resolvedMetadata, 'food-tour');
+  const media = resolveDetailsMedia(resolvedMetadata);
   const pinnedComments = selectFoodTourPinnedComments(
-    presentation.pinnedComments || selectPinnedComments(experience.comments, metadata || experience.detailsMetadata)
+    presentation.pinnedComments || selectPinnedComments(experience.comments, resolvedMetadata)
   );
   const brandFont = presentation.brandFont || experience.Organization?.font;
   const primaryColor = experience.Organization?.primaryColor;
@@ -62,6 +65,7 @@ const FoodTourExperience = ({
     ACCENT_CLASSES[ux.accent] || ACCENT_CLASSES.terracotta,
     ux.density === 'compact' ? 'food-tour-experience--compact' : '',
     ux.corners === 'square' ? 'food-tour-experience--square' : '',
+    presentation.widescreenHero ? 'food-tour-experience--widescreen-hero' : '',
   ].filter(Boolean).join(' ');
 
   return (
@@ -90,9 +94,11 @@ const FoodTourExperience = ({
         {children ?? (
           <div className="food-tour-details">
             <div>
-              <p className="food-tour-details__rating" data-testid="experience-details__rating">
-                ★ {Number(experience.ratings || 0).toFixed(2)} ({experience.commentCount || 0} comments)
-              </p>
+              {!commentsDisabled ? (
+                <p className="food-tour-details__rating" data-testid="experience-details__rating">
+                  ★ {Number(experience.ratings || 0).toFixed(2)} ({experience.commentCount || 0} comments)
+                </p>
+              ) : null}
               <section aria-label="Tour description">
                 <h2>{copy.descriptionHeading}</h2>
                 {(experience.description || copy.descriptionFallback)
@@ -125,7 +131,7 @@ const FoodTourExperience = ({
             <aside aria-label={copy.bookingLabel}>{booking}</aside>
           </div>
         )}
-        {reviews}
+        {commentsDisabled ? null : reviews}
       </div>
       {showPinnedComments && pinnedComments.length > 0 ? (
         <PinnedExperienceComments

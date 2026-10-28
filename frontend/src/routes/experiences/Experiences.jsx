@@ -4,8 +4,10 @@ import { networkAdapter } from 'services/NetworkAdapter';
 import { useState, useEffect, useCallback } from 'react';
 import { MAX_GUESTS_INPUT_VALUE } from 'utils/constants';
 import ResultsContainer from 'components/results-container/ResultsContainer';
+import ExperienceMap from './ExperienceMap';
+import { filterExperiencesForTab } from './experienceDiscovery';
 import { formatDate } from 'utils/date-helpers';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import _debounce from 'lodash/debounce';
 
 /**
@@ -14,6 +16,10 @@ import _debounce from 'lodash/debounce';
  */
 const Experiences = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const [searchParams] = useSearchParams();
+  const isExperienceMapVisible = searchParams.get('map') === '1';
+  const isEventView = location.pathname === '/events';
 
   // State variables
   const [isDatePickerVisible, setisDatePickerVisible] = useState(false);
@@ -131,15 +137,19 @@ const Experiences = () => {
         });
       }
       if (experiencesResultsResponse && experiencesResultsResponse.data) {
+        const viewElements = filterExperiencesForTab(
+          experiencesResultsResponse.data.elements,
+          isEventView ? 'events' : 'experiences'
+        );
         setHotelsResults({
           isLoading: false,
-          data: experiencesResultsResponse.data.elements,
+          data: viewElements,
           errors: experiencesResultsResponse.errors,
         });
       }
     };
     getInitialData();
-  }, []);
+  }, [isEventView]);
 
   return (
     <>
@@ -157,10 +167,11 @@ const Experiences = () => {
         onSearchButtonAction={onSearchButtonAction}
       />
       <div className="container mx-auto">
+        {isExperienceMapVisible ? <ExperienceMap experienceType={isEventView ? 'event' : 'experience'} /> : null}
         {/* <PopularLocations popularDestinationsData={popularDestinationsData} /> */}
         <div className="my-8">
           <h2 className="text-3xl font-medium text-slate-700 text-center my-2">
-            Explore nearby experiences
+            {isEventView ? 'Explore upcoming events' : 'Explore nearby experiences'}
           </h2>
           <ResultsContainer
             hotelsResults={experiencesResults} //TODO: rename prop to experiencesResults

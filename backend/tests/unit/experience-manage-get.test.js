@@ -296,7 +296,7 @@ describe('getExperienceForEdit', () => {
     test('persists and returns valid metadata for an authorized update', async () => {
       const { updateExperience } = await import('../../server/controllers/ExperienceManage.controller.js');
       const metadata = { version: 1, template: 'food-tour', overrides: { pinnedCommentIds: [9, 8, 7] } };
-      const record = { id: 10, OrganizationId: 3 };
+      const record = { id: 10, OrganizationId: 3, detailsMetadata: metadata };
       record.update = jest.fn(async (payload) => Object.assign(record, payload));
       mockFindByPk.mockResolvedValue(record);
       mockFindOne.mockResolvedValue({ isAdmin: true });
@@ -319,6 +319,29 @@ describe('getExperienceForEdit', () => {
       expect(res.status).toHaveBeenCalledWith(200);
       expect(record.update).toHaveBeenCalledWith({}, expect.any(Object));
       expect(record.detailsMetadata).toEqual(metadata);
+    });
+
+    test('rejects changing the details template after creation', async () => {
+      const { updateExperience } = await import('../../server/controllers/ExperienceManage.controller.js');
+      const record = {
+        id: 10,
+        OrganizationId: 3,
+        detailsMetadata: { version: 1, template: 'food-tour', overrides: {} },
+        update: jest.fn(),
+      };
+      mockFindByPk.mockResolvedValue(record);
+      mockFindOne.mockResolvedValue({ isAdmin: true });
+      const res = mockRes();
+
+      await updateExperience({ params: { experienceId: '10' }, user: { id: 1 }, body: {
+        detailsMetadata: { version: 1, template: 'default', overrides: {} },
+      } }, res);
+
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
+        errors: expect.arrayContaining(['Experience details template cannot be changed after creation']),
+      }));
+      expect(record.update).not.toHaveBeenCalled();
     });
   });
 

@@ -68,7 +68,7 @@ const OrganizerCard = React.memo(({ organizer, onSelect }) => {
   );
 });
 
-const ExperienceDetails = ({ previewData = null, isPreview = false }) => {
+const ExperienceDetails = ({ previewData = null, isPreview = false, isOrganizationEmbed = false }) => {
   const { experienceId } = useParams();
   const mapSectionRef = useRef(null);
   const [isCommentsModalOpen, setIsCommentsModalOpen] = useState(false); // Add state for comments modal
@@ -192,7 +192,7 @@ const ExperienceDetails = ({ previewData = null, isPreview = false }) => {
   };
 
   useEffect(() => {
-    if (!experienceData?.id || !userDetails) return;
+    if (!experienceData?.id || !userDetails || detailsMetadata.overrides.commentsDisabled) return;
     const checkEligibility = async () => {
       try {
         const resp = await networkAdapter.get(`/api/comments/eligibility?commentableType=experience&commentableId=${experienceData.id}`);
@@ -202,7 +202,7 @@ const ExperienceDetails = ({ previewData = null, isPreview = false }) => {
       } catch (e) { /* ignore */ }
     };
     checkEligibility();
-  }, [experienceData?.id, userDetails]);
+  }, [detailsMetadata.overrides.commentsDisabled, experienceData?.id, userDetails]);
 
   const renderStarsHelper = (count) =>
     Array.from({ length: Math.round(count || 0) })
@@ -413,7 +413,9 @@ const ExperienceDetails = ({ previewData = null, isPreview = false }) => {
     </>
   );
 
+  const commentsDisabled = detailsMetadata.overrides.commentsDisabled === true;
   const renderReviews = () => (
+    commentsDisabled ? null : (
     <div className="order-6 lg:order-5 lg:col-start-1 mt-8">
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-2xl font-semibold text-slate-800 flex items-center gap-2">
@@ -501,10 +503,15 @@ const ExperienceDetails = ({ previewData = null, isPreview = false }) => {
         )}
       </div>
     </div>
+    )
   );
 
   return (
-    <div className={detailsMetadata.template === 'food-tour' ? 'w-full py-6' : 'container mx-auto px-4 py-6'}>
+    <div className={detailsMetadata.template === 'event'
+      ? 'w-full'
+      : detailsMetadata.template === 'food-tour'
+        ? (isOrganizationEmbed ? 'w-full' : 'w-full py-6')
+        : 'container mx-auto px-4 py-6'}>
       {detailsMetadata.template === 'event' ? (
         <EventExperienceTemplate
           experience={experienceData}
@@ -523,6 +530,8 @@ const ExperienceDetails = ({ previewData = null, isPreview = false }) => {
           onSelectOrganizer={setSelectedOrganizer}
           onOpenGallery={openGallery}
           showPinnedComments={false}
+          commentsDisabled={commentsDisabled}
+          presentation={{ widescreenHero: isOrganizationEmbed }}
         />
       ) : (
       <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_360px] gap-4 lg:gap-6">

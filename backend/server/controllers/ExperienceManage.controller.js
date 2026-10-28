@@ -522,6 +522,10 @@ const updateExperience = async (req, res) => {
         if (req.body.detailsMetadata !== undefined) {
             const { metadata, errors } = normalizeDetailsMetadata(req.body.detailsMetadata);
             updatePayloadErrors.push(...errors);
+            const currentTemplate = normalizeDetailsMetadata(experience.detailsMetadata).metadata.template;
+            if (metadata.template !== currentTemplate) {
+                updatePayloadErrors.push('Experience details template cannot be changed after creation');
+            }
             updatePayload.detailsMetadata = metadata;
         }
 

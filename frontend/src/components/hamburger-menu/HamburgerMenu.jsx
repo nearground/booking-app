@@ -3,6 +3,7 @@ import { useContext, useRef } from 'react';
 import useModalAccessibility from 'components/ux/modal/useModalAccessibility';
 import { AuthContext } from 'contexts/AuthContext';
 import { networkAdapter } from 'services/NetworkAdapter';
+import ExperienceNavItem from 'components/navbar-items/ExperienceNavItem';
 
 /**
  * HamburgerMenu Component
@@ -53,6 +54,7 @@ const HamburgerMenu = (props) => {
         tabIndex={-1}
         className="absolute right-0 top-0 max-h-[calc(100dvh-env(safe-area-inset-top)-env(safe-area-inset-bottom))] w-80 max-w-[calc(100vw-env(safe-area-inset-left)-env(safe-area-inset-right))] overflow-y-auto rounded-bl-2xl border border-white/20 bg-brand pt-[max(4.5rem,calc(env(safe-area-inset-top)+1rem))] shadow-2xl">
         <ul className="list-none my-4 px-4 space-y-3">
+          <ExperienceNavItem onHamburgerMenuToggle={onHamburgerMenuToggle} compact />
           {!isAuthenticated && (
             <li>
               <Link

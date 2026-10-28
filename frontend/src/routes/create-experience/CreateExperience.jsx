@@ -2287,16 +2287,32 @@ const CreateExperience = ({ mode = 'create', experienceData = null }) => {
             />
           </div>
           <div>
-            <label htmlFor="experience-details-template" className="block text-xs font-medium text-slate-700 mb-1">Details template</label>
-            <select
-              id="experience-details-template"
-              className="border rounded px-3 py-2 w-full"
-              value={formData.detailsMetadata.template}
-              onChange={(event) => setField('detailsMetadata', { ...formData.detailsMetadata, template: event.target.value })}
+            <label
+              htmlFor={isEditMode ? undefined : 'experience-details-template'}
+              className="block text-xs font-medium text-slate-700 mb-1"
             >
-              {EXPERIENCE_DETAILS_TEMPLATES.map(({ value, label }) => <option key={value} value={value}>{label}</option>)}
-            </select>
-            <p className="mt-1 text-xs text-slate-500">Event uses one occurrence with free or paid ticket tiers. Food tour uses uploaded hero media. Pinned reviews can be used with any template.</p>
+              Details template
+            </label>
+            {isEditMode ? (
+              <>
+                <p className="border rounded px-3 py-2 w-full bg-slate-100 text-slate-700" aria-label="Details template">
+                  {EXPERIENCE_DETAILS_TEMPLATES.find(({ value }) => value === formData.detailsMetadata.template)?.label || 'Default'}
+                </p>
+                <p className="mt-1 text-xs text-slate-500">The template is fixed after this experience is created.</p>
+              </>
+            ) : (
+              <>
+                <select
+                  id="experience-details-template"
+                  className="border rounded px-3 py-2 w-full"
+                  value={formData.detailsMetadata.template}
+                  onChange={(event) => setField('detailsMetadata', { ...formData.detailsMetadata, template: event.target.value })}
+                >
+                  {EXPERIENCE_DETAILS_TEMPLATES.map(({ value, label }) => <option key={value} value={value}>{label}</option>)}
+                </select>
+                <p className="mt-1 text-xs text-slate-500">Event uses one occurrence with free or paid ticket tiers. Food tour uses uploaded hero media. Pinned reviews can be used with any template.</p>
+              </>
+            )}
           </div>
           <details className="md:col-span-2 rounded border border-slate-200 bg-slate-50 p-3">
             <summary className="cursor-pointer font-medium text-slate-700">Customize template text</summary>

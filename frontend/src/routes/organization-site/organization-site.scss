@@ -47,6 +47,12 @@
 .org-site-section-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 1.5rem; scroll-margin-top: 1.5rem; }
 .org-site-section-heading .org-site-section-title { margin-bottom: 0; }
 .org-site-eyebrow { margin: 0 0 .6rem; font-size: .75rem; text-transform: uppercase; letter-spacing: .12em; color: #526170; }
+.org-site-tabs { position: sticky; z-index: 3; top: 0; border-bottom: 1px solid #e2e8f0; background: rgb(255 255 255 / 96%); backdrop-filter: blur(12px); }
+.org-site-tab-list { display: flex; justify-content: center; gap: .5rem; width: min(100% - 2rem, 1120px); margin: 0 auto; overflow-x: auto; }
+.org-site-tab { flex: 0 0 auto; min-height: 52px; padding: .8rem 1rem; border: 0; border-bottom: 3px solid transparent; background: transparent; color: #526170; font: inherit; font-weight: 700; cursor: pointer; }
+.org-site-tab[aria-selected="true"] { border-bottom-color: var(--org-primary); color: var(--org-primary); }
+.org-site-experience-panel { width: 100%; padding: 0; }
+.org-site-tour-details { padding: 0; border: 0; border-radius: 0; background: transparent; box-shadow: none; }
 .org-site-count { color: #526170; font-size: .9rem; }
 .org-site-card { border: 1px solid #e8ebee; }
 .org-site-card-content { padding: 1.5rem; }
@@ -56,6 +62,7 @@
   .org-site-carousel-title { display: none; }
   .org-site-brand h1 { overflow-wrap: anywhere; }
   .org-site-main { padding-top: 2rem; }
+  .org-site-tab-list { justify-content: flex-start; }
 }
 @media (prefers-reduced-motion: reduce) {
   .org-site *, .org-site *::before, .org-site *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }

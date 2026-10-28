@@ -50,13 +50,31 @@ export function generateScenario({ scenario, seed = `pv-${scenario}-v1`, clock, 
         links.push({ key: `org-${i}`, refs: { LocationId: `location-${i}` } });
     }
     const ownership = scenario === 'startup' ? [0] : [0, 1, 2, 0, 0, 1, 2];
-    ownership.forEach((org, i) => add('location', `location-${i}`, {
-        name: scenario === 'startup' ? 'Martin LLC HQ' : `Test Location ${i + 1}`,
-        coordinates: { type: 'Point', coordinates: [-105.21986 + rng.number.float({ min: -0.006, max: 0.006 }), 20.64453 + rng.number.float({ min: -0.006, max: 0.006 })] },
-        country: 'Mexico', state: 'Jalisco', city: 'Puerto Vallarta',
-        street: scenario === 'startup' ? 'Flamingo 139' : `Test Street ${i + 1}`,
-        zipCode: '48328', timezone,
-    }, { OrganizationId: `org-${org}` }));
+    const demoLocations = [
+        { name: 'Centro Puerto Vallarta Meeting Point', street: 'Morelos, Centro', coordinates: [-105.238, 20.610] },
+        { name: 'Zona Romantica Meeting Point', street: 'Basilio Badillo, Emiliano Zapata', coordinates: [-105.2355, 20.6088] },
+        { name: 'Marina Vallarta Meeting Point', street: 'Paseo de la Marina, Marina Vallarta', coordinates: [-105.250, 20.662] },
+        { name: 'Sierra Ridge Trailhead', street: 'Paso Ancho, Puerto Vallarta', coordinates: [-105.202, 20.640] },
+        { name: 'Centro Rooftop Mixology Studio', street: 'Morelos, Centro', coordinates: [-105.232, 20.612] },
+        { name: 'Los Muertos Pier Meeting Point', street: 'Playa Los Muertos, Emiliano Zapata', coordinates: [-105.2393, 20.6006] },
+        { name: 'Old Town Taco Route Meeting Point', street: 'Constitucion, Emiliano Zapata', coordinates: [-105.2364, 20.6085] },
+    ];
+    ownership.forEach((org, i) => {
+        const demoLocation = demoLocations[i];
+        const coordinates = scenario === 'startup'
+            ? [-105.21986 + rng.number.float({ min: -0.006, max: 0.006 }), 20.64453 + rng.number.float({ min: -0.006, max: 0.006 })]
+            : [
+                demoLocation.coordinates[0] + rng.number.float({ min: -0.0004, max: 0.0004 }),
+                demoLocation.coordinates[1] + rng.number.float({ min: -0.0004, max: 0.0004 }),
+            ];
+        add('location', `location-${i}`, {
+            name: scenario === 'startup' ? 'Martin LLC HQ' : demoLocation.name,
+            coordinates: { type: 'Point', coordinates },
+            country: 'Mexico', state: 'Jalisco', city: 'Puerto Vallarta',
+            street: scenario === 'startup' ? 'Flamingo 139' : demoLocation.street,
+            zipCode: '48328', timezone,
+        }, { OrganizationId: `org-${org}` });
+    });
     const members = scenario === 'startup' ? 1 : 25;
     for (let i = 0; i < members; i += 1) {
         const isReset = i === 24;
@@ -180,7 +198,7 @@ function generateShowcaseScenario({ seed, now, passwordHash }) {
             font: 'lato',
             layoutTemplate: 'editorial',
             tagline: 'Taste the neighborhood with local food lovers',
-            about: 'Meet the cooks, discover neighborhood taquerias and share the flavors of Puerto Vallarta with our small-group food tours.',
+            about: 'For years, our local guides have introduced visitors to Puerto Vallarta through its neighborhood kitchens, family-run taquerias, and market stalls. We bring that experience to every small-group tour, sharing the stories and flavors that make each part of the city unique.',
             owner: 'showcase-user-food',
             location: 'showcase-location-food',
         },
@@ -221,18 +239,25 @@ function generateShowcaseScenario({ seed, now, passwordHash }) {
     }
 
     const locations = [
-        { key: 'showcase-location-party', organization: 'showcase-org-house-party', name: 'House Party Rooftop' },
-        { key: 'showcase-location-party-bar', organization: 'showcase-org-house-party', name: 'House Party Bar' },
-        { key: 'showcase-location-food', organization: 'showcase-org-food-tours', name: 'Old Town Taco Route' },
-        { key: 'showcase-location-default', organization: 'showcase-org-default-tours', name: 'Los Arcos Meeting Point' },
+        { key: 'showcase-location-party', organization: 'showcase-org-house-party', name: 'House Party Rooftop', street: 'Basilio Badillo, Zona Romantica', coordinates: [-105.2355, 20.6088] },
+        { key: 'showcase-location-party-bar', organization: 'showcase-org-house-party', name: 'House Party Bar', street: 'Lazaro Cardenas, Zona Romantica', coordinates: [-105.2332, 20.6104] },
+        { key: 'showcase-location-food', organization: 'showcase-org-food-tours', name: 'Old Town Taco Route', street: 'Constitucion, Emiliano Zapata', coordinates: [-105.2364, 20.6085] },
+        { key: 'showcase-location-default', organization: 'showcase-org-default-tours', name: 'Los Muertos Pier Meeting Point', street: 'Playa Los Muertos, Emiliano Zapata', coordinates: [-105.2393, 20.6006] },
+        { key: 'showcase-location-food-pitillal', organization: 'showcase-org-food-tours', name: 'Pitillal Market Meeting Point', street: 'Benito Juarez, El Pitillal', coordinates: [-105.2194, 20.6671] },
     ];
-    locations.forEach((location, index) => add('location', location.key, {
+    locations.forEach((location) => add('location', location.key, {
         name: location.name,
-        coordinates: { type: 'Point', coordinates: [-105.21986 + rng.number.float({ min: -0.003, max: 0.003 }), 20.64453 + rng.number.float({ min: -0.003, max: 0.003 })] },
+        coordinates: {
+            type: 'Point',
+            coordinates: [
+                location.coordinates[0] + rng.number.float({ min: -0.0004, max: 0.0004 }),
+                location.coordinates[1] + rng.number.float({ min: -0.0004, max: 0.0004 }),
+            ],
+        },
         country: 'Mexico',
         state: 'Jalisco',
         city: 'Puerto Vallarta',
-        street: `${index + 1} Showcase Way`,
+        street: location.street,
         zipCode: '48328',
         timezone,
     }, { OrganizationId: location.organization }));
@@ -349,6 +374,7 @@ function generateShowcaseScenario({ seed, now, passwordHash }) {
                 bookingLabel: 'Choose a taco tour session',
                 reviewsHeading: 'Stories from the table',
             },
+            commentsDisabled: true,
             locationKey: 'showcase-location-food',
             cron: '0 9,13,17 * * 1,3,5',
             prices: [59.99, 44.99, 32.99, 17.99],
@@ -376,6 +402,30 @@ function generateShowcaseScenario({ seed, now, passwordHash }) {
             cron: '0 9,13,17 * * 1,3,5',
             prices: [64.99, 49.99, 34.99, 19.99],
         },
+        {
+            key: 'showcase-experience-food-pitillal',
+            organization: 'showcase-org-food-tours',
+            location: 'showcase-location-food-pitillal',
+            owner: 'showcase-user-food',
+            title: 'Pitillal Food Tours',
+            subtitle: 'A Friday-morning tasting walk through Pitillal',
+            description: 'Explore Pitillal through its busy market, neighborhood kitchens, and family-run food stands. Meet local vendors, sample regional favorites, and hear how everyday ingredients and cooking traditions shape this lively part of Puerto Vallarta.',
+            capacity: 12,
+            duration: 150,
+            thumbnail: null,
+            images: [],
+            userQuestionnary: [{ questionKey: 'ready_to_have_fun', prompt: 'Ready to have fun???', required: false }],
+            template: 'food-tour',
+            copy: {
+                heroEyebrow: 'A taste of Pitillal',
+                galleryButton: 'See the Pitillal route',
+                bookingLabel: 'Choose a Pitillal tour session',
+                reviewsHeading: 'Stories from the neighborhood',
+            },
+            locationKey: 'showcase-location-food-pitillal',
+            cron: '0 9 * * 5',
+            prices: [54.99, 42.99, 31.99, 17.99],
+        },
     ];
     const eventStart = CronExpressionParser.parse('0 20 * * *', {
         currentDate: new Date(now.getTime() + 7 * 86400000),
@@ -399,7 +449,10 @@ function generateShowcaseScenario({ seed, now, passwordHash }) {
             detailsMetadata: {
                 version: 1,
                 template: experience.template,
-                overrides: experience.copy ? { copy: experience.copy } : {},
+                overrides: {
+                    ...(experience.copy ? { copy: experience.copy } : {}),
+                    ...(experience.commentsDisabled ? { commentsDisabled: true } : {}),
+                },
             },
         }, {
             OrganizationId: experience.organization,

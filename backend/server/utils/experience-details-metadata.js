@@ -19,10 +19,14 @@ export const normalizeDetailsMetadata = (value) => {
     if (!EXPERIENCE_DETAILS_TEMPLATES.includes(template)) errors.push('detailsMetadata.template is unsupported');
     const overrides = value.overrides === undefined ? {} : value.overrides;
     if (!isRecord(overrides)) return { metadata: fallback, errors: [...errors, 'detailsMetadata.overrides must be an object'] };
-    if (Object.keys(overrides).some((key) => !['heroVideoKey', 'heroPosterKey', 'pinnedCommentIds', 'copy'].includes(key))) {
+    if (Object.keys(overrides).some((key) => !['heroVideoKey', 'heroPosterKey', 'pinnedCommentIds', 'commentsDisabled', 'copy'].includes(key))) {
         errors.push('detailsMetadata.overrides contains unsupported fields');
     }
     const safeOverrides = {};
+    if (overrides.commentsDisabled !== undefined) {
+        if (typeof overrides.commentsDisabled !== 'boolean') errors.push('detailsMetadata.overrides.commentsDisabled must be a boolean');
+        else safeOverrides.commentsDisabled = overrides.commentsDisabled;
+    }
     for (const [field, extensions] of [['heroVideoKey', ['mp4']], ['heroPosterKey', ['jpg', 'jpeg', 'png', 'webp', 'avif']]]) {
         if (overrides[field] === undefined) continue;
         if (!isMediaKey(overrides[field], extensions)) errors.push(`detailsMetadata.overrides.${field} must be an uploaded media key`);

@@ -86,6 +86,10 @@ describe('experience details metadata contract', () => {
         } };
         expect(normalizeDetailsMetadata(metadata)).toEqual({ metadata, errors: [] });
     });
+    test('roundtrips the comments-disabled setting', () => {
+        const metadata = { version: 1, template: 'food-tour', overrides: { commentsDisabled: true } };
+        expect(normalizeDetailsMetadata(metadata)).toEqual({ metadata, errors: [] });
+    });
 
     test.each([
         { version: 2, template: 'event' },
@@ -97,6 +101,7 @@ describe('experience details metadata contract', () => {
         { version: 1, template: 'food-tour', overrides: { heroPosterKey: 'users/1/asset/file.svg' } },
         { version: 1, template: 'food-tour', overrides: { pinnedCommentIds: [1, 1] } },
         { version: 1, template: 'food-tour', overrides: { pinnedCommentIds: [1, 2, 3, 4] } },
+        { version: 1, template: 'food-tour', overrides: { commentsDisabled: 'yes' } },
         { version: 1, template: 'event', overrides: [] },
         { version: 1, template: 'event', overrides: { copy: { invalid: 'text' } } },
         { version: 1, template: 'event', overrides: { copy: { storyHeading: 'x'.repeat(501) } } },

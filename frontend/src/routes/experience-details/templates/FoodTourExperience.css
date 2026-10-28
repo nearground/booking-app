@@ -59,7 +59,8 @@
   position: relative;
   isolation: isolate;
   width: 100%;
-  aspect-ratio: 16 / 9;
+  height: clamp(16rem, 38vh, 30rem);
+  min-height: 0;
   overflow: hidden;
   background: #292524;
   color: #fff;
@@ -84,7 +85,7 @@
 
 .food-tour-hero__copy {
   position: absolute;
-  bottom: 6rem;
+  bottom: 5rem;
   left: max(1.5rem, calc((100% - 76rem) / 2));
   right: 1.5rem;
   max-width: 56rem;
@@ -102,7 +103,7 @@
 
 .food-tour-hero h1 {
   margin-bottom: 1rem;
-  font-size: clamp(2.5rem, 5vw, 5rem);
+  font-size: clamp(1.75rem, 4vw, 3.5rem);
   font-weight: 700;
   line-height: 1.05;
 }
@@ -232,10 +233,6 @@
 }
 
 @media (max-width: 767px) {
-  .food-tour-hero {
-    min-height: 32rem;
-  }
-
   .food-tour-pins__grid {
     grid-template-columns: minmax(0, 1fr);
   }

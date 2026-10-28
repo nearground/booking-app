@@ -120,9 +120,11 @@ describe('CreateExperience — edit mode', () => {
     expect(screen.getByText('Edit Experience')).toBeInTheDocument();
   });
 
-  test('retains the saved template selection when editing', () => {
+  test('displays the saved template as fixed when editing', () => {
     renderComponent({ mode: 'edit', experienceData });
-    expect(screen.getByLabelText('Details template')).toHaveValue('food-tour');
+    expect(screen.getByLabelText('Details template')).toHaveTextContent(/Food tour/);
+    expect(screen.queryByRole('combobox', { name: 'Details template' })).not.toBeInTheDocument();
+    expect(screen.getByText('The template is fixed after this experience is created.')).toBeInTheDocument();
   });
 
   test('renders "Preview Changes" submit button in edit mode', () => {

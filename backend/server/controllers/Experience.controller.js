@@ -602,7 +602,7 @@ const getNearbyExperiences = async (req, res) => {
             include: [
                 {
                     model: Location,
-                    attributes: ['city'],
+                    attributes: ['city', 'name', 'coordinates'],
                     where: { city: city.toLowerCase() },
                 },
                 {

@@ -3,6 +3,7 @@ import DropdownButton from 'components/ux/dropdown-button/DropdownButton';
 import { networkAdapter } from 'services/NetworkAdapter';
 import { useContext } from 'react';
 import { AuthContext } from 'contexts/AuthContext';
+import ExperienceNavItem from './ExperienceNavItem';
 
 /**
  * A component that renders the navigation items for the navbar for both mobile/desktop view.
@@ -65,17 +66,7 @@ const NavbarItems = ({ isAuthenticated, onHamburgerMenuToggle, showOnlyMainLinks
           Hotels
         </Link> */}
       </li>
-      <li className="p-4 hover:bg-emerald-900 md:hover:bg-brand">
-        <Link
-          to="/experiences"
-          className={`uppercase font-medium text-slate-100 hover-underline-animation ${
-            isActive('/experiences') && 'active-link'
-          }`}
-          onClick={onHamburgerMenuToggle}
-        >
-          Experiences
-        </Link>
-      </li>
+      <ExperienceNavItem onHamburgerMenuToggle={onHamburgerMenuToggle} />
       <li className="p-4 hover:bg-emerald-900 md:hover:bg-brand">
         {/* <Link
           to="/services"

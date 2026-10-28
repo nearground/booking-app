@@ -19,6 +19,7 @@ export function resolveDetailsMetadata(value) {
   if (!EXPERIENCE_DETAILS_TEMPLATES.some(({ value: supported }) => supported === template)) return fallback;
   const input = isRecord(value.overrides) ? value.overrides : {};
   const overrides = {};
+  if (typeof input.commentsDisabled === 'boolean') overrides.commentsDisabled = input.commentsDisabled;
   const copyKeys = new Set(Object.values(EXPERIENCE_TEMPLATE_COPY).flat().map(({ key }) => key));
   if (isRecord(input.copy)) {
     const copy = Object.fromEntries(Object.entries(input.copy).filter(

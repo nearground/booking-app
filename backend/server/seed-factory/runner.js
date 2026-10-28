@@ -108,6 +108,7 @@ export async function runSeedScenario(db, {
                             heroPosterKey: showcaseMedia.heroPoster,
                             pinnedCommentIds: [0, 1, 2].map((index) => persisted.get(`showcase-review-2-${index}`).id),
                         }],
+                        ['showcase-experience-food-pitillal', showcaseMedia.foodImages, {}],
                         ['showcase-experience-default', showcaseMedia.defaultImages, {}],
                     ];
                     for (const [recordKey, images, overrides] of updates) {
