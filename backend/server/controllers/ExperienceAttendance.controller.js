@@ -1,5 +1,5 @@
 import {
-    getPartyAttendance,
+    getEventAttendance,
     getPublicExperienceAttendance,
 } from '../services/ExperienceAttendance.service.js';
 import { sendError } from '../utils/http-response.js';
@@ -9,7 +9,7 @@ export const getExperienceAttendance = async (req, res) => {
     try {
         const result = req.params.sessionId
             ? await getPublicExperienceAttendance(req.params)
-            : await getPartyAttendance(req.params);
+            : await getEventAttendance(req.params);
         return res
             .status(result.status)
             .json({ errors: result.errors, data: result.data });

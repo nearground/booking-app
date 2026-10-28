@@ -1,16 +1,20 @@
 import { resolveDetailsMetadata, resolveDetailsMedia, selectPinnedComments } from './experienceDetailsTemplate';
 
 describe('experience template resolution', () => {
-  test.each([undefined, null, {}, { version: 2, template: 'party' }, { version: 1, template: 'injected' }])(
+  test('normalizes legacy party metadata to the event template', () => {
+    expect(resolveDetailsMetadata({ version: 1, template: 'party', overrides: {} }))
+      .toEqual({ version: 1, template: 'event', overrides: {} });
+  });
+  test.each([undefined, null, {}, { version: 2, template: 'event' }, { version: 1, template: 'injected' }])(
     'retains default layout for unsupported metadata %j', (value) => {
       expect(resolveDetailsMetadata(value)).toEqual({ version: 1, template: 'default', overrides: {} });
     }
   );
   test('drops arbitrary styles, URLs and personal fields', () => {
-    expect(resolveDetailsMetadata({ version: 1, template: 'party', overrides: {
+    expect(resolveDetailsMetadata({ version: 1, template: 'event', overrides: {
       css: 'body{}', checkedInPeople: [{ email: 'private@example.test' }],
       heroVideoKey: 'data:text/html,unsafe', heroPosterKey: 'https://example.test/a.jpg',
-    } })).toEqual({ version: 1, template: 'party', overrides: {} });
+    } })).toEqual({ version: 1, template: 'event', overrides: {} });
   });
   test('resolves uploaded media to trusted same-origin paths', () => {
     expect(resolveDetailsMedia({ version: 1, template: 'food-tour', overrides: {
@@ -18,7 +22,7 @@ describe('experience template resolution', () => {
     } })).toEqual({ heroVideoUrl: '/api/media/object/users/1/asset/123-abc.mp4', heroPosterUrl: null });
   });
   test('retains validated custom text for each template', () => {
-    const metadata = { version: 1, template: 'party', overrides: { copy: {
+    const metadata = { version: 1, template: 'event', overrides: { copy: {
       paidBadge: 'Tickets from $10',
       storyHeading: 'A new event heading',
       unknown: 'ignored',

@@ -16,11 +16,11 @@ export const EXPERIENCE_TEMPLATE_COPY = {
     { key: 'pinnedReviewsHeading', label: 'Pinned reviews heading', defaultValue: 'Guest favorites' },
     { key: 'pinnedReviewLabel', label: 'Pinned review label', defaultValue: 'Pinned experience review' },
   ],
-  party: [
+  event: [
     { key: 'freeBadge', label: 'Free event badge', defaultValue: 'One night · Free entry' },
     { key: 'paidBadge', label: 'Paid event badge', defaultValue: 'One night · Paid entry' },
     { key: 'storyEyebrow', label: 'Event section eyebrow', defaultValue: 'Good people. One unforgettable night.' },
-    { key: 'storyHeading', label: 'Event section heading', defaultValue: 'The party' },
+    { key: 'storyHeading', label: 'Event section heading', defaultValue: 'The event' },
     { key: 'descriptionFallback', label: 'Description fallback', defaultValue: 'Join us for a one-off celebration at a private venue.' },
     { key: 'venueHeading', label: 'Venue section heading', defaultValue: 'The venue' },
     { key: 'arrivalInstructions', label: 'Arrival instructions', defaultValue: 'Register before you arrive. Your booking confirmation is your entry reference.' },

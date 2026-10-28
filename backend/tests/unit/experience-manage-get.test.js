@@ -123,7 +123,7 @@ describe('getExperienceForEdit', () => {
   describe('details metadata management writes', () => {
     beforeEach(() => jest.clearAllMocks());
 
-    test.each(['picked', 'datetime'])('party creation preserves %s occurrence capacity/end overrides inside the transaction', async (kind) => {
+    test.each(['picked', 'datetime'])('event creation preserves %s occurrence capacity/end overrides inside the transaction', async (kind) => {
       const { createExperience } = await import('../../server/controllers/ExperienceManage.controller.js');
       const { normalizeBaseCreatePayload, normalizeSchedules } = await import('../../server/controllers/offering-manage.shared.js');
       const dateTime = '2027-01-01T18:00:00Z';
@@ -141,7 +141,7 @@ describe('getExperienceForEdit', () => {
       });
       mockLocationFindOne.mockResolvedValue({ id: 5 });
       mockOrganizationFindByPk.mockResolvedValue({ id: 3 });
-      const metadata = { version: 1, template: 'party', overrides: {} };
+      const metadata = { version: 1, template: 'event', overrides: {} };
       const record = { id: 10, detailsMetadata: metadata, addOrganizer: jest.fn() };
       mockExperienceCreate.mockResolvedValue(record);
       mockFindByPk.mockResolvedValue(record);
@@ -160,14 +160,14 @@ describe('getExperienceForEdit', () => {
       normalizeSchedules.mockReturnValue({ templates: [], picks: [], errors: [] });
     });
 
-    test('party schedule editing keeps its materialized session and disables asynchronous sync', async () => {
+    test('event schedule editing keeps its materialized session and disables asynchronous sync', async () => {
       const { updateExperience } = await import('../../server/controllers/ExperienceManage.controller.js');
       const { normalizeSchedules } = await import('../../server/controllers/offering-manage.shared.js');
       const dateTime = '2027-01-01T18:00:00Z';
       normalizeSchedules.mockReturnValue({ templates: [], picks: [{ dateTime }], errors: [] });
       const record = {
         id: 10, OrganizationId: 3, capacity: 20, duration: 60,
-        detailsMetadata: { version: 1, template: 'party', overrides: {} },
+        detailsMetadata: { version: 1, template: 'event', overrides: {} },
       };
       record.update = jest.fn(async (payload) => Object.assign(record, payload));
       mockFindByPk.mockResolvedValue(record);
@@ -185,12 +185,12 @@ describe('getExperienceForEdit', () => {
       normalizeSchedules.mockReturnValue({ templates: [], picks: [], errors: [] });
     });
 
-    test('editing a cancelled party does not recreate its session', async () => {
+    test('editing a cancelled event does not recreate its session', async () => {
       const { updateExperience } = await import('../../server/controllers/ExperienceManage.controller.js');
       const dateTime = '2027-01-01T18:00:00Z';
       const record = {
         id: 10, OrganizationId: 3, capacity: 20, duration: 60,
-        detailsMetadata: { version: 1, template: 'party', overrides: {} },
+        detailsMetadata: { version: 1, template: 'event', overrides: {} },
       };
       record.update = jest.fn(async (payload) => Object.assign(record, payload));
       mockFindByPk.mockResolvedValue(record);
@@ -208,11 +208,11 @@ describe('getExperienceForEdit', () => {
       expect(mockSessionCreate).not.toHaveBeenCalled();
     });
 
-    test('party cannot re-enable background schedule generation', async () => {
+    test('event cannot re-enable background schedule generation', async () => {
       const { toggleAutoSync } = await import('../../server/controllers/ExperienceManage.controller.js');
       const record = {
         id: 10, OrganizationId: 3,
-        detailsMetadata: { version: 1, template: 'party', overrides: {} },
+        detailsMetadata: { version: 1, template: 'event', overrides: {} },
         update: jest.fn(),
       };
       mockFindByPk.mockResolvedValue(record);
@@ -227,10 +227,10 @@ describe('getExperienceForEdit', () => {
       { dates: ['2027-01-01T18:00:00Z', '2027-01-02T18:00:00Z'], price: 0, sessions: [] },
       { dates: ['2027-01-01T18:00:00Z'], price: 0, sessions: [{ dateTime: '2027-01-01T18:00:00Z' }, { dateTime: '2027-01-02T18:00:00Z' }] },
       { dates: ['2027-01-02T18:00:00Z'], price: 0, sessions: [{ dateTime: '2027-01-01T18:00:00Z' }] },
-    ])('rejects invalid party writes transactionally %j', async ({ dates, price, sessions }) => {
+    ])('rejects invalid event writes transactionally %j', async ({ dates, price, sessions }) => {
       const { updateExperience } = await import('../../server/controllers/ExperienceManage.controller.js');
       const record = {
-        id: 10, OrganizationId: 3, detailsMetadata: { version: 1, template: 'party', overrides: {} },
+        id: 10, OrganizationId: 3, detailsMetadata: { version: 1, template: 'event', overrides: {} },
         update: jest.fn(),
       };
       mockFindByPk.mockResolvedValue(record);
@@ -247,13 +247,13 @@ describe('getExperienceForEdit', () => {
     });
 
     test.each([[true, 0], [false, 0], [true, 12], [false, 12]])(
-      'party update preserves or transactionally creates its sole session (existing=%s, price=%s)',
+      'event update preserves or transactionally creates its sole session (existing=%s, price=%s)',
       async (existing, price) => {
         const { updateExperience } = await import('../../server/controllers/ExperienceManage.controller.js');
         const dateTime = '2027-01-01T18:00:00Z';
         const record = {
           id: 10, OrganizationId: 3, capacity: 20, duration: 60,
-          detailsMetadata: { version: 1, template: 'party', overrides: {} },
+          detailsMetadata: { version: 1, template: 'event', overrides: {} },
         };
         record.update = jest.fn(async (payload) => Object.assign(record, payload));
         mockFindByPk.mockResolvedValue(record);
@@ -276,7 +276,7 @@ describe('getExperienceForEdit', () => {
     test('rejects unsafe metadata on create before writing', async () => {
       const { createExperience } = await import('../../server/controllers/ExperienceManage.controller.js');
       const res = mockRes();
-      await createExperience({ body: { detailsMetadata: { version: 1, template: 'party', overrides: { css: 'bad' } } } }, res);
+      await createExperience({ body: { detailsMetadata: { version: 1, template: 'event', overrides: { css: 'bad' } } } }, res);
       expect(res.status).toHaveBeenCalledWith(400);
     });
 
@@ -287,7 +287,7 @@ describe('getExperienceForEdit', () => {
       mockFindOne.mockResolvedValue(null);
       const res = mockRes();
       await updateExperience({ params: { experienceId: '10' }, user: { id: 7 }, body: {
-        detailsMetadata: { version: 1, template: 'party', overrides: {} },
+        detailsMetadata: { version: 1, template: 'event', overrides: {} },
       } }, res);
       expect(res.status).toHaveBeenCalledWith(403);
       expect(record.update).not.toHaveBeenCalled();
@@ -405,7 +405,7 @@ describe('getExperienceForEdit', () => {
     mockFindByPk.mockResolvedValue(experienceRecord);
     mockFindOne.mockResolvedValue({ id: 1, isAdmin: true }); // admin membership found
     mockCommentFindAll.mockImplementation(async ({ where }) => (
-      where.id ? [{ id: 3, stars: 5, title: 'Pinned', comment: 'A helpful five-star review.' }] : []
+      where.id ? [{ id: 3, stars: 3, title: 'Pinned', comment: 'A helpful three-star review.' }] : []
     ));
 
     await getExperienceForEdit(req, res);
@@ -423,14 +423,13 @@ describe('getExperienceForEdit', () => {
     expect(responseData.data.experience.TicketTiers[0].title).toBe('Adult');
     expect(responseData.data.experience.Organizers).toHaveLength(1);
     expect(responseData.data.experience.pinnableComments).toEqual([
-      { id: 3, stars: 5, title: 'Pinned', comment: 'A helpful five-star review.' },
+      { id: 3, stars: 3, title: 'Pinned', comment: 'A helpful three-star review.' },
     ]);
     expect(mockCommentFindAll).toHaveBeenCalledWith(expect.objectContaining({
       where: expect.objectContaining({
         CommentableId: 10,
         CommentableType: 'Experience',
         ParentId: null,
-        stars: 5,
       }),
       attributes: ['id', 'stars', 'title', 'comment'],
     }));

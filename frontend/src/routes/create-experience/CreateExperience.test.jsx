@@ -49,9 +49,9 @@ describe('CreateExperience — create mode (default)', () => {
     renderComponent();
     const selector = screen.getByLabelText('Details template');
     expect(selector).toHaveValue('default');
-    fireEvent.change(selector, { target: { value: 'party' } });
-    expect(selector).toHaveValue('party');
-    expect(screen.getByText(/one event occurrence with free or paid ticket tiers/)).toBeInTheDocument();
+    fireEvent.change(selector, { target: { value: 'event' } });
+    expect(selector).toHaveValue('event');
+    expect(screen.getByText(/Event uses one occurrence with free or paid ticket tiers/)).toBeInTheDocument();
     fireEvent.click(screen.getByText('Customize template text'));
     expect(screen.getByLabelText('Paid registration button')).toHaveValue('Register for event');
   });

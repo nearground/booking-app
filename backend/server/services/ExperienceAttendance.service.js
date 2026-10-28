@@ -6,7 +6,7 @@ import {
 } from '../models/index.js';
 import { resolveMediaUrl } from '../utils/media-storage.js';
 
-export const getPartyAttendance = async ({ experienceCode }) => {
+export const getEventAttendance = async ({ experienceCode }) => {
     if (!/^[1-9]\d*$/.test(String(experienceCode))) {
         return { status: 400, errors: ['Invalid experience'], data: null };
     }
@@ -28,7 +28,7 @@ export const getPartyAttendance = async ({ experienceCode }) => {
     if (sessions.length !== 1) {
         return {
             status: 409,
-            errors: ['This party needs exactly one event date'],
+            errors: ['This event requires exactly one scheduled date'],
             data: null,
         };
     }

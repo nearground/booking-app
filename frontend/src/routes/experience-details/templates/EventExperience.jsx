@@ -3,7 +3,7 @@ import { networkAdapter } from 'services/NetworkAdapter';
 import ExperienceSessionBookingModal from '../../../components/experience-session-booking-modal/ExperienceSessionBookingModal';
 import { isValidOrganizationSiteSlug, resolveAppUrl } from '../../organization-site/organizationSiteResolver';
 import { resolveTemplateCopy } from '../experienceDetailsCopy';
-import './PartyExperience.css';
+import './EventExperience.css';
 
 const publicAttendanceQuestion = {
   questionKey: 'publicAttendance',
@@ -13,7 +13,7 @@ const publicAttendanceQuestion = {
     'I consent to show my registered name and profile picture on the public attendee list after my booking is confirmed. This is optional; only my own profile is shared.',
 };
 
-const PartyExperience = ({
+const EventExperience = ({
   experience,
   metadata,
   isPreview = false,
@@ -93,7 +93,7 @@ const PartyExperience = ({
   const validTickets = ticketTiers.length > 0 && ticketTiers.every(
     (tier) => Number.isFinite(Number(tier.price)) && Number(tier.price) >= 0
   );
-  const copy = resolveTemplateCopy(metadata || experience.detailsMetadata, 'party');
+  const copy = resolveTemplateCopy(metadata || experience.detailsMetadata, 'event');
   const verifiedFreeEvent = Boolean(session && freeTickets && !loadError);
   const registrationDeadline = session?.endDateTime || session?.dateTime;
   const canRegister = Boolean(
@@ -162,14 +162,14 @@ const PartyExperience = ({
             : freeTickets ? copy.freeRegisterButton : copy.paidRegisterButton;
 
   return (
-    <main className="party-experience">
-      <header className="party-experience__hero">
+    <main className="event-experience">
+      <header className="event-experience__hero">
         {typeof banner === 'string' && banner ? (
-          <img className="party-experience__cover" src={banner} alt="" />
+          <img className="event-experience__cover" src={banner} alt="" />
         ) : null}
-        <div className="party-experience__hero-content">
-          <p className="party-experience__eyebrow">
-            {experience.Organization?.name || 'Private venue party'}
+        <div className="event-experience__hero-content">
+          <p className="event-experience__eyebrow">
+            {experience.Organization?.name || 'Private venue event'}
           </p>
           {isValidOrganizationSiteSlug(experience.Organization?.slug) && (
             <a
@@ -179,16 +179,16 @@ const PartyExperience = ({
               View {experience.Organization.name || 'organization'} profile
             </a>
           )}
-          <span className="party-experience__badge">
+          <span className="event-experience__badge">
             {verifiedFreeEvent
               ? copy.freeBadge
               : copy.paidBadge}
           </span>
           <h1>{experience.title}</h1>
           {experience.subtitle ? (
-            <p className="party-experience__subtitle">{experience.subtitle}</p>
+            <p className="event-experience__subtitle">{experience.subtitle}</p>
           ) : null}
-          <p className="party-experience__date">{dateLabel}</p>
+          <p className="event-experience__date">{dateLabel}</p>
           <p>
             {venue.name || 'Private venue'}
             {venue.city ? ` · ${venue.city}` : ''}
@@ -196,26 +196,26 @@ const PartyExperience = ({
         </div>
       </header>
 
-      <div className="party-experience__layout">
+      <div className="event-experience__layout">
         <section
-          className="party-experience__story"
-          aria-labelledby="party-about"
+          className="event-experience__story"
+          aria-labelledby="event-about"
         >
-          <p className="party-experience__eyebrow">
+          <p className="event-experience__eyebrow">
             {copy.storyEyebrow}
           </p>
-          <h2 id="party-about">{copy.storyHeading}</h2>
+          <h2 id="event-about">{copy.storyHeading}</h2>
           {(
             experience.description ||
             copy.descriptionFallback
           )
             .split(/\n\s*\n/)
             .map((paragraph, index) => (
-              <p className="party-experience__description" key={index}>
+              <p className="event-experience__description" key={index}>
                 {paragraph}
               </p>
             ))}
-          <div className="party-experience__venue">
+          <div className="event-experience__venue">
             <h3>{copy.venueHeading}</h3>
             <p>{venue.name || 'Private venue'}</p>
             {venue.city ? (
@@ -231,11 +231,11 @@ const PartyExperience = ({
         </section>
 
         <aside
-          className="party-experience__registration"
-          aria-labelledby="party-registration"
+          className="event-experience__registration"
+          aria-labelledby="event-registration"
         >
-          <p className="party-experience__eyebrow">{copy.registrationEyebrow}</p>
-          <h2 id="party-registration">
+          <p className="event-experience__eyebrow">{copy.registrationEyebrow}</p>
+          <h2 id="event-registration">
             {verifiedFreeEvent ? copy.freeRegistrationHeading : copy.paidRegistrationHeading}
           </h2>
           <p>
@@ -244,14 +244,14 @@ const PartyExperience = ({
               : copy.paidRegistrationDescription}
           </p>
           {session ? (
-            <p className="party-experience__date">{dateLabel}</p>
+            <p className="event-experience__date">{dateLabel}</p>
           ) : null}
           {canRegister ? (
             <p>{session.availableSpots} places available</p>
           ) : null}
           <button
             type="button"
-            className="party-experience__register"
+            className="event-experience__register"
             disabled={isPreview || !canRegister || Boolean(loadError)}
             onClick={() => {
               setPendingCartEdit(null);
@@ -260,7 +260,7 @@ const PartyExperience = ({
           >
             {registrationLabel}
           </button>
-          <p className="party-experience__privacy">
+          <p className="event-experience__privacy">
             {verifiedFreeEvent ? `${copy.freePaymentNotice} ` : ''}
             {copy.privacyNotice}
           </p>
@@ -268,18 +268,18 @@ const PartyExperience = ({
         </aside>
 
         <section
-          className="party-experience__attendance"
-          aria-labelledby="party-attendance"
+          className="event-experience__attendance"
+          aria-labelledby="event-attendance"
         >
-          <div className="party-experience__attendance-heading">
+          <div className="event-experience__attendance-heading">
             <div>
-              <p className="party-experience__eyebrow">{copy.attendanceEyebrow}</p>
-              <h2 id="party-attendance">{copy.attendanceHeading}</h2>
+              <p className="event-experience__eyebrow">{copy.attendanceEyebrow}</p>
+              <h2 id="event-attendance">{copy.attendanceHeading}</h2>
             </div>
             <p
               role="status"
               aria-live="polite"
-              className="party-experience__count"
+              className="event-experience__count"
             >
               {isLoading
                 ? 'Loading attendee list…'
@@ -291,7 +291,7 @@ const PartyExperience = ({
           <p>{copy.attendanceDescription}</p>
           {attendees.length > 0 ? (
             <ul
-              className="party-experience__guests"
+              className="event-experience__guests"
               aria-label="Public attendees"
             >
               {attendees.map((attendee, index) => (
@@ -300,7 +300,7 @@ const PartyExperience = ({
                     <img src={attendee.avatar} alt="" />
                   ) : (
                     <span
-                      className="party-experience__avatar"
+                      className="event-experience__avatar"
                       aria-hidden="true"
                     >
                       {attendee.name?.slice(0, 1)}
@@ -335,4 +335,4 @@ const PartyExperience = ({
   );
 };
 
-export default PartyExperience;
+export default EventExperience;

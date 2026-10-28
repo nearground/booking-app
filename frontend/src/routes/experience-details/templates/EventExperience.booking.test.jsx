@@ -4,13 +4,13 @@ import { vi } from 'vitest';
 import { AuthContext } from 'contexts/AuthContext';
 import { CartContext } from 'contexts/CartContext';
 import { networkAdapter } from 'services/NetworkAdapter';
-import PartyExperience from './PartyExperience';
+import EventExperience from './EventExperience';
 
 vi.mock('services/NetworkAdapter', () => ({
   networkAdapter: { get: vi.fn() },
 }));
 
-describe('PartyExperience existing booking integration', () => {
+describe('EventExperience existing booking integration', () => {
   test.each([false, true])(
     'adds a free fixed-session ticket with explicit attendee-list consent=%s',
     async (shareProfile) => {
@@ -36,7 +36,7 @@ describe('PartyExperience existing booking integration', () => {
           }}
         >
           <CartContext.Provider value={{ addToCart, openCart }}>
-            <PartyExperience
+            <EventExperience
               experience={{
                 id: 7,
                 title: 'After Dark',
@@ -116,7 +116,7 @@ describe('PartyExperience existing booking integration', () => {
         }}
       >
         <CartContext.Provider value={{ updateCartItem, openCart }}>
-          <PartyExperience
+          <EventExperience
             experience={{
               id: 7,
               title: 'After Dark',

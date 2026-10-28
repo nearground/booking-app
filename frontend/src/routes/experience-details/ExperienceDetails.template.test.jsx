@@ -5,8 +5,8 @@ import { MemoryRouter } from 'react-router-dom';
 import { AuthContext } from 'contexts/AuthContext';
 import ExperienceDetails from './ExperienceDetails';
 
-vi.mock('./templates/PartyExperience', () => ({
-  default: ({ experience }) => <div data-testid="party-template">{experience.title}</div>,
+vi.mock('./templates/EventExperience', () => ({
+  default: ({ experience }) => <div data-testid="event-template">{experience.title}</div>,
 }));
 vi.mock('./templates/FoodTourExperience', () => ({
   default: ({ experience, booking, reviews }) => <div data-testid="food-tour-template">{experience.title}{booking}<div data-testid="reviews-slot">{reviews}</div></div>,
@@ -42,20 +42,20 @@ test.each([undefined, { version: 99, template: 'food-tour' }])(
     renderDetails(metadata);
     expect(screen.getByText("What You'll Do")).toBeInTheDocument();
     expect(screen.getByTestId('session-calendar')).toBeInTheDocument();
-    expect(screen.queryByTestId('party-template')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('event-template')).not.toBeInTheDocument();
     expect(screen.queryByTestId('food-tour-template')).not.toBeInTheDocument();
   }
 );
 
-test('party dispatch does not render the shared date picker or organizer bios', () => {
-  renderDetails({ version: 1, template: 'party', overrides: {} });
-  expect(screen.getByTestId('party-template')).toHaveTextContent('Template preview');
+test('event dispatch does not render the shared date picker or organizer bios', () => {
+  renderDetails({ version: 1, template: 'event', overrides: {} });
+  expect(screen.getByTestId('event-template')).toHaveTextContent('Template preview');
   expect(screen.queryByTestId('session-calendar')).not.toBeInTheDocument();
   expect(screen.queryByText('Hosted By')).not.toBeInTheDocument();
 });
 
-test('pinned five-star reviews render on the party template', () => {
-  renderDetails({ version: 1, template: 'party', overrides: { pinnedCommentIds: [1] } }, [
+test('pinned five-star reviews render on the event template', () => {
+  renderDetails({ version: 1, template: 'event', overrides: { pinnedCommentIds: [1] } }, [
     { id: 1, stars: 5, title: 'A featured review', comment: 'A great event from beginning to end.' },
   ]);
   expect(screen.getByRole('region', { name: 'Pinned experience comments' })).toBeInTheDocument();

@@ -280,7 +280,7 @@ function generateShowcaseScenario({ seed, now, passwordHash }) {
         });
     }
 
-    const partyQuestionnaire = [{
+    const eventQuestionnaire = [{
         questionKey: 'publicAttendance',
         prompt: 'I consent to show my registered name and profile picture on the public attendee list after my booking is confirmed. This is optional; only my own profile is shared.',
         required: false,
@@ -299,8 +299,8 @@ function generateShowcaseScenario({ seed, now, passwordHash }) {
             duration: 150,
             thumbnail: null,
             images: [],
-            userQuestionnary: partyQuestionnaire,
-            template: 'party',
+            userQuestionnary: eventQuestionnaire,
+            template: 'event',
             copy: {
                 storyHeading: 'A night above the bay',
                 freeRegistrationHeading: 'Save your free place',
@@ -320,8 +320,8 @@ function generateShowcaseScenario({ seed, now, passwordHash }) {
             duration: 120,
             thumbnail: null,
             images: [],
-            userQuestionnary: partyQuestionnaire,
-            template: 'party',
+            userQuestionnary: eventQuestionnaire,
+            template: 'event',
             copy: {
                 storyHeading: 'An evening at the neighborhood bar',
                 paidRegistrationHeading: 'Reserve your bar-night ticket',
@@ -377,11 +377,11 @@ function generateShowcaseScenario({ seed, now, passwordHash }) {
             prices: [64.99, 49.99, 34.99, 19.99],
         },
     ];
-    const partyStart = CronExpressionParser.parse('0 20 * * *', {
+    const eventStart = CronExpressionParser.parse('0 20 * * *', {
         currentDate: new Date(now.getTime() + 7 * 86400000),
         tz: timezone,
     }).next().toDate();
-    const partyKeys = new Set(experiences.filter(({ template }) => template === 'party').map(({ key }) => key));
+    const eventKeys = new Set(experiences.filter(({ template }) => template === 'event').map(({ key }) => key));
     for (const [index, experience] of experiences.entries()) {
         add('experiences', experience.key, {
             title: experience.title,
@@ -407,19 +407,19 @@ function generateShowcaseScenario({ seed, now, passwordHash }) {
             UserId: experience.owner,
         });
         const sessionKeys = [];
-        if (partyKeys.has(experience.key)) {
+        if (eventKeys.has(experience.key)) {
             const sessionKey = `showcase-session-${index}`;
             const pickKey = `showcase-pick-${index}`;
             add('picks', pickKey, {
-                dateTime: partyStart.toISOString(),
-                endDateTime: new Date(partyStart.getTime() + experience.duration * 60000).toISOString(),
+                dateTime: eventStart.toISOString(),
+                endDateTime: new Date(eventStart.getTime() + experience.duration * 60000).toISOString(),
                 capacity: experience.capacity,
                 status: 'active',
                 source: 'seed',
             }, { ExperienceId: experience.key });
             add('pickedSessions', sessionKey, {
-                dateTime: partyStart.toISOString(),
-                endDateTime: new Date(partyStart.getTime() + experience.duration * 60000).toISOString(),
+                dateTime: eventStart.toISOString(),
+                endDateTime: new Date(eventStart.getTime() + experience.duration * 60000).toISOString(),
                 capacity: experience.capacity,
                 availableSpots: experience.capacity - 3,
                 status: 'scheduled',
@@ -456,7 +456,7 @@ function generateShowcaseScenario({ seed, now, passwordHash }) {
                 sessionKeys.push(sessionKey);
             }
         }
-        if (partyKeys.has(experience.key)) {
+        if (eventKeys.has(experience.key)) {
             add('ticketTiers', `showcase-tier-${index}`, {
                 title: experience.key === 'showcase-experience-party-1' ? 'General admission' : 'Free admission',
                 description: experience.key === 'showcase-experience-party-1'
@@ -506,10 +506,10 @@ function generateShowcaseScenario({ seed, now, passwordHash }) {
                 repliesCount: 0,
                 repliesDisabled: false,
             }, { CommentableId: experience.key, UserId: `showcase-user-guest-${guest}` });
-            if (partyKeys.has(experience.key)) {
+            if (eventKeys.has(experience.key)) {
                 const reservationKey = `showcase-reservation-${index}-${guest}`;
                 add('experienceReservations', reservationKey, {
-                    confirmationCode: `SHOWCASE-PARTY-${index}-${guest + 1}`,
+                    confirmationCode: `SHOWCASE-EVENT-${index}-${guest + 1}`,
                     numberOfAttendees: 1,
                     totalPrice: experience.key === 'showcase-experience-party-1' ? '250.00' : '0.00',
                     status: 'attended',

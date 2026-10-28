@@ -2264,7 +2264,7 @@ const CreateExperience = ({ mode = 'create', experienceData = null }) => {
             >
               {EXPERIENCE_DETAILS_TEMPLATES.map(({ value, label }) => <option key={value} value={value}>{label}</option>)}
             </select>
-            <p className="mt-1 text-xs text-slate-500">Party uses one event occurrence with free or paid ticket tiers. Food tour uses uploaded hero media. Pinned reviews can be used with any template.</p>
+            <p className="mt-1 text-xs text-slate-500">Event uses one occurrence with free or paid ticket tiers. Food tour uses uploaded hero media. Pinned reviews can be used with any template.</p>
           </div>
           <details className="md:col-span-2 rounded border border-slate-200 bg-slate-50 p-3">
             <summary className="cursor-pointer font-medium text-slate-700">Customize template text</summary>

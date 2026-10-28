@@ -27,34 +27,34 @@ describe('additive experience showcase scenario', () => {
         expect(byType(showcase, 'members').every(({ attributes }) => attributes.password === passwordHash)).toBe(true);
         for (const experience of byType(showcase, 'experiences')) {
             expect(experience.attributes.detailsMetadata.version).toBe(1);
-            expect(experience.attributes.detailsMetadata.template).toMatch(/^(default|party|food-tour)$/);
+            expect(experience.attributes.detailsMetadata.template).toMatch(/^(default|event|food-tour)$/);
             expect(experience.attributes.detailsMetadata.overrides.copy).toBeDefined();
         }
     });
 
-    test('party events use one 20:00 Mexico City session, free or paid tickets, and opted-in checked-in registered guests', () => {
+    test('event examples use one 20:00 Mexico City session, free or paid tickets, and opted-in registered guests', () => {
         const graph = generateScenario(options);
         const records = graph.records;
-        const parties = byType(graph, 'experiences').filter(({ attributes }) => attributes.detailsMetadata.template === 'party');
+        const events = byType(graph, 'experiences').filter(({ attributes }) => attributes.detailsMetadata.template === 'event');
 
-        expect(parties.map(({ attributes }) => attributes.title)).toEqual(['Private Rooftop Party', 'Bar Special Night']);
-        for (const [partyIndex, party] of parties.entries()) {
-            const session = records.find(({ type, refs }) => type === 'pickedSessions' && refs.ExperienceId === party.key);
+        expect(events.map(({ attributes }) => attributes.title)).toEqual(['Private Rooftop Party', 'Bar Special Night']);
+        for (const [eventIndex, event] of events.entries()) {
+            const session = records.find(({ type, refs }) => type === 'pickedSessions' && refs.ExperienceId === event.key);
             expect(session).toBeDefined();
             expect(new Intl.DateTimeFormat('en-GB', {
                 timeZone: 'America/Mexico_City', hour: '2-digit', hour12: false,
             }).format(new Date(session.attributes.dateTime))).toBe('20');
-            expect(records.filter(({ type, refs }) => type === 'schedules' && refs.ExperienceId === party.key)).toHaveLength(0);
-            expect(records.filter(({ type, refs }) => type === 'ticketTiers' && refs.ExperienceId === party.key)
-                .map(({ attributes }) => attributes.price)).toEqual([partyIndex === 0 ? '0.00' : '250.00']);
-            expect(party.attributes.userQuestionnary).toContainEqual(expect.objectContaining({
+            expect(records.filter(({ type, refs }) => type === 'schedules' && refs.ExperienceId === event.key)).toHaveLength(0);
+            expect(records.filter(({ type, refs }) => type === 'ticketTiers' && refs.ExperienceId === event.key)
+                .map(({ attributes }) => attributes.price)).toEqual([eventIndex === 0 ? '0.00' : '250.00']);
+            expect(event.attributes.userQuestionnary).toContainEqual(expect.objectContaining({
                 questionKey: 'publicAttendance', type: 'boolean', required: false,
             }));
             const reservations = records.filter(({ type, refs }) => type === 'experienceReservations' && refs.ScheduledExperienceId === session.key);
             expect(reservations).toHaveLength(3);
             expect(reservations.every(({ attributes }) => attributes.status === 'attended' &&
-                attributes.totalPrice === (partyIndex === 0 ? '0.00' : '250.00'))).toBe(true);
-            expect(session.attributes.availableSpots).toBe(party.attributes.capacity - 3);
+                attributes.totalPrice === (eventIndex === 0 ? '0.00' : '250.00'))).toBe(true);
+            expect(session.attributes.availableSpots).toBe(event.attributes.capacity - 3);
             expect(reservations.every(({ refs }) => records.find(({ key }) => key === refs.CustomerId).attributes.isRegistered)).toBe(true);
             const answers = records.filter(({ type, refs }) => type === 'reservationAnswers' && reservations.some(({ key }) => key === refs.ExperienceReservationId));
             expect(answers).toHaveLength(3);

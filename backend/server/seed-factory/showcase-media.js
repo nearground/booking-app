@@ -24,7 +24,7 @@ export async function prepareShowcaseMedia({
         throw new TypeError('Showcase media beforeUpload must be a function');
     }
     const owners = {
-        partyImages: ownerIds.party ?? ownerId,
+        eventImages: ownerIds.event ?? ownerId,
         foodImages: ownerIds.food ?? ownerId,
         defaultImages: ownerIds.default ?? ownerId,
         heroVideo: ownerIds.food ?? ownerId,
@@ -36,7 +36,7 @@ export async function prepareShowcaseMedia({
     const assets = [];
     try {
         for (const [group, directory] of [
-            ['partyImages', 'mixology'],
+            ['eventImages', 'mixology'],
             ['foodImages', 'taco-tour'],
             ['defaultImages', 'sightseeing'],
         ]) {
@@ -70,7 +70,7 @@ export async function prepareShowcaseMedia({
             { cause: error }
         );
     }
-    const media = { partyImages: [], foodImages: [], defaultImages: [], heroVideo: null, heroPoster: null };
+    const media = { eventImages: [], foodImages: [], defaultImages: [], heroVideo: null, heroPoster: null };
     for (const asset of assets) {
         const digest = createHash('sha256')
             .update(asset.relativePath.split(path.sep).join('/'))

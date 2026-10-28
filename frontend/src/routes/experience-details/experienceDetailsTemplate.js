@@ -2,7 +2,7 @@ import { EXPERIENCE_TEMPLATE_COPY } from './experienceDetailsCopy';
 
 export const EXPERIENCE_DETAILS_TEMPLATES = [
   { value: 'default', label: 'Default — gallery and calendar' },
-  { value: 'party', label: 'Party — single date, paid or free admission' },
+  { value: 'event', label: 'Event — single date, paid or free admission' },
   { value: 'food-tour', label: 'Food tour — video and featured reviews' },
 ];
 
@@ -14,8 +14,9 @@ const isMediaKey = (value, extensions) =>
 
 export function resolveDetailsMetadata(value) {
   const fallback = { version: 1, template: 'default', overrides: {} };
-  if (!isRecord(value) || value.version !== 1 ||
-    !EXPERIENCE_DETAILS_TEMPLATES.some(({ value: template }) => template === value.template)) return fallback;
+  if (!isRecord(value) || value.version !== 1) return fallback;
+  const template = value.template === 'party' ? 'event' : value.template;
+  if (!EXPERIENCE_DETAILS_TEMPLATES.some(({ value: supported }) => supported === template)) return fallback;
   const input = isRecord(value.overrides) ? value.overrides : {};
   const overrides = {};
   const copyKeys = new Set(Object.values(EXPERIENCE_TEMPLATE_COPY).flat().map(({ key }) => key));
@@ -30,7 +31,7 @@ export function resolveDetailsMetadata(value) {
   if (Array.isArray(input.pinnedCommentIds)) {
     overrides.pinnedCommentIds = [...new Set(input.pinnedCommentIds.filter((id) => Number.isSafeInteger(id) && id > 0))].slice(0, 3);
   }
-  return { version: 1, template: value.template, overrides };
+  return { version: 1, template, overrides };
 }
 
 export function resolveDetailsMedia(metadata) {

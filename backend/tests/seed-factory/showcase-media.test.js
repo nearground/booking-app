@@ -17,12 +17,12 @@ describe('showcase media materialization', () => {
     test('uploads all real fixtures using shared storage PUTs and stable owner-scoped keys', async () => {
         const fetchImpl = jest.fn().mockResolvedValue({ ok: true });
         const first = await prepareShowcaseMedia({ ownerId: 42, fetchImpl });
-        expect(first.partyImages).toHaveLength(3);
+        expect(first.eventImages).toHaveLength(3);
         expect(first.foodImages).toHaveLength(3);
         expect(first.defaultImages).toHaveLength(8);
         expect(first.heroVideo).toMatch(/^users\/42\/asset\/showcase-[a-f0-9]{64}\.mp4$/);
         expect(first.heroPoster).toMatch(/\.jpg$/);
-        const keys = [...first.partyImages, ...first.foodImages, ...first.defaultImages,
+        const keys = [...first.eventImages, ...first.foodImages, ...first.defaultImages,
             first.heroVideo, first.heroPoster];
         expect(fetchImpl).toHaveBeenCalledTimes(keys.length);
         for (const [index, [url, options]] of fetchImpl.mock.calls.entries()) {
@@ -45,12 +45,12 @@ describe('showcase media materialization', () => {
         const fetchImpl = jest.fn().mockResolvedValue({ ok: true });
         const journaled = [];
         const media = await prepareShowcaseMedia({
-            ownerIds: { party: 51, food: 52, default: 53 },
+            ownerIds: { event: 51, food: 52, default: 53 },
             keySuffix: 'run-123',
             beforeUpload: async ({ objectKey }) => journaled.push(objectKey),
             fetchImpl,
         });
-        const keys = [...media.partyImages, ...media.foodImages, ...media.defaultImages, media.heroVideo, media.heroPoster];
+        const keys = [...media.eventImages, ...media.foodImages, ...media.defaultImages, media.heroVideo, media.heroPoster];
         expect(journaled).toEqual(keys);
         expect(fetchImpl.mock.calls.map(([url]) => url)).toEqual(keys.map((key) => `http://worker.example/objects/${key}`));
         expect(keys.every((key) => key.includes('-run-123.'))).toBe(true);
@@ -66,10 +66,10 @@ describe('showcase media materialization', () => {
         const fetchImpl = jest.fn().mockResolvedValue({ ok: true });
         const media = await prepareShowcaseMedia({
             ownerId: 42,
-            ownerIds: { party: 51, food: 52, default: 53 },
+            ownerIds: { event: 51, food: 52, default: 53 },
             fetchImpl,
         });
-        expect(media.partyImages.every((key) => key.startsWith('users/51/asset/'))).toBe(true);
+        expect(media.eventImages.every((key) => key.startsWith('users/51/asset/'))).toBe(true);
         expect(media.foodImages.every((key) => key.startsWith('users/52/asset/'))).toBe(true);
         expect(media.defaultImages.every((key) => key.startsWith('users/53/asset/'))).toBe(true);
         expect(media.heroVideo).toMatch(/^users\/52\/asset\/[a-zA-Z0-9-]+\.mp4$/);
@@ -79,13 +79,13 @@ describe('showcase media materialization', () => {
     test('allows all ownerIds without a fallback ownerId and falls back for partial mappings', async () => {
         const fetchImpl = jest.fn().mockResolvedValue({ ok: true });
         const complete = await prepareShowcaseMedia({
-            ownerIds: { party: 51, food: 52, default: 53 }, fetchImpl,
+            ownerIds: { event: 51, food: 52, default: 53 }, fetchImpl,
         });
         expect(complete.heroVideo).toMatch(/^users\/52\//);
         const partial = await prepareShowcaseMedia({
             ownerId: 42, ownerIds: { food: 52 }, fetchImpl,
         });
-        expect(partial.partyImages[0]).toMatch(/^users\/42\//);
+        expect(partial.eventImages[0]).toMatch(/^users\/42\//);
         expect(partial.defaultImages[0]).toMatch(/^users\/42\//);
         expect(partial.heroPoster).toMatch(/^users\/52\//);
     });

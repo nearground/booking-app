@@ -3,7 +3,7 @@ import { syncExperienceSchedule, populateScheduleBounded, previewStartDateUpdate
 import { sendError } from '../utils/http-response.js';
 import cache from '../utils/cache.js';
 import { Op } from 'sequelize';
-import { normalizeDetailsMetadata, validatePartyConfiguration } from '../utils/experience-details-metadata.js';
+import { normalizeDetailsMetadata, validateEventConfiguration } from '../utils/experience-details-metadata.js';
 import {
     normalizeBaseCreatePayload,
     normalizeBaseUpdatePayload,
@@ -332,15 +332,15 @@ const createExperience = async (req, res) => {
             });
         }
 
-        let partyConfiguration = null;
-        if (detailsMetadata.template === 'party') {
+        let eventConfiguration = null;
+        if (detailsMetadata.template === 'event') {
             const schedules = normalizeSchedules(req.body.schedules);
             const tiers = validateTicketTiers(req.body.ticketTiers);
-            partyConfiguration = validatePartyConfiguration({ ...schedules, tiers: tiers.tiers || [] });
-            const partyErrors = [...schedules.errors, ...tiers.errors, ...partyConfiguration.errors];
-            if (partyErrors.length) {
+            eventConfiguration = validateEventConfiguration({ ...schedules, tiers: tiers.tiers || [] });
+            const eventErrors = [...schedules.errors, ...tiers.errors, ...eventConfiguration.errors];
+            if (eventErrors.length) {
                 await transaction.rollback();
-                return res.status(400).json({ errors: partyErrors, data: {} });
+                return res.status(400).json({ errors: eventErrors, data: {} });
             }
         }
 
@@ -354,7 +354,7 @@ const createExperience = async (req, res) => {
                 thumbnail: normalized.thumbnail,
                 images: normalized.images,
                 detailsMetadata,
-                ...(partyConfiguration ? { autoSyncEnabled: false } : {}),
+                ...(eventConfiguration ? { autoSyncEnabled: false } : {}),
                 ratings: normalized.ratings,
                 userQuestionnary: Array.isArray(userQuestionnary) ? userQuestionnary : [],
                 OrganizationId: normalized.organizationId,
@@ -418,13 +418,13 @@ const createExperience = async (req, res) => {
 
         await experience.addOrganizer(req.user.id, { transaction });
 
-        if (partyConfiguration) {
+        if (eventConfiguration) {
             await ScheduledExperience.create({
                 ExperienceId: experience.id,
-                dateTime: partyConfiguration.dateTime,
-                endDateTime: partyConfiguration.endDateTime || new Date(new Date(partyConfiguration.dateTime).getTime() + (partyConfiguration.durationMinutes || normalized.duration) * 60000),
-                capacity: partyConfiguration.capacity ?? normalized.capacity,
-                availableSpots: partyConfiguration.capacity ?? normalized.capacity,
+                dateTime: eventConfiguration.dateTime,
+                endDateTime: eventConfiguration.endDateTime || new Date(new Date(eventConfiguration.dateTime).getTime() + (eventConfiguration.durationMinutes || normalized.duration) * 60000),
+                capacity: eventConfiguration.capacity ?? normalized.capacity,
+                availableSpots: eventConfiguration.capacity ?? normalized.capacity,
                 status: 'scheduled',
             }, { transaction });
         }
@@ -549,10 +549,10 @@ const updateExperience = async (req, res) => {
                 : [];
         }
 
-        let partyConfiguration = null;
-        let partyNeedsSession = false;
+        let eventConfiguration = null;
+        let eventNeedsSession = false;
         const effectiveMetadata = normalizeDetailsMetadata(updatePayload.detailsMetadata ?? experience.detailsMetadata).metadata;
-        if (effectiveMetadata.template === 'party') {
+        if (effectiveMetadata.template === 'event') {
             const schedules = req.body.schedules !== undefined
                 ? normalizeSchedules(req.body.schedules)
                 : {
@@ -563,22 +563,22 @@ const updateExperience = async (req, res) => {
             const tiers = req.body.ticketTiers !== undefined
                 ? validateTicketTiers(req.body.ticketTiers)
                 : { tiers: await TicketTier.findAll({ where: { ExperienceId: experience.id }, transaction }), errors: [] };
-            partyConfiguration = validatePartyConfiguration({ ...schedules, tiers: tiers.tiers || [] });
+            eventConfiguration = validateEventConfiguration({ ...schedules, tiers: tiers.tiers || [] });
             const sessions = await ScheduledExperience.findAll({
                 where: { ExperienceId: experience.id },
                 limit: 2,
                 transaction,
             });
-            const partyErrors = [...schedules.errors, ...tiers.errors, ...partyConfiguration.errors];
-            if (sessions.length > 1) partyErrors.push('Party experiences cannot have multiple existing sessions');
-            if (sessions.length === 1 && new Date(sessions[0].dateTime).getTime() !== new Date(partyConfiguration.dateTime).getTime()) {
-                partyErrors.push('An existing party session date cannot be changed through experience editing');
+            const eventErrors = [...schedules.errors, ...tiers.errors, ...eventConfiguration.errors];
+            if (sessions.length > 1) eventErrors.push('Event experiences cannot have multiple existing sessions');
+            if (sessions.length === 1 && new Date(sessions[0].dateTime).getTime() !== new Date(eventConfiguration.dateTime).getTime()) {
+                eventErrors.push('An existing event session date cannot be changed through experience editing');
             }
-            if (partyErrors.length) {
+            if (eventErrors.length) {
                 await transaction.rollback();
-                return res.status(400).json({ errors: partyErrors, data: {} });
+                return res.status(400).json({ errors: eventErrors, data: {} });
             }
-            partyNeedsSession = sessions.length === 0;
+            eventNeedsSession = sessions.length === 0;
             updatePayload.autoSyncEnabled = false;
         }
         await experience.update(updatePayload, { transaction });
@@ -629,13 +629,13 @@ const updateExperience = async (req, res) => {
             }
         }
 
-        if (partyNeedsSession) {
+        if (eventNeedsSession) {
             await ScheduledExperience.create({
                 ExperienceId: experience.id,
-                dateTime: partyConfiguration.dateTime,
-                endDateTime: partyConfiguration.endDateTime || new Date(new Date(partyConfiguration.dateTime).getTime() + (partyConfiguration.durationMinutes || experience.duration) * 60000),
-                capacity: partyConfiguration.capacity ?? experience.capacity,
-                availableSpots: partyConfiguration.capacity ?? experience.capacity,
+                dateTime: eventConfiguration.dateTime,
+                endDateTime: eventConfiguration.endDateTime || new Date(new Date(eventConfiguration.dateTime).getTime() + (eventConfiguration.durationMinutes || experience.duration) * 60000),
+                capacity: eventConfiguration.capacity ?? experience.capacity,
+                availableSpots: eventConfiguration.capacity ?? experience.capacity,
                 status: 'scheduled',
             }, { transaction });
         }
@@ -819,9 +819,9 @@ const toggleAutoSync = async (req, res) => {
         }
 
         const enabled = Boolean(req.body.enabled);
-        if (enabled && normalizeDetailsMetadata(experience.detailsMetadata).metadata.template === 'party') {
+        if (enabled && normalizeDetailsMetadata(experience.detailsMetadata).metadata.template === 'event') {
             return res.status(400).json({
-                errors: ['Party experiences cannot enable recurring schedule synchronization'],
+                errors: ['Event experiences cannot enable recurring schedule synchronization'],
                 data: {},
             });
         }
@@ -1121,7 +1121,6 @@ const getExperienceForEdit = async (req, res) => {
             CommentableId: experience.id,
             CommentableType: 'Experience',
             ParentId: null,
-            stars: 5,
         };
         const [recentReviews, pinnedReviews] = await Promise.all([
             Comment.findAll({

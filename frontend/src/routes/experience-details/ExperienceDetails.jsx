@@ -24,7 +24,7 @@ import ReviewSidebar from './components/ReviewSidebar';
 import GuestCommentPrompt from '../../components/comments/GuestCommentPrompt';
 import { resolveDetailsMetadata, selectPinnedComments } from './experienceDetailsTemplate';
 import { resolveTemplateCopy } from './experienceDetailsCopy';
-import PartyExperienceTemplate from './templates/PartyExperience';
+import EventExperienceTemplate from './templates/EventExperience';
 import FoodTourExperienceTemplate from './templates/FoodTourExperience';
 import PinnedExperienceComments from './components/PinnedExperienceComments';
 import {
@@ -505,8 +505,8 @@ const ExperienceDetails = ({ previewData = null, isPreview = false }) => {
 
   return (
     <div className={detailsMetadata.template === 'food-tour' ? 'w-full py-6' : 'container mx-auto px-4 py-6'}>
-      {detailsMetadata.template === 'party' ? (
-        <PartyExperienceTemplate
+      {detailsMetadata.template === 'event' ? (
+        <EventExperienceTemplate
           experience={experienceData}
           metadata={detailsMetadata}
           booking={booking}

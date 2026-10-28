@@ -80,7 +80,7 @@ export async function runSeedScenario(db, {
                 if (scenario === 'showcase') {
                     if (!env.R2_WORKER_BASE_URL || !env.R2_DEV_TOKEN) throw new Error('Showcase media seeding requires storage cleanup configuration');
                     const ownerIds = {
-                        party: persisted.get('showcase-user-party').id,
+                        event: persisted.get('showcase-user-party').id,
                         food: persisted.get('showcase-user-food').id,
                         default: persisted.get('showcase-user-default').id,
                     };
@@ -94,15 +94,15 @@ export async function runSeedScenario(db, {
                         },
                     });
                     assets.push(
-                        ...showcaseMedia.partyImages,
+                        ...showcaseMedia.eventImages,
                         ...showcaseMedia.foodImages,
                         ...showcaseMedia.defaultImages,
                         showcaseMedia.heroVideo,
                         showcaseMedia.heroPoster,
                     );
                     const updates = [
-                        ['showcase-experience-party-0', showcaseMedia.partyImages, {}],
-                        ['showcase-experience-party-1', showcaseMedia.partyImages, {}],
+                        ['showcase-experience-party-0', showcaseMedia.eventImages, {}],
+                        ['showcase-experience-party-1', showcaseMedia.eventImages, {}],
                         ['showcase-experience-food', showcaseMedia.foodImages, {
                             heroVideoKey: showcaseMedia.heroVideo,
                             heroPosterKey: showcaseMedia.heroPoster,

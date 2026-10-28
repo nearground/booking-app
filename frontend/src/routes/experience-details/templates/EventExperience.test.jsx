@@ -7,7 +7,7 @@ import {
   waitFor,
 } from '@testing-library/react';
 import { vi } from 'vitest';
-import PartyExperience from './PartyExperience';
+import EventExperience from './EventExperience';
 import { networkAdapter } from 'services/NetworkAdapter';
 
 vi.mock('services/NetworkAdapter', () => ({
@@ -74,9 +74,9 @@ beforeEach(() => {
   });
 });
 
-describe('PartyExperience', () => {
+describe('EventExperience', () => {
   test('links to the organization profile', () => {
-    render(<PartyExperience isPreview experience={{
+    render(<EventExperience isPreview experience={{
       ...experience, Organization: { name: 'House Party', slug: 'house-party' },
     }} />);
     expect(screen.getByRole('link', { name: 'View House Party profile' }))
@@ -84,14 +84,14 @@ describe('PartyExperience', () => {
   });
 
   test.each([undefined, 'bad/slug', 'admin'])('omits the organization profile link for invalid slug %s', (slug) => {
-    render(<PartyExperience isPreview experience={{
+    render(<EventExperience isPreview experience={{
       ...experience, Organization: { name: 'House Party', slug },
     }} />);
     expect(screen.queryByRole('link', { name: 'View House Party profile' })).not.toBeInTheDocument();
   });
 
   test('shows a dedicated single-event page and public attendees without organizer bios or contact data', async () => {
-    render(<PartyExperience experience={experience} />);
+    render(<EventExperience experience={experience} />);
     expect(await screen.findByText('12 attending')).toBeInTheDocument();
     expect(
       screen.getByRole('heading', { name: 'After Dark' })
@@ -112,7 +112,7 @@ describe('PartyExperience', () => {
   });
 
   test('registers for the fixed free session through the existing booking modal with optional explicit public consent', async () => {
-    render(<PartyExperience experience={experience} />);
+    render(<EventExperience experience={experience} />);
     fireEvent.click(
       await screen.findByRole('button', { name: 'Register for free' })
     );
@@ -148,7 +148,7 @@ describe('PartyExperience', () => {
       data: { session: event, attendeeCount: 0, attendees: [] },
     });
 
-    render(<PartyExperience experience={experience} />);
+    render(<EventExperience experience={experience} />);
     expect(await screen.findByRole('button', { name: label })).toBeDisabled();
   });
 
@@ -165,7 +165,7 @@ describe('PartyExperience', () => {
         attendees: [],
       },
     });
-    render(<PartyExperience experience={experience} />);
+    render(<EventExperience experience={experience} />);
     expect(
       await screen.findByRole('button', { name: 'Register for free' })
     ).toBeEnabled();
@@ -173,7 +173,7 @@ describe('PartyExperience', () => {
 
   test('allows paid admission through the existing booking modal', async () => {
     render(
-      <PartyExperience
+      <EventExperience
         experience={{ ...experience, TicketTiers: [{ id: 3, price: '10' }] }}
       />
     );
@@ -189,7 +189,7 @@ describe('PartyExperience', () => {
       errors: ['Internal database detail'],
       status: 500,
     });
-    render(<PartyExperience experience={experience} />);
+    render(<EventExperience experience={experience} />);
     expect(await screen.findByRole('alert')).toHaveTextContent(
       'Attendee details are temporarily unavailable'
     );
@@ -199,7 +199,7 @@ describe('PartyExperience', () => {
 
   test('keeps preview non-transactional and does not fetch live attendance', async () => {
     render(
-      <PartyExperience
+      <EventExperience
         experience={{ ...experience, previewUpcomingSessions: [session] }}
         isPreview
       />
@@ -213,7 +213,7 @@ describe('PartyExperience', () => {
   test('resumes cart edits only for this exact event', async () => {
     const initialCartEdit = { id: 4, metadata: { ScheduledExperienceId: 91 } };
     render(
-      <PartyExperience
+      <EventExperience
         experience={experience}
         initialCartEdit={initialCartEdit}
       />
@@ -224,7 +224,7 @@ describe('PartyExperience', () => {
   test('refreshes current check-ins and clears its refresh timer on unmount', async () => {
     const interval = vi.spyOn(window, 'setInterval');
     const clear = vi.spyOn(window, 'clearInterval');
-    const { unmount } = render(<PartyExperience experience={experience} />);
+    const { unmount } = render(<EventExperience experience={experience} />);
     await screen.findByText('12 attending');
     const refresh = interval.mock.calls[0][0];
     networkAdapter.get.mockResolvedValue({

@@ -1,5 +1,5 @@
 import {
-    getPartyAttendance,
+    getEventAttendance,
     getPublicExperienceAttendance,
 } from '../../server/services/ExperienceAttendance.service.js';
 import { getExperienceAttendance } from '../../server/controllers/ExperienceAttendance.controller.js';
@@ -120,7 +120,7 @@ describe('public registered attendance', () => {
     });
 
     test('resolves the sole event even after doors open without the future-only booking calendar', async () => {
-        const result = await getPartyAttendance({ experienceCode: 2 });
+        const result = await getEventAttendance({ experienceCode: 2 });
         expect(result.data.session).toEqual({
             id: 12,
             status: 'in-progress',
@@ -137,7 +137,7 @@ describe('public registered attendance', () => {
         async ({ sessions }) => {
             ScheduledExperience.findAll.mockResolvedValue(sessions);
             expect(
-                (await getPartyAttendance({ experienceCode: 2 })).status
+                (await getEventAttendance({ experienceCode: 2 })).status
             ).toBe(409);
             expect(ExperienceReservation.sum).not.toHaveBeenCalled();
         }
