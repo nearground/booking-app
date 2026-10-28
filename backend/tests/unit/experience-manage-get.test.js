@@ -14,6 +14,7 @@ const mockSessionCreate = jest.fn();
 const mockPickCreate = jest.fn();
 const mockPickDestroy = jest.fn();
 const mockTemplateDestroy = jest.fn();
+const mockTemplateCreate = jest.fn();
 const mockExperienceCreate = jest.fn();
 const mockLocationFindOne = jest.fn();
 const mockOrganizationFindByPk = jest.fn();
@@ -36,7 +37,7 @@ jest.mock('../../server/models/index.js', () => {
     sequelize: {
       models: {
         OrganizationMembers: mockOrganizationMembers,
-        ScheduleTemplate: { findAll: (...args) => mockTemplateFindAll(...args), destroy: (...args) => mockTemplateDestroy(...args) },
+        ScheduleTemplate: { findAll: (...args) => mockTemplateFindAll(...args), destroy: (...args) => mockTemplateDestroy(...args), create: (...args) => mockTemplateCreate(...args) },
         PickedOccurrence: { findAll: (...args) => mockPickFindAll(...args), destroy: (...args) => mockPickDestroy(...args), create: (...args) => mockPickCreate(...args) },
       },
       transaction: jest.fn(async () => ({
@@ -56,7 +57,7 @@ jest.mock('../../server/models/index.js', () => {
       sequelize: {
         models: {
           OrganizationMembers: mockOrganizationMembers,
-          ScheduleTemplate: { findAll: (...args) => mockTemplateFindAll(...args), destroy: (...args) => mockTemplateDestroy(...args) },
+          ScheduleTemplate: { findAll: (...args) => mockTemplateFindAll(...args), destroy: (...args) => mockTemplateDestroy(...args), create: (...args) => mockTemplateCreate(...args) },
           PickedOccurrence: { findAll: (...args) => mockPickFindAll(...args), destroy: (...args) => mockPickDestroy(...args), create: (...args) => mockPickCreate(...args) },
         },
         transaction: jest.fn(async () => ({
@@ -117,14 +118,22 @@ describe('getExperienceForEdit', () => {
   describe('details metadata management writes', () => {
     beforeEach(() => jest.clearAllMocks());
 
-    test('party creation materializes exactly one free session inside the transaction', async () => {
+    test.each(['picked', 'datetime'])('party creation preserves %s occurrence capacity/end overrides inside the transaction', async (kind) => {
       const { createExperience } = await import('../../server/controllers/ExperienceManage.controller.js');
       const { normalizeBaseCreatePayload, normalizeSchedules } = await import('../../server/controllers/offering-manage.shared.js');
       const dateTime = '2027-01-01T18:00:00Z';
+      const endDateTime = '2027-01-01T18:15:00Z';
+      const occurrence = kind === 'picked'
+        ? { dateTime, capacity: 7, endDateTime }
+        : { ruleType: 'datetime', ruleDateTime: dateTime, capacity: 7, durationMinutes: 15 };
       normalizeBaseCreatePayload.mockReturnValueOnce({ errors: [], normalized: {
         organizationId: 3, locationId: 5, title: 'Party', capacity: 20, duration: 60,
       } });
-      normalizeSchedules.mockReturnValue({ templates: [], picks: [{ dateTime }], errors: [] });
+      normalizeSchedules.mockReturnValue({
+        templates: kind === 'datetime' ? [occurrence] : [],
+        picks: kind === 'picked' ? [occurrence] : [],
+        errors: [],
+      });
       mockLocationFindOne.mockResolvedValue({ id: 5 });
       mockOrganizationFindByPk.mockResolvedValue({ id: 3 });
       const metadata = { version: 1, template: 'party', overrides: {} };
@@ -133,15 +142,16 @@ describe('getExperienceForEdit', () => {
       mockFindByPk.mockResolvedValue(record);
       const res = mockRes();
       await createExperience({ user: { id: 1 }, organizationId: 3, body: {
-        detailsMetadata: metadata, schedules: [{ kind: 'picked', dateTime }],
+        detailsMetadata: metadata, schedules: [{ kind: kind === 'picked' ? 'picked' : 'template', ...occurrence }],
         ticketTiers: [{ title: 'Free', price: 0, minAge: 0 }],
       } }, res);
       expect(res.status).toHaveBeenCalledWith(201);
       expect(mockExperienceCreate).toHaveBeenCalledWith(expect.objectContaining({ autoSyncEnabled: false }), expect.any(Object));
       expect(mockSessionCreate).toHaveBeenCalledTimes(1);
       expect(mockSessionCreate).toHaveBeenCalledWith(expect.objectContaining({
-        ExperienceId: 10, dateTime, availableSpots: 20, capacity: 20, status: 'scheduled',
+        ExperienceId: 10, dateTime, availableSpots: 7, capacity: 7, status: 'scheduled',
       }), expect.objectContaining({ transaction: expect.any(Object) }));
+      expect(new Date(mockSessionCreate.mock.calls[0][0].endDateTime).getTime()).toBe(new Date(endDateTime).getTime());
       normalizeSchedules.mockReturnValue({ templates: [], picks: [], errors: [] });
     });
 
