@@ -1,0 +1,215 @@
+.party-experience {
+  --party-accent: var(--org-accent-color, #e8ff8a);
+  background: #101018;
+  color: #f5f4fb;
+  min-height: 75vh;
+  padding-bottom: 4rem;
+}
+
+.party-experience__hero {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  align-items: flex-end;
+  min-height: 440px;
+  overflow: hidden;
+  background: radial-gradient(ellipse at top right, #663aaa, #171126 70%);
+}
+
+.party-experience__cover {
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.party-experience__hero::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(0deg, #101018 2%, #101018bb 50%, #10101833);
+}
+
+.party-experience__hero-content,
+.party-experience__layout {
+  width: min(1120px, calc(100% - 3rem));
+  margin: 0 auto;
+}
+
+.party-experience__hero-content {
+  padding: 4rem 0 2.5rem;
+}
+
+.party-experience h1 {
+  max-width: 850px;
+  margin: 1rem 0;
+  font-size: clamp(2.5rem, 6vw, 5rem);
+  line-height: 1.05;
+  font-weight: 800;
+  letter-spacing: -0.035em;
+}
+
+.party-experience h2 {
+  font-size: 1.65rem;
+  font-weight: 700;
+  margin-bottom: 1rem;
+}
+
+.party-experience h3 {
+  font-size: 1.2rem;
+  font-weight: 700;
+}
+
+.party-experience__eyebrow {
+  text-transform: uppercase;
+  letter-spacing: 0.13em;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #c9b8ef;
+  margin-bottom: 0.8rem;
+}
+
+.party-experience__badge,
+.party-experience__count {
+  display: inline-block;
+  border: 1px solid #bca3e75c;
+  border-radius: 999px;
+  padding: 0.5rem 1rem;
+  font-weight: 600;
+}
+
+.party-experience__subtitle {
+  max-width: 700px;
+  font-size: 1.2rem;
+  margin-bottom: 1.5rem;
+  color: #ded8eb;
+}
+
+.party-experience__date {
+  font-weight: 600;
+  margin: 1rem 0 0.5rem;
+}
+
+.party-experience__layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
+  gap: 2rem;
+}
+
+.party-experience__story,
+.party-experience__registration,
+.party-experience__attendance {
+  padding: 2rem;
+}
+
+.party-experience__registration,
+.party-experience__attendance {
+  background: #1c1928;
+  border: 1px solid #443751;
+  border-radius: 1.5rem;
+}
+
+.party-experience__description {
+  white-space: pre-line;
+  margin-bottom: 1rem;
+  line-height: 1.8;
+  color: #e0dce8;
+}
+
+.party-experience__venue {
+  margin-top: 2rem;
+  border-top: 1px solid #443751;
+  padding-top: 1.5rem;
+}
+
+.party-experience__venue p,
+.party-experience__registration p,
+.party-experience__attendance > p {
+  margin-bottom: 0.8rem;
+  line-height: 1.6;
+}
+
+.party-experience__register {
+  background: var(--party-accent);
+  color: #111;
+  border: 0;
+  border-radius: 999px;
+  width: 100%;
+  padding: 1rem 1.25rem;
+  margin: 1.25rem 0 1rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.party-experience__register:focus-visible {
+  outline: 3px solid white;
+  outline-offset: 4px;
+}
+
+.party-experience__register:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.party-experience__privacy {
+  font-size: 0.8rem;
+  color: #cfc6de;
+}
+
+.party-experience__attendance {
+  grid-column: 1 / -1;
+}
+
+.party-experience__attendance-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.party-experience__count {
+  color: #e8ff8a;
+}
+
+.party-experience__guests {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  list-style: none;
+  margin-top: 1.5rem;
+  padding: 0;
+}
+
+.party-experience__guests li {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.party-experience__guests img,
+.party-experience__avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: #5e417e;
+  object-fit: cover;
+}
+
+@media (max-width: 760px) {
+  .party-experience__layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .party-experience__story,
+  .party-experience__registration,
+  .party-experience__attendance {
+    padding: 1.5rem;
+  }
+}

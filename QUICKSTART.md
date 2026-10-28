@@ -45,6 +45,36 @@ chmod +x docker-manager.sh
 
 ## Direct Docker Compose
 
+### Showcase seed media
+
+The demo seeder uploads the checked-in showcase images, hero video, and poster to
+the same R2 storage worker used by API media uploads. Start `r2-local` and configure
+matching `R2_DEV_TOKEN` values before seeding; no running API or login is required.
+Development Compose mounts `frontend/public` read-only at `/demo-assets` and sets
+`SHOWCASE_MEDIA_ASSETS_DIR` for the backend.
+
+Outside Compose, the seeder defaults to the repository's `frontend/public`.
+For production or backend-only installations, provide that complete asset directory
+and set `SHOWCASE_MEDIA_ASSETS_DIR` to its absolute path, plus an accessible
+`R2_WORKER_BASE_URL` and matching `R2_DEV_TOKEN`. Missing assets or failed uploads
+abort seeding rather than persisting broken media keys. Repeated uploads of unchanged
+fixtures use deterministic, owner-scoped keys and safely overwrite the same objects.
+
+For a disposable development database, apply migrations and populate the demo graph:
+
+```bash
+docker compose exec backend npx sequelize-cli db:migrate
+docker compose exec backend npx sequelize-cli db:seed:all
+```
+
+Reseeding replaces demo sessions, ticket tiers, reviews and host assignments; do not
+run it against live bookings. Visit `/o/testcompany1` for free private-venue parties,
+`/o/testcompany2` for the branded video-led taco tour, and `/o/testcompany3` for the
+default coastal experience and uploaded-photo hero carousel. Follow each site's
+experience links to compare the layouts. The party fixtures include three checked-in
+registered demo guests who have opted into the public guest list; real guests remain
+private unless they explicitly opt in.
+
 ### Start services
 
 ```bash

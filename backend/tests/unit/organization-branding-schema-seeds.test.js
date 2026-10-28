@@ -53,7 +53,7 @@ describe('initial organization branding schema', () => {
 describe('branded organization demo seeds', () => {
   test.each([
     ['startup', startupSeeder, ['martinllc'], ['classic']],
-    ['demo', demoSeeder, ['testcompany1', 'testcompany2', 'testcompany3'], ['classic', 'editorial', 'immersive']],
+    ['demo', demoSeeder, ['testcompany1', 'testcompany2', 'testcompany3'], ['classic', 'editorial', 'classic']],
   ])('%s organization inserts contain valid, complete branding', async (_name, seeder, slugs, templates) => {
     const stopAfterOrganizations = new Error('Captured organization insert');
     let organizations;

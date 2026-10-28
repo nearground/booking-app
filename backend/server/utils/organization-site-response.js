@@ -3,6 +3,9 @@ import { resolveMediaUrl } from './media-storage.js';
 const buildPublicOrganizationSitePayload = (organization) => {
   const org = organization.toJSON ? organization.toJSON() : organization;
   const experiences = (org.Experiences || []).map((experience) => {
+    const images = Array.isArray(experience.images)
+      ? [...new Set(experience.images.filter((image) => typeof image === 'string' && image.trim()).map((image) => resolveMediaUrl(image)))]
+      : [];
     const sessions = experience.ScheduledExperiences || [];
     const firstSession = sessions.reduce((earliest, session) =>
       !earliest || new Date(session.dateTime) < new Date(earliest.dateTime) ? session : earliest, null);
@@ -11,7 +14,8 @@ const buildPublicOrganizationSitePayload = (organization) => {
       title: experience.title,
       subtitle: experience.subtitle || '',
       description: experience.description || '',
-      thumbnail: experience.thumbnail || null,
+      thumbnail: resolveMediaUrl(experience.thumbnail) || images[0] || null,
+      images,
       duration: experience.duration || null,
       nextDateTime: firstSession?.dateTime || null,
       soldOut: sessions.length > 0 && sessions.every((session) => Number(session.availableSpots) <= 0),

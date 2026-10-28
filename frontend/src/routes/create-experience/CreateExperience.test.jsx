@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { AuthContext } from 'contexts/AuthContext';
 import { networkAdapter } from 'services/NetworkAdapter';
@@ -24,6 +24,9 @@ vi.mock('react-leaflet', () => ({
 }));
 
 vi.mock('leaflet/dist/leaflet.css', () => ({}));
+vi.mock('../experience-details/ExperienceDetails', () => ({
+  default: () => <div data-testid="experience-preview" />,
+}));
 
 const userDetailsWithOrg = {
   id: 1,
@@ -42,6 +45,13 @@ const renderComponent = (props = {}) => render(
 );
 
 describe('CreateExperience — create mode (default)', () => {
+  test('selects a validated details template, defaulting to legacy layout', () => {
+    renderComponent();
+    const selector = screen.getByLabelText('Details template');
+    expect(selector).toHaveValue('default');
+    fireEvent.change(selector, { target: { value: 'party' } });
+    expect(selector).toHaveValue('party');
+  });
   test('renders "Create New Experience" title in create mode', async () => {
     renderComponent();
     expect(screen.getByText('Create New Experience')).toBeInTheDocument();
@@ -59,6 +69,7 @@ describe('CreateExperience — edit mode', () => {
     title: 'Mountain Hike',
     subtitle: 'Epic views',
     description: 'A beautiful hike.',
+    detailsMetadata: { version: 1, template: 'food-tour', overrides: { pinnedCommentIds: [1, 2, 3] } },
     thumbnail: 'https://example.com/mountain.jpg',
     capacity: 20,
     duration: 180,
@@ -104,6 +115,11 @@ describe('CreateExperience — edit mode', () => {
   test('renders "Edit Experience" title in edit mode', () => {
     renderComponent({ mode: 'edit', experienceData });
     expect(screen.getByText('Edit Experience')).toBeInTheDocument();
+  });
+
+  test('retains the saved template selection when editing', () => {
+    renderComponent({ mode: 'edit', experienceData });
+    expect(screen.getByLabelText('Details template')).toHaveValue('food-tour');
   });
 
   test('renders "Preview Changes" submit button in edit mode', () => {

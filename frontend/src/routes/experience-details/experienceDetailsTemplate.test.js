@@ -1,0 +1,26 @@
+import { resolveDetailsMetadata, resolveDetailsMedia, selectPinnedComments } from './experienceDetailsTemplate';
+
+describe('experience template resolution', () => {
+  test.each([undefined, null, {}, { version: 2, template: 'party' }, { version: 1, template: 'injected' }])(
+    'retains default layout for unsupported metadata %j', (value) => {
+      expect(resolveDetailsMetadata(value)).toEqual({ version: 1, template: 'default', overrides: {} });
+    }
+  );
+  test('drops arbitrary styles, URLs and personal fields', () => {
+    expect(resolveDetailsMetadata({ version: 1, template: 'party', overrides: {
+      css: 'body{}', checkedInPeople: [{ email: 'private@example.test' }],
+      heroVideoKey: 'data:text/html,unsafe', heroPosterKey: 'https://example.test/a.jpg',
+    } })).toEqual({ version: 1, template: 'party', overrides: {} });
+  });
+  test('resolves uploaded media to trusted same-origin paths', () => {
+    expect(resolveDetailsMedia({ version: 1, template: 'food-tour', overrides: {
+      heroVideoKey: 'users/1/asset/123-abc.mp4',
+    } })).toEqual({ heroVideoUrl: '/api/media/object/users/1/asset/123-abc.mp4', heroPosterUrl: null });
+  });
+  test('only pins matching five-star top-level comments in configured order', () => {
+    const comments = [{ id: 1, stars: 4 }, { id: 2, stars: 5, ParentId: 7 }, { id: 3, stars: '5' }];
+    expect(selectPinnedComments(comments, { version: 1, template: 'food-tour', overrides: {
+      pinnedCommentIds: [3, 1, 2],
+    } })).toEqual([comments[2]]);
+  });
+});

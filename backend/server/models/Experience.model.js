@@ -4,6 +4,7 @@ const require = createRequire(import.meta.url);
 const { DataTypes } = require('sequelize');
 
 import sequelize from './database.js';
+import { normalizeDetailsMetadata } from '../utils/experience-details-metadata.js';
 const Experience = sequelize.define('Experience', {
     id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
     capacity: { type: DataTypes.INTEGER, allowNull: false },
@@ -16,6 +17,16 @@ const Experience = sequelize.define('Experience', {
     ratings: DataTypes.DECIMAL(3, 2),
     commentsCount: DataTypes.INTEGER,
     images: { type: DataTypes.JSON },
+    detailsMetadata: {
+        type: DataTypes.JSON,
+        allowNull: true,
+        validate: {
+            isSafeDetailsMetadata(value) {
+                const { errors } = normalizeDetailsMetadata(value);
+                if (errors.length) throw new Error(errors.join('; '));
+            },
+        },
+    },
     thumbnail: DataTypes.STRING,
     userQuestionnary: { type: DataTypes.JSON },
     autoSyncEnabled: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: true },

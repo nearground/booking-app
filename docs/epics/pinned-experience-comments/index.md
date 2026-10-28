@@ -17,7 +17,7 @@ Authorized experience owners can feature a comment above regular comments, demon
 
 ## Scope and non-goals
 
-Existing UI: `frontend/src/components/comments/CommentsSection.jsx`, `CommentCard.jsx`, and `frontend/src/routes/experience-details/ExperienceDetails.jsx`. API/service/model: `backend/server/routes/comments.js`, `controllers/Comment.controller.js`, `services/Comment.service.js`, `models/Comment.model.js`. No pin field/behavior was found in the Comment model. Add pin/unpin and display with role checks; preserve sort, pagination, replies and edit rules. Seed example follows Epic 2 approach.
+Existing UI: `frontend/src/components/comments/CommentsSection.jsx`, `CommentCard.jsx`, and `frontend/src/routes/experience-details/ExperienceDetails.jsx`. The food-tour showcase persists its explicit ordered selection in `Experience.detailsMetadata.overrides.pinnedCommentIds`; it does not use a separate Comment pin field or infer pins from ratings. General-purpose pin/unpin/reorder controls and pin-specific authorization/API remain future work in this Epic. Preserve sort, pagination, replies and edit rules. Seed example follows Epic 2 approach.
 
 ## Acceptance criteria
 
@@ -59,3 +59,4 @@ Backend tests for authorized/unauthorized pin state; frontend tests for pinned-f
 
 - Draft created; not approved for implementation. Open decisions remain; no implementation evidence recorded.
 - 2026-10-26: User decided pin authority: organizers and admins of the owning organization, ACL-compatible later.
+- 2026-10-28: The food-tour experience template supports a metadata-selected showcase of up to three ordered, five-star, top-level experience comments at the bottom of the page. Dedicated frontend tests cover ordering, the three-comment limit, ineligible comments, explicit selection rather than inferred pins, and anonymity. The showcase uses the persisted metadata ID list as its single pin source; general pin/unpin/reorder UI/API and Comment-level pin fields are not part of this showcase. The full Epic remains open.

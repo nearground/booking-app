@@ -3,6 +3,7 @@ import { syncExperienceSchedule, populateScheduleBounded, previewStartDateUpdate
 import { sendError } from '../utils/http-response.js';
 import cache from '../utils/cache.js';
 import { Op } from 'sequelize';
+import { normalizeDetailsMetadata, validatePartyConfiguration } from '../utils/experience-details-metadata.js';
 import {
     normalizeBaseCreatePayload,
     normalizeBaseUpdatePayload,
@@ -287,6 +288,8 @@ const createExperience = async (req, res) => {
             maxSubtitleLength: MAX_EXPERIENCE_SUBTITLE_LENGTH,
             maxDescriptionLength: MAX_EXPERIENCE_DESCRIPTION_LENGTH,
         });
+        const { metadata: detailsMetadata, errors: metadataErrors } = normalizeDetailsMetadata(req.body.detailsMetadata);
+        errors.push(...metadataErrors);
         if (errors.length > 0) {
             await transaction.rollback();
             return res.status(400).json({ errors, data: {} });
@@ -329,6 +332,18 @@ const createExperience = async (req, res) => {
             });
         }
 
+        let partyConfiguration = null;
+        if (detailsMetadata.template === 'party') {
+            const schedules = normalizeSchedules(req.body.schedules);
+            const tiers = validateTicketTiers(req.body.ticketTiers);
+            partyConfiguration = validatePartyConfiguration({ ...schedules, tiers: tiers.tiers || [] });
+            const partyErrors = [...schedules.errors, ...tiers.errors, ...partyConfiguration.errors];
+            if (partyErrors.length) {
+                await transaction.rollback();
+                return res.status(400).json({ errors: partyErrors, data: {} });
+            }
+        }
+
         const experience = await Experience.create(
             {
                 title: normalized.title,
@@ -338,6 +353,8 @@ const createExperience = async (req, res) => {
                 description: normalized.description,
                 thumbnail: normalized.thumbnail,
                 images: normalized.images,
+                detailsMetadata,
+                ...(partyConfiguration ? { autoSyncEnabled: false } : {}),
                 ratings: normalized.ratings,
                 userQuestionnary: Array.isArray(userQuestionnary) ? userQuestionnary : [],
                 OrganizationId: normalized.organizationId,
@@ -401,6 +418,17 @@ const createExperience = async (req, res) => {
 
         await experience.addOrganizer(req.user.id, { transaction });
 
+        if (partyConfiguration) {
+            await ScheduledExperience.create({
+                ExperienceId: experience.id,
+                dateTime: partyConfiguration.dateTime,
+                endDateTime: partyConfiguration.endDateTime || new Date(new Date(partyConfiguration.dateTime).getTime() + (partyConfiguration.durationMinutes || normalized.duration) * 60000),
+                capacity: partyConfiguration.capacity ?? normalized.capacity,
+                availableSpots: partyConfiguration.capacity ?? normalized.capacity,
+                status: 'scheduled',
+            }, { transaction });
+        }
+
         await transaction.commit();
         // Run sync after commit to materialize scheduled experiences
         try {
@@ -460,7 +488,7 @@ const updateExperience = async (req, res) => {
             return res.status(400).json({ errors: ['Invalid experience id'], data: {} });
         }
 
-        const experience = await Experience.findByPk(experienceId, { transaction });
+        const experience = await Experience.findByPk(experienceId, { transaction, lock: true });
         if (!experience) {
             await transaction.rollback();
             return res.status(404).json({ errors: ['Experience not found'], data: {} });
@@ -491,6 +519,11 @@ const updateExperience = async (req, res) => {
             maxSubtitleLength: MAX_EXPERIENCE_SUBTITLE_LENGTH,
             maxDescriptionLength: MAX_EXPERIENCE_DESCRIPTION_LENGTH,
         });
+        if (req.body.detailsMetadata !== undefined) {
+            const { metadata, errors } = normalizeDetailsMetadata(req.body.detailsMetadata);
+            updatePayloadErrors.push(...errors);
+            updatePayload.detailsMetadata = metadata;
+        }
 
         if (updatePayloadErrors.length > 0) {
             await transaction.rollback();
@@ -516,6 +549,38 @@ const updateExperience = async (req, res) => {
                 : [];
         }
 
+        let partyConfiguration = null;
+        let partyNeedsSession = false;
+        const effectiveMetadata = normalizeDetailsMetadata(updatePayload.detailsMetadata ?? experience.detailsMetadata).metadata;
+        if (effectiveMetadata.template === 'party') {
+            const schedules = req.body.schedules !== undefined
+                ? normalizeSchedules(req.body.schedules)
+                : {
+                    templates: await ScheduleTemplate.findAll({ where: { ExperienceId: experience.id }, transaction }),
+                    picks: await PickedOccurrence.findAll({ where: { ExperienceId: experience.id, status: 'active' }, transaction }),
+                    errors: [],
+                };
+            const tiers = req.body.ticketTiers !== undefined
+                ? validateTicketTiers(req.body.ticketTiers)
+                : { tiers: await TicketTier.findAll({ where: { ExperienceId: experience.id }, transaction }), errors: [] };
+            partyConfiguration = validatePartyConfiguration({ ...schedules, tiers: tiers.tiers || [] });
+            const sessions = await ScheduledExperience.findAll({
+                where: { ExperienceId: experience.id },
+                limit: 2,
+                transaction,
+            });
+            const partyErrors = [...schedules.errors, ...tiers.errors, ...partyConfiguration.errors];
+            if (sessions.length > 1) partyErrors.push('Party experiences cannot have multiple existing sessions');
+            if (sessions.length === 1 && new Date(sessions[0].dateTime).getTime() !== new Date(partyConfiguration.dateTime).getTime()) {
+                partyErrors.push('An existing party session date cannot be changed through experience editing');
+            }
+            if (partyErrors.length) {
+                await transaction.rollback();
+                return res.status(400).json({ errors: partyErrors, data: {} });
+            }
+            partyNeedsSession = sessions.length === 0;
+            updatePayload.autoSyncEnabled = false;
+        }
         await experience.update(updatePayload, { transaction });
 
         // Handle schedules update payload: create/replace templates and picks
@@ -564,6 +629,16 @@ const updateExperience = async (req, res) => {
             }
         }
 
+        if (partyNeedsSession) {
+            await ScheduledExperience.create({
+                ExperienceId: experience.id,
+                dateTime: partyConfiguration.dateTime,
+                endDateTime: partyConfiguration.endDateTime || new Date(new Date(partyConfiguration.dateTime).getTime() + (partyConfiguration.durationMinutes || experience.duration) * 60000),
+                capacity: partyConfiguration.capacity ?? experience.capacity,
+                availableSpots: partyConfiguration.capacity ?? experience.capacity,
+                status: 'scheduled',
+            }, { transaction });
+        }
         await transaction.commit();
 
         const updatedExperience = await Experience.findByPk(experience.id, {
@@ -744,6 +819,12 @@ const toggleAutoSync = async (req, res) => {
         }
 
         const enabled = Boolean(req.body.enabled);
+        if (enabled && normalizeDetailsMetadata(experience.detailsMetadata).metadata.template === 'party') {
+            return res.status(400).json({
+                errors: ['Party experiences cannot enable recurring schedule synchronization'],
+                data: {},
+            });
+        }
         await experience.update({ autoSyncEnabled: enabled });
 
         return res.status(200).json({
@@ -1043,6 +1124,7 @@ const getExperienceForEdit = async (req, res) => {
                     title: experience.title,
                     subtitle: experience.subtitle || '',
                     description: experience.description || '',
+                    detailsMetadata: normalizeDetailsMetadata(experience.detailsMetadata).metadata,
                     thumbnail: experience.thumbnail || '',
                     capacity: experience.capacity,
                     duration: experience.duration,

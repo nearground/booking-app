@@ -3,7 +3,7 @@ title: "Single-date experience presentation"
 work_id: "EPIC-single-date-experience"
 work_type: epic
 template_version: 1
-status: draft
+status: in-progress
 parent: null
 branch: "epic/single-date-experience"
 depends_on: [EPIC-correlated-seed-factory, EPIC-hero-gallery-display-template]
@@ -63,3 +63,6 @@ Backend tests for `scheduleType` validation and single-session creation; compone
 ## Progress and decisions
 
 - 2026-10-26: User decided single-date is an explicit creation choice that also streamlines creation UX.
+- 2026-10-28 ASAP showcase slice: prioritize the hero Epic's `detailsMetadata.template='party'` presentation and bounded demo seed ahead of the broader schedule-type/conversion work. Seeded private-venue parties have one picked occurrence, no recurring templates, automatic schedule synchronization disabled and one zero-price admission tier. The party page omits calendars and organizer bios, refuses ambiguous/multiple-session configurations, and uses the existing fixed-session booking modal.
+- Party-owner verification: 17 frontend tests and 54 backend tests passed, including default-private opt-in guest identities, actual booking-modal integration, zero-total checkout confirmation, server-side free-tier checks and registration deadlines. Public check-in totals use the existing reservation-level `attended` status; named profiles require registered account-holder consent, never billing names or unnamed guests. This does not claim per-attendee check-in tracking or live seed execution.
+- Remaining original scope: general `scheduleType` authoring/enforcement and duplication-based conversion are not delivered by this showcase; the unchecked acceptance criteria above remain authoritative.

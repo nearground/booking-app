@@ -71,6 +71,7 @@ services:
       MYSQL_PASSWORD: ${MYSQL_PASSWORD:?Set MYSQL_PASSWORD in .env}
       MYSQL_HOST: ${MYSQL_HOST:-database}
       MEDIA_PUBLIC_BASE_URL: ${MEDIA_PUBLIC_BASE_URL:-/api/media/object}
+      SHOWCASE_MEDIA_ASSETS_DIR: /demo-assets
 
       JWT_SECRET: ${JWT_SECRET:?Set a unique randomly generated JWT_SECRET in .env}
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-24h}
@@ -113,6 +114,7 @@ services:
     volumes:
       # Mount source code for hot reload
       - ./backend:/app
+      - ./frontend/public:/demo-assets:ro
       # Use anonymous volume for node_modules to prevent overwriting
       - /app/node_modules
     depends_on:
