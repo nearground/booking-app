@@ -138,7 +138,8 @@ export const checkoutCart = async (cartId, customerId, billingInfo, contactInfo 
                     confirmationCode: generateConfirmationCode(item.ProductId, metadata.ScheduledExperienceId),
                     numberOfAttendees: Number(item.quantity),
                     totalPrice: Number(item.totalPrice),
-                    status: isFreeOrder ? 'confirmed' : 'pending',
+                    // Confirm reservations until online payment processing is available.
+                    status: 'confirmed',
                     specialRequests: metadata.specialRequests || null,
                     dayOfPhone: metadata.mainContact?.phone ? String(metadata.mainContact.phone).trim() : null,
                     billingEmail: billingInfo.email,

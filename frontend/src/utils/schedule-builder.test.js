@@ -1,4 +1,13 @@
-import { buildCronExpression, getUpcomingSchedulePreview, WEEKDAY_OPTIONS } from 'utils/schedule-builder';
+import {
+  buildCronExpression,
+  formatDateForInput,
+  formatDateTimeForInput,
+  getUpcomingSchedulePreview,
+  parseCronExpression,
+  parseDateTimeInput,
+  parseScheduleDateBoundary,
+  WEEKDAY_OPTIONS,
+} from 'utils/schedule-builder';
 
 describe('buildCronExpression', () => {
   test('daily 14:30 → "30 14 * * *"', () => {
@@ -59,6 +68,48 @@ describe('buildCronExpression', () => {
     expect(
       buildCronExpression({ recurrenceType: 'weekly', time: '10:30', weekDays: [4, 2] })
     ).toBe('30 10 * * 2,4');
+  });
+});
+
+describe('parseCronExpression', () => {
+  test('parses daily and weekly expressions for the schedule editor', () => {
+    expect(parseCronExpression('30 14 * * *')).toEqual({
+      hour: 14,
+      minute: 30,
+      recurrenceType: 'daily',
+      weekDays: [],
+    });
+    expect(parseCronExpression('0 9 * * 1,3,5')).toEqual({
+      hour: 9,
+      minute: 0,
+      recurrenceType: 'weekly',
+      weekDays: [1, 3, 5],
+    });
+  });
+
+  test('returns null for cron rules the visual editor cannot represent', () => {
+    expect(parseCronExpression('0 9 1 * *')).toBeNull();
+    expect(parseCronExpression('not a cron rule')).toBeNull();
+  });
+});
+
+describe('date/time editor conversion', () => {
+  test('round-trips an instant through the experience timezone', () => {
+    const instant = '2026-01-15T16:30:00.000Z';
+    const inputValue = formatDateTimeForInput(instant, 'America/Mexico_City');
+
+    expect(inputValue).toBe('2026-01-15T10:30');
+    expect(parseDateTimeInput(inputValue, 'America/Mexico_City')).toBe(instant);
+  });
+
+  test('returns null for an incomplete date/time input', () => {
+    expect(parseDateTimeInput('', 'America/Mexico_City')).toBeNull();
+  });
+
+  test('converts recurring date bounds using the experience timezone', () => {
+    expect(formatDateForInput('2026-01-15T00:30:00.000Z', 'America/Mexico_City')).toBe('2026-01-14');
+    expect(parseScheduleDateBoundary('2026-01-14', 'America/Mexico_City')).toBe('2026-01-14T06:00:00.000Z');
+    expect(parseScheduleDateBoundary('2026-01-14', 'America/Mexico_City', true)).toBe('2026-01-15T05:59:59.999Z');
   });
 });
 
@@ -155,6 +206,47 @@ describe('getUpcomingSchedulePreview', () => {
         hour12: false,
       }).format(d);
       expect(Number(displayedHour)).toBe(14);
+    });
+  });
+
+  test('applies date bounds in the schedule timezone when bounds are UTC instants', () => {
+    const timezone = 'Asia/Tokyo';
+    const targetDate = formatDateForInput(new Date(Date.now() + 10 * 24 * 60 * 60 * 1000), timezone);
+    const startDate = parseScheduleDateBoundary(targetDate, timezone);
+    const endDate = parseScheduleDateBoundary(targetDate, timezone, true);
+
+    const results = getUpcomingSchedulePreview({
+      recurrenceType: 'daily',
+      time: '12:00',
+      timezone,
+      startDate,
+      endDate,
+      limit: 2,
+    });
+
+    expect(results).toHaveLength(1);
+    expect(formatDateForInput(results[0], timezone)).toBe(targetDate);
+  });
+
+  test('respects recurring schedule start and end dates', () => {
+    const today = new Date();
+    const startDate = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate() + 2))
+      .toISOString().slice(0, 10);
+    const endDate = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate() + 4))
+      .toISOString().slice(0, 10);
+    const results = getUpcomingSchedulePreview({
+      recurrenceType: 'daily',
+      time: '23:59',
+      timezone: 'UTC',
+      startDate,
+      endDate,
+      limit: 6,
+    });
+
+    expect(results.length).toBeGreaterThan(0);
+    results.forEach((date) => {
+      const sessionDate = date.toISOString().slice(0, 10);
+      expect(sessionDate >= startDate && sessionDate <= endDate).toBe(true);
     });
   });
 });

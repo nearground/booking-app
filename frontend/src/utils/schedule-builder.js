@@ -40,10 +40,12 @@ export const parseCronExpression = (cron) => {
   if (parts.length !== 5) {
     return null;
   }
-  const [minuteStr, hourStr, , , dayOfWeekStr] = parts;
+  const [minuteStr, hourStr, dayOfMonthStr, monthStr, dayOfWeekStr] = parts;
   const hour = Number(hourStr);
   const minute = Number(minuteStr);
   if (
+    dayOfMonthStr !== '*' ||
+    monthStr !== '*' ||
     !Number.isInteger(hour) ||
     !Number.isInteger(minute) ||
     hour < 0 ||
@@ -56,11 +58,17 @@ export const parseCronExpression = (cron) => {
   if (dayOfWeekStr === '*') {
     return { hour, minute, recurrenceType: 'daily', weekDays: [] };
   }
+  if (!/^\d(?:,\d)*$/.test(dayOfWeekStr)) {
+    return null;
+  }
   const weekDays = dayOfWeekStr
     .split(',')
     .map(Number)
     .filter((d) => Number.isInteger(d) && d >= 0 && d <= 6);
-  return { hour, minute, recurrenceType: 'weekly', weekDays };
+  if (weekDays.length === 0 || dayOfWeekStr.split(',').length !== weekDays.length) {
+    return null;
+  }
+  return { hour, minute, recurrenceType: 'weekly', weekDays: [...new Set(weekDays)].sort((a, b) => a - b) };
 };
 
 /**
@@ -107,6 +115,62 @@ const makeDateInTimezone = (year, month, day, hour, minute, timezone) => {
   return new Date(nominalUtc.getTime() - offsetMs);
 };
 
+export const formatDateTimeForInput = (value, timezone) => {
+  if (!value) return '';
+  const date = new Date(value);
+  if (!Number.isFinite(date.getTime())) return '';
+
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: timezone || undefined,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  }).formatToParts(date);
+  const part = (type) => parts.find((item) => item.type === type)?.value;
+  return `${part('year')}-${part('month')}-${part('day')}T${part('hour')}:${part('minute')}`;
+};
+
+export const parseDateTimeInput = (value, timezone) => {
+  const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/.exec(value || '');
+  if (!match) return null;
+
+  const [, year, month, day, hour, minute] = match.map(Number);
+  const date = timezone
+    ? makeDateInTimezone(year, month, day, hour, minute, timezone)
+    : new Date(year, month - 1, day, hour, minute, 0, 0);
+  return date.toISOString();
+};
+
+export const formatDateForInput = (value, timezone) => {
+  if (!value) return '';
+  const date = new Date(value);
+  if (!Number.isFinite(date.getTime())) return '';
+
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: timezone || undefined,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(date);
+  const part = (type) => parts.find((item) => item.type === type)?.value;
+  return `${part('year')}-${part('month')}-${part('day')}`;
+};
+
+export const parseScheduleDateBoundary = (value, timezone, endOfDay = false) => {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value || '');
+  if (!match) return null;
+
+  const [, year, month, day] = match.map(Number);
+  const date = timezone
+    ? makeDateInTimezone(year, month, day, endOfDay ? 23 : 0, endOfDay ? 59 : 0, timezone)
+    : new Date(year, month - 1, day, endOfDay ? 23 : 0, endOfDay ? 59 : 0, endOfDay ? 59 : 0, endOfDay ? 999 : 0);
+  if (endOfDay && timezone) date.setTime(date.getTime() + 59999);
+  return date.toISOString();
+};
+
 export const buildCronExpression = ({ recurrenceType, time, weekDays }) => {
   const parsedTime = parseTime(time);
   if (!parsedTime) {
@@ -148,6 +212,8 @@ export const getUpcomingSchedulePreview = ({
   weekDays,
   cronExpression,
   timezone,
+  startDate,
+  endDate,
   limit = 6,
 }) => {
   // Resolve parameters — cronExpression takes precedence when time is absent.
@@ -193,7 +259,16 @@ export const getUpcomingSchedulePreview = ({
     ? new Intl.DateTimeFormat('en-US', { timeZone: timezone, weekday: 'short' })
     : null;
 
-  for (let dayOffset = 0; dayOffset < 60 && results.length < limit; dayOffset += 1) {
+  const toCalendarDate = (value) => {
+    if (!value) return '';
+    const dateValue = String(value);
+    if (/^\d{4}-\d{2}-\d{2}$/.test(dateValue)) return dateValue;
+    return formatDateForInput(dateValue, timezone);
+  };
+  const startDateString = toCalendarDate(startDate);
+  const endDateString = toCalendarDate(endDate);
+
+  for (let dayOffset = 0; dayOffset < 730 && results.length < limit; dayOffset += 1) {
     const referenceDate = new Date(now);
     referenceDate.setDate(now.getDate() + dayOffset);
 
@@ -222,6 +297,14 @@ export const getUpcomingSchedulePreview = ({
     );
 
     if (candidateDate <= now) {
+      continue;
+    }
+
+    const candidateDateString = `${candidateYear}-${String(candidateMonth).padStart(2, '0')}-${String(candidateDay).padStart(2, '0')}`;
+    if (
+      (startDateString && candidateDateString < startDateString) ||
+      (endDateString && candidateDateString > endDateString)
+    ) {
       continue;
     }
 

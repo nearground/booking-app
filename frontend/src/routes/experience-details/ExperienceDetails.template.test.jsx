@@ -62,6 +62,17 @@ test('pinned five-star reviews render on the event template', () => {
   expect(screen.getByText('A featured review')).toBeInTheDocument();
 });
 
+test('default template renders pinned comments directly below its description', () => {
+  renderDetails({ version: 1, template: 'default', overrides: { pinnedCommentIds: [1] } }, [
+    { id: 1, stars: 5, title: 'A featured review', comment: 'A great experience.' },
+  ]);
+  const descriptionHeading = screen.getByRole('heading', { name: "What You'll Do" });
+  const pinnedComments = screen.getByRole('region', { name: 'Pinned experience comments' });
+
+  expect(pinnedComments.parentElement).toBe(descriptionHeading.parentElement);
+  expect(pinnedComments).toBeInTheDocument();
+});
+
 test('food-tour dispatch receives the existing booking component', () => {
   renderDetails({ version: 1, template: 'food-tour', overrides: {} });
   expect(screen.getByTestId('food-tour-template')).toHaveTextContent('Template preview');

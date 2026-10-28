@@ -17,9 +17,10 @@ import SessionsPreviewPanel from 'components/sessions-preview-panel/SessionsPrev
 import ExperienceDetails from 'routes/experience-details/ExperienceDetails';
 import { getStandardCountryList } from 'utils/countries';
 import {
-  WEEKDAY_OPTIONS,
   buildCronExpression,
+  formatDateForInput,
   getUpcomingSchedulePreview,
+  parseScheduleDateBoundary,
   parseCronExpression,
 } from 'utils/schedule-builder';
 import ScheduleBuilder from 'components/schedule-builder/ScheduleBuilder';
@@ -203,7 +204,8 @@ const LocationMiniMap = ({ point }) => {
  * returned by the manage GET endpoint. Used to seed the ScheduleBuilder in edit mode.
  */
 const buildSchedulesFromExperienceData = (experienceData) => {
-  const templates = (experienceData?.ScheduleTemplates || []).map((tpl) => {
+  const savedTemplates = experienceData?.ScheduleTemplates || [];
+  const templates = savedTemplates.filter((tpl) => tpl.ruleType !== 'datetime').map((tpl) => {
     const parsedCron = tpl.ruleType === 'cron' ? parseCronExpression(tpl.ruleCron) : null;
     return {
       kind: 'template',
@@ -211,11 +213,11 @@ const buildSchedulesFromExperienceData = (experienceData) => {
       ruleType: tpl.ruleType || 'cron',
       ruleCron: tpl.ruleCron || null,
       ruleDateTime: tpl.ruleDateTime || null,
-      timezone: tpl.timezone || 'UTC',
+      timezone: tpl.timezone || experienceData?.Location?.timezone || 'UTC',
       durationMinutes: tpl.durationMinutes != null ? String(tpl.durationMinutes) : '',
       capacity: tpl.capacity != null ? String(tpl.capacity) : '',
-      startDate: tpl.startDate || '',
-      endDate: tpl.endDate || '',
+      startDate: formatDateForInput(tpl.startDate, tpl.timezone || experienceData?.Location?.timezone),
+      endDate: formatDateForInput(tpl.endDate, tpl.timezone || experienceData?.Location?.timezone),
       _recurrenceType: parsedCron?.recurrenceType || 'weekly',
       _time: parsedCron
         ? `${String(parsedCron.hour).padStart(2, '0')}:${String(parsedCron.minute).padStart(2, '0')}`
@@ -225,6 +227,22 @@ const buildSchedulesFromExperienceData = (experienceData) => {
     };
   });
 
+  const legacyOneOffs = savedTemplates
+    .filter((tpl) => tpl.ruleType === 'datetime')
+    .map((tpl) => {
+      const start = tpl.ruleDateTime ? new Date(tpl.ruleDateTime) : null;
+      const end = start && tpl.durationMinutes
+        ? new Date(start.getTime() + Number(tpl.durationMinutes) * 60000)
+        : null;
+      return {
+        kind: 'picked',
+        dateTime: tpl.ruleDateTime || '',
+        endDateTime: end && Number.isFinite(end.getTime()) ? end.toISOString() : '',
+        capacity: tpl.capacity != null ? String(tpl.capacity) : '',
+        note: tpl.name || '',
+      };
+    });
+
   const picks = (experienceData?.PickedOccurrences || []).map((pick) => ({
     kind: 'picked',
     dateTime: pick.dateTime || null,
@@ -233,7 +251,7 @@ const buildSchedulesFromExperienceData = (experienceData) => {
     note: pick.note || '',
   }));
 
-  return [...templates, ...picks];
+  return [...templates, ...legacyOneOffs, ...picks];
 };
 
 /**
@@ -320,6 +338,7 @@ const CreateExperience = ({ mode = 'create', experienceData = null }) => {
   const [activeStep, setActiveStep] = useState('core');
   const [validationSummary, setValidationSummary] = useState([]);
   const [pinnedCommentSearch, setPinnedCommentSearch] = useState('');
+  const [pinnedCommentStars, setPinnedCommentStars] = useState('');
   const [, setLocationGeocodeDebug] = useState({
     status: 'idle',
     fullQuery: '',
@@ -348,11 +367,12 @@ const CreateExperience = ({ mode = 'create', experienceData = null }) => {
   );
   const filteredPinnableComments = useMemo(() => {
     const searchTerm = pinnedCommentSearch.trim().toLowerCase();
-    if (!searchTerm) return pinnableComments;
+    if (!searchTerm && !pinnedCommentStars) return [];
     return pinnableComments.filter((comment) =>
-      `${comment.title || ''} ${comment.comment || ''}`.toLowerCase().includes(searchTerm)
+      (!pinnedCommentStars || pinnedCommentStars === 'any' || String(comment.stars) === pinnedCommentStars) &&
+      (!searchTerm || `${comment.title || ''} ${comment.comment || ''}`.toLowerCase().includes(searchTerm))
     );
-  }, [pinnedCommentSearch, pinnableComments]);
+  }, [pinnedCommentSearch, pinnedCommentStars, pinnableComments]);
 
   const initialSchedules = useMemo(
     () => (isEditMode && experienceData ? buildSchedulesFromExperienceData(experienceData) : []),
@@ -584,8 +604,11 @@ const CreateExperience = ({ mode = 'create', experienceData = null }) => {
             return;
           }
           const recurrenceType = item._recurrenceType || 'weekly';
-          const cron = item.ruleCron || buildCronExpression({ recurrenceType, time: item._time || formData.scheduleTime, weekDays: item._weekDays || formData.scheduleDays });
-          const upcoming = getUpcomingSchedulePreview({ recurrenceType, time: item._time || formData.scheduleTime, weekDays: item._weekDays || formData.scheduleDays, cronExpression: cron, timezone: schedulePreviewTimezone, limit: 6 });
+          const time = item._useCustomCron ? undefined : item._time || formData.scheduleTime;
+          const weekDays = item._useCustomCron ? [] : item._weekDays || formData.scheduleDays;
+          const itemTimezone = item.timezone || schedulePreviewTimezone;
+          const cron = item.ruleCron || buildCronExpression({ recurrenceType, time, weekDays });
+          const upcoming = getUpcomingSchedulePreview({ recurrenceType, time, weekDays, cronExpression: cron, timezone: itemTimezone, startDate: item.startDate, endDate: item.endDate, limit: 6 });
           upcoming.forEach((d) => results.push(d));
         } else if (item.kind === 'picked' && item.dateTime) {
           results.push(new Date(item.dateTime));
@@ -618,8 +641,11 @@ const CreateExperience = ({ mode = 'create', experienceData = null }) => {
             return [{ id: `schedule-calendar-once-${item.ruleDateTime}`, title: item.name || 'Scheduled session', dateTime: new Date(item.ruleDateTime).toISOString(), source: 'Schedule Builder' }];
           }
           const recurrenceType = item._recurrenceType || 'weekly';
-          const cron = item.ruleCron || buildCronExpression({ recurrenceType, time: item._time || formData.scheduleTime, weekDays: item._weekDays || formData.scheduleDays });
-          return getUpcomingSchedulePreview({ recurrenceType, time: item._time || formData.scheduleTime, weekDays: item._weekDays || formData.scheduleDays, limit: 120, cronExpression: cron, timezone: schedulePreviewTimezone }).map((d, idx) => ({ id: `schedule-calendar-${item.name || 't'}-${idx + 1}-${d.toISOString()}`, title: 'Scheduled session', dateTime: d.toISOString(), source: 'Schedule Builder' }));
+          const time = item._useCustomCron ? undefined : item._time || formData.scheduleTime;
+          const weekDays = item._useCustomCron ? [] : item._weekDays || formData.scheduleDays;
+          const itemTimezone = item.timezone || schedulePreviewTimezone;
+          const cron = item.ruleCron || buildCronExpression({ recurrenceType, time, weekDays });
+          return getUpcomingSchedulePreview({ recurrenceType, time, weekDays, limit: 120, cronExpression: cron, timezone: itemTimezone, startDate: item.startDate, endDate: item.endDate }).map((d, idx) => ({ id: `schedule-calendar-${item.name || 't'}-${idx + 1}-${d.toISOString()}`, title: item.name || 'Scheduled session', dateTime: d.toISOString(), source: 'Schedule Builder' }));
         }
         if (item.kind === 'picked' && item.dateTime) {
           return [{ id: `schedule-calendar-picked-${item.dateTime}`, title: 'Scheduled session', dateTime: new Date(item.dateTime).toISOString(), source: 'Schedule Builder' }];
@@ -974,8 +1000,14 @@ const CreateExperience = ({ mode = 'create', experienceData = null }) => {
         }
 
         if (item.kind === 'template') {
+          if (item.startDate && item.endDate && item.startDate.slice(0, 10) > item.endDate.slice(0, 10)) {
+            return `Schedule ${i + 1}: the end date must be after the start date.`;
+          }
           const ruleType = String(item.ruleType || 'cron').trim();
           if (ruleType === 'cron') {
+            if (item._useCustomCron && !String(item.ruleCron || '').trim()) {
+              return `Schedule ${i + 1}: enter a custom cron expression.`;
+            }
             const cron = item.ruleCron || buildCronExpression({ recurrenceType: item._recurrenceType || 'weekly', time: item._time || formData.scheduleTime, weekDays: item._weekDays || formData.scheduleDays });
             if (!cron) {
               return item._recurrenceType === 'daily'
@@ -1720,8 +1752,8 @@ const CreateExperience = ({ mode = 'create', experienceData = null }) => {
             ruleCron: computedRuleCron || null,
             ruleDateTime: s.ruleDateTime || null,
             timezone: s.timezone || schedulePreviewTimezone || 'UTC',
-            startDate: s.startDate || null,
-            endDate: s.endDate || null,
+            startDate: parseScheduleDateBoundary(s.startDate, s.timezone || schedulePreviewTimezone),
+            endDate: parseScheduleDateBoundary(s.endDate, s.timezone || schedulePreviewTimezone, true),
             durationMinutes:
               s.durationMinutes != null && String(s.durationMinutes).trim() !== ''
                 ? Number(s.durationMinutes)
@@ -2302,13 +2334,13 @@ const CreateExperience = ({ mode = 'create', experienceData = null }) => {
                 </span>
               )}
             </div>
-            <p className="mt-1 text-xs text-slate-500">Choose up to three five-star experience reviews to feature on any details template. Pins are saved with this experience.</p>
+            <p className="mt-1 text-xs text-slate-500">Choose up to three experience reviews to feature on any details template. Pins are saved with this experience.</p>
             {isEditMode && pinnableComments.length > 0 ? (
               <div className="mt-3">
                 <label htmlFor="pinned-review-search" className="mb-1 block text-xs font-medium text-slate-700">
                   Find a review
                 </label>
-                <div className="flex gap-2">
+                <div className="flex flex-col gap-2 sm:flex-row">
                   <input
                     id="pinned-review-search"
                     type="search"
@@ -2317,6 +2349,18 @@ const CreateExperience = ({ mode = 'create', experienceData = null }) => {
                     value={pinnedCommentSearch}
                     onChange={(event) => setPinnedCommentSearch(event.target.value)}
                   />
+                  <select
+                    aria-label="Filter reviews by stars"
+                    className="rounded border border-slate-300 bg-white px-3 py-2 text-sm"
+                    value={pinnedCommentStars}
+                    onChange={(event) => setPinnedCommentStars(event.target.value)}
+                  >
+                    <option value="" disabled>Choose stars</option>
+                    <option value="any">Any star rating</option>
+                    {[5, 4, 3, 2, 1].map((stars) => (
+                      <option key={stars} value={String(stars)}>{stars} stars</option>
+                    ))}
+                  </select>
                   {pinnedCommentSearch && (
                     <button
                       type="button"
@@ -2328,7 +2372,9 @@ const CreateExperience = ({ mode = 'create', experienceData = null }) => {
                   )}
                 </div>
                 <p className="mt-1 text-xs text-slate-500">
-                  Showing {filteredPinnableComments.length} of {pinnableComments.length} reviews
+                  {pinnedCommentSearch.trim() || pinnedCommentStars
+                    ? `Showing ${filteredPinnableComments.length} matching reviews`
+                    : 'Search reviews or choose a star rating to see matching reviews.'}
                   {(formData.detailsMetadata.overrides.pinnedCommentIds || []).length >= 3
                     ? ' · Unpin a review to choose another.'
                     : ''}
@@ -2364,7 +2410,7 @@ const CreateExperience = ({ mode = 'create', experienceData = null }) => {
                           />
                           <span className="min-w-0">
                             <span className="block text-sm font-medium text-slate-800">
-                              ★★★★★ {comment.title || 'Five-star review'}
+                              {'★'.repeat(comment.stars)}{'☆'.repeat(5 - comment.stars)} {comment.title || 'Review'}
                             </span>
                             <span className="block text-sm text-slate-600">{comment.comment}</span>
                           </span>
@@ -2486,16 +2532,23 @@ const CreateExperience = ({ mode = 'create', experienceData = null }) => {
           </div>
         </div>
 
-        <div className="border rounded p-4 bg-slate-50">
-          <h3 className="font-semibold text-slate-700 mb-3">Schedule Builder</h3>
+        <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 sm:p-5">
+          <div className="mb-4">
+            <h3 className="text-lg font-semibold text-slate-800">Session schedule</h3>
+            <p className="mt-1 text-sm text-slate-500">
+              Create repeating sessions, add one-off dates, and review the schedule before saving.
+            </p>
+          </div>
           <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_20rem] gap-4">
             <div>
-              <div>
-                <ScheduleBuilder schedules={formData.schedules} onChange={(s) => setField('schedules', s)} timezone={schedulePreviewTimezone} />
+              <ScheduleBuilder schedules={formData.schedules} onChange={(s) => setField('schedules', s)} timezone={schedulePreviewTimezone} />
 
-                <div className="mt-4">
-                  <p className="text-sm font-medium text-slate-700 mb-2">Upcoming schedule preview</p>
-                  <p className="text-xs text-slate-500 mb-2">Times shown in {schedulePreviewTimezone}</p>
+              <div className="mt-4 rounded-lg border border-slate-200 bg-white p-4">
+                <p className="text-sm font-semibold text-slate-800">Upcoming sessions</p>
+                <p className="mt-1 text-xs text-slate-500">
+                  Showing the next sessions in {schedulePreviewTimezone}.
+                </p>
+                {upcomingPreview.length > 0 ? (
                   <ul className="text-sm text-slate-600 space-y-1">
                     {upcomingPreview.map((scheduleDate) => (
                       <li key={scheduleDate.toISOString()}>
@@ -2510,7 +2563,13 @@ const CreateExperience = ({ mode = 'create', experienceData = null }) => {
                       </li>
                     ))}
                   </ul>
-                </div>
+                ) : (
+                  <p className="mt-3 text-sm text-slate-500">
+                    {formData.schedules.length > 0
+                      ? 'Complete a schedule above to preview its upcoming sessions.'
+                      : 'Add a schedule to see its next sessions here.'}
+                  </p>
+                )}
               </div>
             </div>
 

@@ -23,6 +23,7 @@ const ScheduleBuilder = ({ schedules = [], onChange, timezone }) => {
         ruleType: 'cron',
         ruleCron: null,
         ruleDateTime: null,
+        timezone: timezone || 'UTC',
         durationMinutes: '',
         capacity: '',
         _recurrenceType: 'weekly',
@@ -45,7 +46,7 @@ const ScheduleBuilder = ({ schedules = [], onChange, timezone }) => {
         <div>
           <p className="font-semibold text-slate-800">How will this experience run?</p>
           <p className="mt-1 text-sm text-slate-500">
-            Set a repeating timetable, add specific dates, or combine both.
+            Scheduling is optional. Set a repeating timetable, add specific dates, or combine both.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -70,7 +71,7 @@ const ScheduleBuilder = ({ schedules = [], onChange, timezone }) => {
         <div className="rounded-lg border border-dashed border-slate-300 bg-white px-5 py-8 text-center">
           <p className="font-medium text-slate-700">No sessions added yet</p>
           <p className="mt-1 text-sm text-slate-500">
-            Choose a repeating schedule for regular sessions, or add dates one by one.
+            Leave this blank to add sessions later, or choose a repeating schedule or specific dates now.
           </p>
         </div>
       ) : (
@@ -108,7 +109,12 @@ const ScheduleBuilder = ({ schedules = [], onChange, timezone }) => {
                     idPrefix={`schedule-${idx}`}
                   />
                 ) : (
-                  <PickedEditor value={item} onChange={(next) => updateItem(idx, next)} idPrefix={`date-${idx}`} />
+                  <PickedEditor
+                    value={item}
+                    onChange={(next) => updateItem(idx, next)}
+                    idPrefix={`date-${idx}`}
+                    timezone={timezone}
+                  />
                 )}
               </div>
             </section>

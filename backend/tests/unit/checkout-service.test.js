@@ -169,6 +169,7 @@ import Cart from '../../server/models/Cart.model.js';
 import Order from '../../server/models/Order.model.js';
 import OrderItem from '../../server/models/OrderItem.model.js';
 import ExperienceReservation from '../../server/models/ExperienceReservation.model.js';
+import ExperienceReservationAnswer from '../../server/models/ExperienceReservationAnswer.model.js';
 import ServiceReservation from '../../server/models/ServiceReservation.model.js';
 import HotelReservation from '../../server/models/HotelReservation.model.js';
 import TicketTier from '../../server/models/TicketTier.model.js';
@@ -250,11 +251,23 @@ describe('checkoutCart – confirmationCode snapshotting into OrderItem.metadata
         expect(txHolder.tx.commit).toHaveBeenCalledTimes(1);
     });
 
-    test('paid-price bookings still await payment confirmation', async () => {
-        setupCart([makeCartItem('Experience')]);
+    test('confirms paid-price reservations while keeping the order pending payment', async () => {
+        setupCart([makeCartItem('Experience', {
+            reservationAnswers: [{ questionKey: 'publicAttendance', answerText: 'true' }],
+        })]);
         await checkoutCart(1, 42, makeBillingInfo());
         expect(ExperienceReservation.create).toHaveBeenCalledWith(
-            expect.objectContaining({ status: 'pending' }),
+            expect.objectContaining({ status: 'confirmed' }),
+            { transaction: txHolder.tx }
+        );
+        expect(ExperienceReservationAnswer.bulkCreate).toHaveBeenCalledWith(
+            expect.arrayContaining([
+                expect.objectContaining({
+                    ExperienceReservationId: 10,
+                    questionKey: 'publicAttendance',
+                    answerText: 'true',
+                }),
+            ]),
             { transaction: txHolder.tx }
         );
         const order = await Order.create.mock.results[0].value;

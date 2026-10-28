@@ -130,7 +130,7 @@ describe('CreateExperience — edit mode', () => {
     expect(screen.getByRole('button', { name: 'Preview Changes' })).toBeInTheDocument();
   });
 
-  test('lets organizers pin and unpin eligible reviews while editing', () => {
+  test('lets organizers pin and unpin reviews while editing', () => {
     const data = {
       ...experienceData,
       detailsMetadata: { version: 1, template: 'default', overrides: { pinnedCommentIds: [10] } },
@@ -140,6 +140,9 @@ describe('CreateExperience — edit mode', () => {
       ],
     };
     renderComponent({ mode: 'edit', experienceData: data });
+    fireEvent.change(screen.getByRole('combobox', { name: 'Filter reviews by stars' }), {
+      target: { value: '5' },
+    });
     const featuredReview = screen.getByLabelText(/New favorite/);
     expect(screen.getByLabelText(/Already featured/)).toBeChecked();
     expect(featuredReview).not.toBeChecked();
@@ -154,11 +157,23 @@ describe('CreateExperience — edit mode', () => {
       pinnableComments: [
         { id: 10, stars: 5, title: 'Already featured', comment: 'A review currently pinned.' },
         { id: 20, stars: 5, title: 'New favorite', comment: 'A review to feature.' },
+        { id: 30, stars: 3, title: 'Solid outing', comment: 'A three-star experience.' },
       ],
     };
     renderComponent({ mode: 'edit', experienceData: data });
 
     const search = screen.getByRole('searchbox', { name: 'Find a review' });
+    const starFilter = screen.getByRole('combobox', { name: 'Filter reviews by stars' });
+    expect(screen.queryByLabelText(/Already featured/)).not.toBeInTheDocument();
+    expect(screen.getByText(/Search reviews or choose a star rating/)).toBeInTheDocument();
+
+    fireEvent.change(starFilter, { target: { value: '3' } });
+    expect(screen.getByLabelText(/Solid outing/)).toBeInTheDocument();
+    expect(screen.queryByLabelText(/Already featured/)).not.toBeInTheDocument();
+    fireEvent.click(screen.getByLabelText(/Solid outing/));
+    expect(screen.getByLabelText(/Solid outing/)).toBeChecked();
+
+    fireEvent.change(starFilter, { target: { value: '5' } });
     fireEvent.change(search, { target: { value: 'NEW FAVORITE' } });
     expect(screen.queryByLabelText(/Already featured/)).not.toBeInTheDocument();
     const newFavorite = screen.getByLabelText(/New favorite/);
@@ -170,7 +185,10 @@ describe('CreateExperience — edit mode', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Clear' }));
     expect(screen.getByLabelText(/Already featured/)).toBeChecked();
     expect(screen.getByLabelText(/New favorite/)).toBeChecked();
-    expect(screen.getByText('2 of 3 selected')).toBeInTheDocument();
+    expect(screen.queryByLabelText(/Solid outing/)).not.toBeInTheDocument();
+    expect(screen.getByText('3 of 3 selected')).toBeInTheDocument();
+    fireEvent.change(starFilter, { target: { value: 'any' } });
+    expect(screen.getByLabelText(/Solid outing/)).toBeChecked();
   });
 
   test('pre-populates the title field from experienceData', () => {
@@ -193,5 +211,12 @@ describe('CreateExperience — edit mode', () => {
   test('does not show schedule changed banner initially', () => {
     renderComponent({ mode: 'edit', experienceData });
     expect(screen.queryByText(/Schedule has been modified/)).not.toBeInTheDocument();
+  });
+
+  test('loads recurring schedule details into the visual editor', () => {
+    renderComponent({ mode: 'edit', experienceData });
+
+    expect(screen.getByLabelText('Start time')).toHaveValue('09:00');
+    expect(screen.getByRole('button', { name: 'Sat' })).toHaveAttribute('aria-pressed', 'true');
   });
 });

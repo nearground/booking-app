@@ -583,6 +583,7 @@ const ExperienceDetails = ({ previewData = null, isPreview = false }) => {
                 </p>
               )}
             </div>
+            <PinnedExperienceComments comments={comments} metadata={detailsMetadata} />
           </div>
         </div>
 
@@ -648,9 +649,11 @@ const ExperienceDetails = ({ previewData = null, isPreview = false }) => {
       </div>
       )}
 
-      <div className="container mx-auto px-4">
-        <PinnedExperienceComments comments={comments} metadata={detailsMetadata} />
-      </div>
+      {detailsMetadata.template === 'event' ? (
+        <div className="container mx-auto px-4">
+          <PinnedExperienceComments comments={comments} metadata={detailsMetadata} />
+        </div>
+      ) : null}
 
       {activeImage ? (
         <LightboxOverlay
