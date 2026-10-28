@@ -33,6 +33,7 @@ import {
 import { authUser } from '../middlewares/auth.js';
 import { requireOrganizationAdmin } from '../middlewares/organization-auth.js';
 import { requireExperienceOrganizationAdmin } from '../middlewares/experience-auth.js';
+import { getExperienceAttendance } from '../controllers/ExperienceAttendance.controller.js';
 
 const router = express.Router();
 
@@ -42,6 +43,8 @@ router.get('/availableCities', getCities);
 router.get('/nearbyExperiences', getNearbyExperiences);
 router.get('/:experienceCode/schedule/calendar', getScheduledExperiencesCalendarSummary);
 router.get('/:experienceCode/schedule', getScheduledExperiences);
+router.get('/:experienceCode/schedule/:sessionId/attendance', getExperienceAttendance);
+router.get('/:experienceCode/attendance', getExperienceAttendance);
 router.post('/:experienceCode/reservations', createExperienceReservation);
 router.post('/:experienceCode/sync-schedule', syncSchedule);
 router.post('/manage', authUser, requireOrganizationAdmin, createExperience);

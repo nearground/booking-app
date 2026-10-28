@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { networkAdapter } from 'services/NetworkAdapter';
 import { resolveAppUrl } from './organizationSiteResolver';
+import OrganizationHero from './OrganizationHero';
 import './organization-site.scss';
 
 const fontFamilies = {
@@ -18,7 +19,7 @@ const ExperienceCards = ({ experiences }) => experiences.length ? (
   <div className="org-site-cards">
     {experiences.map((experience) => (
       <article className="org-site-card" key={experience.id}>
-        {experience.thumbnail ? <img src={experience.thumbnail} alt="" className="org-site-card-image" /> : <div className="org-site-card-placeholder" aria-hidden="true" />}
+        {experience.thumbnail ? <img src={experience.thumbnail} alt="" className="org-site-card-image" loading="lazy" /> : <div className="org-site-card-placeholder" aria-hidden="true" />}
         <div className="org-site-card-content">
           {experience.soldOut ? <span className="org-site-sold-out">Sold out</span> : null}
           <h2>{experience.title}</h2>
@@ -39,23 +40,15 @@ const TemplateLayout = ({ organization, experiences }) => {
     '--org-accent': safeColor(organization.accentColor, '#f59e0b'),
     '--org-font': fontFamilies[organization.font] || fontFamilies.system,
   };
-  const cover = organization.coverUrl;
-
   return (
     <main className={`org-site org-site-${template}`} style={style}>
-      <header className="org-site-hero">
-        {cover && organization.coverMediaType === 'video' ? <video className="org-site-cover" src={cover} autoPlay muted loop playsInline aria-label={`${organization.name} cover`} /> : cover ? <img className="org-site-cover" src={cover} alt="" /> : null}
-        <div className="org-site-shade" />
-        <div className="org-site-brand">
-          {organization.logoUrl ? <img className="org-site-logo" src={organization.logoUrl} alt={`${organization.name} logo`} /> : null}
-          <p className="org-site-kicker">Discover with</p>
-          <h1>{organization.name}</h1>
-          {organization.tagline ? <p className="org-site-tagline">{organization.tagline}</p> : null}
-        </div>
-      </header>
+      <OrganizationHero organization={organization} experiences={experiences} />
       <section className="org-site-main">
         {organization.about ? <p className="org-site-about">{organization.about}</p> : null}
-        <h2 className="org-site-section-title">Upcoming experiences</h2>
+        <div className="org-site-section-heading" id="organization-experiences">
+          <div><p className="org-site-eyebrow">Make a little room for adventure</p><h2 className="org-site-section-title">Upcoming experiences</h2></div>
+          {experiences.length ? <span className="org-site-count">{experiences.length} {experiences.length === 1 ? 'experience' : 'experiences'} to discover</span> : null}
+        </div>
         <ExperienceCards experiences={experiences} />
         {Object.keys(organization.socialLinks || {}).length || Object.keys(organization.contactLinks || {}).length ? (
           <footer className="org-site-footer">

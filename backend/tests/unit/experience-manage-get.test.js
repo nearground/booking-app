@@ -102,6 +102,58 @@ describe('getExperienceForEdit', () => {
     getExperienceForEdit = ctrl.getExperienceForEdit;
   });
 
+  describe('details metadata management writes', () => {
+    beforeEach(() => jest.clearAllMocks());
+
+    test('rejects unsafe metadata on create before writing', async () => {
+      const { createExperience } = await import('../../server/controllers/ExperienceManage.controller.js');
+      const res = mockRes();
+      await createExperience({ body: { detailsMetadata: { version: 1, template: 'party', overrides: { css: 'bad' } } } }, res);
+      expect(res.status).toHaveBeenCalledWith(400);
+    });
+
+    test('rejects unauthorized updates before metadata persistence', async () => {
+      const { updateExperience } = await import('../../server/controllers/ExperienceManage.controller.js');
+      const record = { id: 10, OrganizationId: 3, update: jest.fn() };
+      mockFindByPk.mockResolvedValue(record);
+      mockFindOne.mockResolvedValue(null);
+      const res = mockRes();
+      await updateExperience({ params: { experienceId: '10' }, user: { id: 7 }, body: {
+        detailsMetadata: { version: 1, template: 'party', overrides: {} },
+      } }, res);
+      expect(res.status).toHaveBeenCalledWith(403);
+      expect(record.update).not.toHaveBeenCalled();
+    });
+
+    test('persists and returns valid metadata for an authorized update', async () => {
+      const { updateExperience } = await import('../../server/controllers/ExperienceManage.controller.js');
+      const metadata = { version: 1, template: 'food-tour', overrides: { pinnedCommentIds: [9, 8, 7] } };
+      const record = { id: 10, OrganizationId: 3 };
+      record.update = jest.fn(async (payload) => Object.assign(record, payload));
+      mockFindByPk.mockResolvedValue(record);
+      mockFindOne.mockResolvedValue({ isAdmin: true });
+      const res = mockRes();
+      await updateExperience({ params: { experienceId: '10' }, user: { id: 1 }, body: { detailsMetadata: metadata } }, res);
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(record.update).toHaveBeenCalledWith({ detailsMetadata: metadata }, expect.any(Object));
+      expect(res.json.mock.calls[0][0].data.experience.detailsMetadata).toEqual(metadata);
+    });
+
+    test('omitted metadata leaves the existing template untouched', async () => {
+      const { updateExperience } = await import('../../server/controllers/ExperienceManage.controller.js');
+      const metadata = { version: 1, template: 'party', overrides: {} };
+      const record = { id: 10, OrganizationId: 3, detailsMetadata: metadata };
+      record.update = jest.fn(async (payload) => Object.assign(record, payload));
+      mockFindByPk.mockResolvedValue(record);
+      mockFindOne.mockResolvedValue({ isAdmin: true });
+      const res = mockRes();
+      await updateExperience({ params: { experienceId: '10' }, user: { id: 1 }, body: {} }, res);
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(record.update).toHaveBeenCalledWith({}, expect.any(Object));
+      expect(record.detailsMetadata).toEqual(metadata);
+    });
+  });
+
   beforeEach(() => {
     jest.clearAllMocks();
   });
@@ -164,6 +216,7 @@ describe('getExperienceForEdit', () => {
       title: 'Mountain Hike',
       subtitle: 'Great views',
       description: 'Amazing trail.',
+      detailsMetadata: { version: 1, template: 'food-tour', overrides: { pinnedCommentIds: [3, 2, 1] } },
       thumbnail: 'key/thumbnail.jpg',
       capacity: 20,
       duration: 180,
@@ -192,6 +245,7 @@ describe('getExperienceForEdit', () => {
     expect(responseData.errors).toEqual([]);
     expect(responseData.data.experience.id).toBe(10);
     expect(responseData.data.experience.title).toBe('Mountain Hike');
+    expect(responseData.data.experience.detailsMetadata).toEqual(experienceRecord.detailsMetadata);
     expect(responseData.data.experience.ScheduleTemplates).toHaveLength(1);
     expect(responseData.data.experience.ScheduleTemplates[0].ruleCron).toBe('0 9 * * 6');
     expect(responseData.data.experience.TicketTiers).toHaveLength(1);

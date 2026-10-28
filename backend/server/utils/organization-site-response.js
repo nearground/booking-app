@@ -11,7 +11,10 @@ const buildPublicOrganizationSitePayload = (organization) => {
       title: experience.title,
       subtitle: experience.subtitle || '',
       description: experience.description || '',
-      thumbnail: experience.thumbnail || null,
+      thumbnail: resolveMediaUrl(experience.thumbnail),
+      images: Array.isArray(experience.images)
+        ? [...new Set(experience.images.filter((image) => typeof image === 'string' && image.trim()).map((image) => resolveMediaUrl(image)))]
+        : [],
       duration: experience.duration || null,
       nextDateTime: firstSession?.dateTime || null,
       soldOut: sessions.length > 0 && sessions.every((session) => Number(session.availableSpots) <= 0),

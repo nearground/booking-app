@@ -22,6 +22,9 @@ import ImageGalleryModal from '../../components/image-gallery-modal/ImageGallery
 import LightboxOverlay from '../../components/image-gallery-modal/LightboxOverlay';
 import ReviewSidebar from './components/ReviewSidebar';
 import GuestCommentPrompt from '../../components/comments/GuestCommentPrompt';
+import { resolveDetailsMetadata } from './experienceDetailsTemplate';
+import PartyExperienceTemplate from './components/templates/PartyExperienceTemplate';
+import FoodTourExperienceTemplate from './components/templates/FoodTourExperienceTemplate';
 import {
   buildExperienceGalleryImages,
   getOrganizerGalleryImages,
@@ -134,6 +137,7 @@ const ExperienceDetails = ({ previewData = null, isPreview = false }) => {
   }, [location.state, location.pathname, navigate]);
 
   const experienceData = experienceDetails.data;
+  const detailsMetadata = useMemo(() => resolveDetailsMetadata(experienceData?.detailsMetadata), [experienceData?.detailsMetadata]);
   const comments = useMemo(() => experienceData?.comments || [], [experienceData]);
   const organizerImages = useMemo(
     () => getOrganizerGalleryImages(experienceData),
@@ -344,6 +348,22 @@ const ExperienceDetails = ({ previewData = null, isPreview = false }) => {
     </>
   );
 
+  const booking = (
+    <ScheduledExperiencesList
+      experienceCode={experienceData.experienceCode}
+      startingPrice={experienceData.price}
+      experienceTitle={experienceData.title}
+      experienceSubtitle={experienceData.subtitle}
+      experienceDurationMinutes={experienceData.duration}
+      experienceThumbnail={experienceData.thumbnail}
+      ticketTiers={experienceData.TicketTiers}
+      experienceUserQuestionnary={experienceData.userQuestionnary}
+      scheduleTimezone={experienceData?.Location?.timezone || 'UTC'}
+      experienceLocation={experienceData.Location || null}
+      previewSessions={isPreview ? previewUpcomingSessions : null}
+      initialCartEdit={initialCartEdit}
+    />
+  );
   const renderRightColumnContent = () => (
     <>
       <p className="text-base font-semibold text-slate-700">Hosted By</p>
@@ -382,25 +402,30 @@ const ExperienceDetails = ({ previewData = null, isPreview = false }) => {
         {experienceData.Location?.name || 'Location details unavailable'}
       </button>
       
-      <ScheduledExperiencesList
-        experienceCode={experienceData.experienceCode}
-        startingPrice={experienceData.price}
-        experienceTitle={experienceData.title}
-        experienceSubtitle={experienceData.subtitle}
-        experienceDurationMinutes={experienceData.duration}
-        experienceThumbnail={experienceData.thumbnail}
-        ticketTiers={experienceData.TicketTiers}
-        experienceUserQuestionnary={experienceData.userQuestionnary}
-        scheduleTimezone={experienceData?.Location?.timezone || 'UTC'}
-        experienceLocation={experienceData.Location || null}
-        previewSessions={isPreview ? previewUpcomingSessions : null}
-        initialCartEdit={initialCartEdit}
-      />
+      {booking}
     </>
   );
 
   return (
     <div className="container mx-auto px-4 py-6">
+      {detailsMetadata.template === 'party' ? (
+        <PartyExperienceTemplate
+          experience={experienceData}
+          metadata={detailsMetadata}
+          booking={booking}
+          isPreview={isPreview}
+          initialCartEdit={initialCartEdit}
+          onOpenGallery={openGallery}
+        />
+      ) : detailsMetadata.template === 'food-tour' ? (
+        <FoodTourExperienceTemplate
+          experience={experienceData}
+          metadata={detailsMetadata}
+          booking={booking}
+          onSelectOrganizer={setSelectedOrganizer}
+          onOpenGallery={openGallery}
+        />
+      ) : (
       <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_360px] gap-4 lg:gap-6">
         {!isDesktop && (
           <div className="order-1 mb-6">
@@ -619,6 +644,7 @@ const ExperienceDetails = ({ previewData = null, isPreview = false }) => {
             </div>
           </div>
       </div>
+      )}
 
       {activeImage ? (
         <LightboxOverlay

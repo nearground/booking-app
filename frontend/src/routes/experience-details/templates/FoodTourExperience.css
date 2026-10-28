@@ -1,0 +1,250 @@
+.food-tour-experience {
+  --food-tour-accent: #9a3412;
+  --food-tour-radius: 1.25rem;
+  --food-tour-spacing: 3rem;
+  min-width: 0;
+  color: #292524;
+  background: #fffbf5;
+}
+
+.food-tour-experience--editorial {
+  font-family: Georgia, 'Times New Roman', serif;
+}
+
+.food-tour-experience--rounded {
+  font-family: 'Trebuchet MS', Arial, sans-serif;
+}
+
+.food-tour-experience--humanist {
+  font-family: 'Gill Sans', Calibri, sans-serif;
+}
+
+.food-tour-experience--system {
+  font-family: system-ui, sans-serif;
+}
+
+.food-tour-experience--inter {
+  font-family: Inter, system-ui, sans-serif;
+}
+
+.food-tour-experience--roboto {
+  font-family: Roboto, Arial, sans-serif;
+}
+
+.food-tour-experience--lato {
+  font-family: Lato, Arial, sans-serif;
+}
+
+.food-tour-experience--montserrat {
+  font-family: Montserrat, 'Trebuchet MS', sans-serif;
+}
+
+.food-tour-experience--citrus {
+  --food-tour-accent: #854d0e;
+}
+
+.food-tour-experience--forest {
+  --food-tour-accent: #166534;
+}
+
+.food-tour-experience--compact {
+  --food-tour-spacing: 1.5rem;
+}
+
+.food-tour-experience--square {
+  --food-tour-radius: 0;
+}
+
+.food-tour-hero {
+  position: relative;
+  isolation: isolate;
+  width: 100%;
+  min-height: 28rem;
+  aspect-ratio: 16 / 9;
+  max-height: 85vh;
+  overflow: hidden;
+  background: #292524;
+  color: #fff;
+}
+
+.food-tour-hero__media,
+.food-tour-hero__shade {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.food-tour-hero__media[hidden] {
+  display: none;
+}
+
+.food-tour-hero__shade {
+  background: linear-gradient(180deg, rgb(0 0 0 / 15%), rgb(0 0 0 / 85%));
+}
+
+.food-tour-hero__copy {
+  position: absolute;
+  bottom: 6rem;
+  left: max(1.5rem, calc((100% - 76rem) / 2));
+  right: 1.5rem;
+  max-width: 56rem;
+  overflow-wrap: anywhere;
+}
+
+.food-tour-eyebrow {
+  margin-bottom: 0.75rem;
+  font-family: Arial, sans-serif;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+}
+
+.food-tour-hero h1 {
+  margin-bottom: 1rem;
+  font-size: clamp(2.5rem, 5vw, 5rem);
+  font-weight: 700;
+  line-height: 1.05;
+}
+
+.food-tour-hero__copy > p:last-child {
+  font-size: clamp(1rem, 2vw, 1.5rem);
+}
+
+.food-tour-hero__actions {
+  position: absolute;
+  bottom: 1.5rem;
+  left: max(1.5rem, calc((100% - 76rem) / 2));
+  right: 1.5rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.food-tour-hero__actions button {
+  min-height: 2.75rem;
+  padding: 0.6rem 1rem;
+  border: 1px solid rgb(255 255 255 / 75%);
+  border-radius: var(--food-tour-radius);
+  background: rgb(0 0 0 / 70%);
+  color: #fff;
+  font-family: Arial, sans-serif;
+  font-size: 0.875rem;
+}
+
+.food-tour-experience button:focus-visible,
+.food-tour-experience a:focus-visible {
+  outline: 3px solid currentColor;
+  outline-offset: 4px;
+}
+
+.food-tour-experience__content,
+.food-tour-pins {
+  width: min(100%, 80rem);
+  margin-inline: auto;
+}
+
+.food-tour-details {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(18rem, 22.5rem);
+  gap: var(--food-tour-spacing);
+  padding: var(--food-tour-spacing) 1.5rem;
+}
+
+.food-tour-details section {
+  margin-top: 2rem;
+}
+
+.food-tour-details h2 {
+  margin-bottom: 0.75rem;
+  font-size: 1.75rem;
+  font-weight: 700;
+}
+
+.food-tour-details p {
+  margin-bottom: 1rem;
+  line-height: 1.75;
+}
+
+.food-tour-details__hosts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.food-tour-pins {
+  padding: var(--food-tour-spacing) 1.5rem;
+  border-top: 1px solid #e7e5e4;
+}
+
+.food-tour-pins > .food-tour-eyebrow,
+.food-tour-pins__stars {
+  color: var(--food-tour-accent);
+}
+
+.food-tour-pins h2 {
+  margin-bottom: 1.5rem;
+  font-size: clamp(1.75rem, 3vw, 2.5rem);
+  font-weight: 700;
+}
+
+.food-tour-pins__grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1.25rem;
+}
+
+.food-tour-pins__card {
+  min-width: 0;
+  padding: 1.5rem;
+  border: 1px solid #e7e5e4;
+  border-radius: var(--food-tour-radius);
+  background: #fff;
+  overflow-wrap: anywhere;
+}
+
+.food-tour-pins__label {
+  color: #57534e;
+  font-family: Arial, sans-serif;
+  font-size: 0.75rem;
+}
+
+.food-tour-pins__stars {
+  margin-block: 0.75rem;
+  letter-spacing: 0.15em;
+}
+
+.food-tour-pins h3 {
+  margin-bottom: 0.5rem;
+  font-size: 1.125rem;
+  font-weight: 700;
+}
+
+.food-tour-pins blockquote {
+  white-space: pre-wrap;
+  line-height: 1.7;
+}
+
+.food-tour-pins__author {
+  margin-top: 1rem;
+  font-size: 0.875rem;
+  font-weight: 700;
+}
+
+@media (max-width: 767px) {
+  .food-tour-hero {
+    min-height: 32rem;
+    max-height: none;
+  }
+
+  .food-tour-pins__grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .food-tour-details,
+  .food-tour-details__hosts {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

@@ -5,6 +5,7 @@ import Experience from '../models/Experience.model.js';
 import Location from '../models/Location.model.js';
 import { resolveMediaUrl } from '../utils/media-storage.js';
 import { DEFAULT_TIMEZONE, normalizeTimezone } from '../utils/timezone.js';
+import { normalizeDetailsMetadata } from '../utils/experience-details-metadata.js';
 
 const { Op } = require('sequelize');
 
@@ -238,6 +239,12 @@ export const pickExperienceTilePriceFromTiers = (ticketTiers = []) => {
 
 export const transformExperience = (experience) => {
     const experienceData = experience.toJSON();
+    experienceData.detailsMetadata = normalizeDetailsMetadata(experienceData.detailsMetadata).metadata;
+    const { heroVideoKey, heroPosterKey } = experienceData.detailsMetadata.overrides;
+    experienceData.detailsMedia = {
+        heroVideoUrl: heroVideoKey ? resolveMediaUrl(heroVideoKey) : null,
+        heroPosterUrl: heroPosterKey ? resolveMediaUrl(heroPosterKey) : null,
+    };
 
     const ticketTierPrice = pickExperienceTilePriceFromTiers(experienceData.TicketTiers);
 

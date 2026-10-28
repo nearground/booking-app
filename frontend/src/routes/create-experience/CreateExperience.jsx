@@ -1,4 +1,5 @@
 import { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { EXPERIENCE_DETAILS_TEMPLATES, resolveDetailsMetadata } from '../experience-details/experienceDetailsTemplate';
 import { Navigate, useNavigate } from 'react-router-dom';
 import {
   CircleMarker,
@@ -327,6 +328,7 @@ const CreateExperience = ({ mode = 'create', experienceData = null }) => {
         organizationId: String(experienceData.OrganizationId || ''),
         locationId: String(experienceData.LocationId || ''),
         title: experienceData.title || '',
+        detailsMetadata: resolveDetailsMetadata(experienceData.detailsMetadata),
         subtitle: experienceData.subtitle || '',
         description: experienceData.description || '',
         thumbnail: experienceData.thumbnail || '',
@@ -347,6 +349,7 @@ const CreateExperience = ({ mode = 'create', experienceData = null }) => {
       organizationId: '',
       locationId: '',
       title: '',
+      detailsMetadata: resolveDetailsMetadata(null),
       subtitle: '',
       description: '',
       thumbnail: '',
@@ -663,6 +666,7 @@ const CreateExperience = ({ mode = 'create', experienceData = null }) => {
       experienceCode: 'preview-experience',
       title: formData.title || 'Untitled Experience',
       subtitle: formData.subtitle || '',
+      detailsMetadata: formData.detailsMetadata,
       description: formData.description || '',
       thumbnail,
       images,
@@ -707,6 +711,7 @@ const CreateExperience = ({ mode = 'create', experienceData = null }) => {
     };
   }, [
     formData.title,
+    formData.detailsMetadata,
     formData.subtitle,
     formData.description,
     formData.thumbnail,
@@ -1643,6 +1648,7 @@ const CreateExperience = ({ mode = 'create', experienceData = null }) => {
       locationId: resolvedLocationId,
       title: formData.title,
       subtitle: formData.subtitle || null,
+      detailsMetadata: formData.detailsMetadata,
       description: formData.description || null,
       thumbnail: thumbnailObjectKey,
       capacity: Number(formData.capacity),
@@ -2189,6 +2195,18 @@ const CreateExperience = ({ mode = 'create', experienceData = null }) => {
               value={formData.title}
               onChange={(event) => setField('title', event.target.value)}
             />
+          </div>
+          <div>
+            <label htmlFor="experience-details-template" className="block text-xs font-medium text-slate-700 mb-1">Details template</label>
+            <select
+              id="experience-details-template"
+              className="border rounded px-3 py-2 w-full"
+              value={formData.detailsMetadata.template}
+              onChange={(event) => setField('detailsMetadata', { ...formData.detailsMetadata, template: event.target.value })}
+            >
+              {EXPERIENCE_DETAILS_TEMPLATES.map(({ value, label }) => <option key={value} value={value}>{label}</option>)}
+            </select>
+            <p className="mt-1 text-xs text-slate-500">Party uses one free occurrence. Food tour uses uploaded hero media and pinned reviews.</p>
           </div>
           <div>
             <label className="block text-xs font-medium text-slate-700 mb-1">Subtitle</label>

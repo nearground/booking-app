@@ -5,21 +5,14 @@ import { resolveMediaUrl } from '../utils/media-storage.js';
 const crypto = require('crypto');
 import { sendError } from '../utils/http-response.js';
 import cache from '../utils/cache.js';
-
-
-const R2_WORKER_BASE_URL = String(
-    process.env.R2_WORKER_BASE_URL || 'http://host.docker.internal:8787'
-).replace(/\/+$/, '');
-const R2_DEV_TOKEN = String(process.env.R2_DEV_TOKEN || '').trim();
-
-const CONTENT_TYPE_TO_EXTENSION = {
-    'image/jpeg': 'jpg',
-    'image/png': 'png',
-    'image/webp': 'webp',
-    'image/gif': 'gif',
-    'image/avif': 'avif',
-    'video/mp4': 'mp4',
-};
+import {
+    CONTENT_TYPE_TO_EXTENSION,
+    buildEncodedObjectKey,
+    getStorageBaseUrl,
+    getStorageHeaders,
+    StorageUploadError,
+    uploadMediaObject,
+} from '../services/media-upload.js';
 
 const ALLOWED_KEY_PREFIXES = ['users/', 'orgs/', 'experiences/', 'hotels/'];
 const ALLOWED_UPLOAD_OWNER_TYPES = new Set(['user']);
@@ -50,22 +43,6 @@ const isValidObjectKey = (key) => {
     }
 
     return /^[a-zA-Z0-9._\-/]+$/.test(normalizedKey);
-};
-
-const buildEncodedObjectKey = (objectKey) =>
-    objectKey
-        .split('/')
-        .map((segment) => encodeURIComponent(segment))
-        .join('/');
-
-const getStorageHeaders = () => {
-    if (!R2_DEV_TOKEN) {
-        return null;
-    }
-
-    return {
-        'X-R2-Dev-Token': R2_DEV_TOKEN,
-    };
 };
 
 const uploadMedia = async (req, res) => {
@@ -135,53 +112,7 @@ const uploadMedia = async (req, res) => {
         const randomSuffix = crypto.randomBytes(3).toString('hex');
         const objectKey = `${normalizedOwnerType}s/${parsedOwnerId}/${normalizedKind}/${Date.now()}-${randomSuffix}.${extension}`;
 
-        const encodedObjectKey = buildEncodedObjectKey(objectKey);
-
-        const uploadUrl = `${R2_WORKER_BASE_URL}/objects/${encodedObjectKey}`;
-
-        const storageHeaders = getStorageHeaders();
-        if (!storageHeaders) {
-            return sendError(res, {
-                status: 500,
-                message: 'Storage is temporarily unavailable',
-                requestId: req.requestId,
-            });
-        }
-
-        const r2Headers = {
-            ...storageHeaders,
-            'Content-Type': contentType,
-        };
-
-        const r2Response = await fetch(uploadUrl, {
-            method: 'PUT',
-            headers: r2Headers,
-            body: req.body,
-        });
-
-        if (!r2Response.ok) {
-            let upstreamError = 'Failed to upload media to storage';
-
-            try {
-                const parsedBody = await r2Response.json();
-                if (parsedBody && parsedBody.error) {
-                    upstreamError = String(parsedBody.error);
-                } else if (parsedBody && Array.isArray(parsedBody.errors) && parsedBody.errors.length) {
-                    upstreamError = String(parsedBody.errors[0]);
-                }
-            } catch (_parseError) {
-                // ignore invalid upstream JSON
-            }
-
-            return sendError(res, {
-                status: Number.isInteger(r2Response.status) && r2Response.status >= 400 ? r2Response.status : 502,
-                message: upstreamError,
-                data: {
-                    upstreamStatus: r2Response.status,
-                },
-                requestId: req.requestId,
-            });
-        }
+        await uploadMediaObject({ objectKey, bytes: req.body, contentType });
 
         return res.status(201).json({
             errors: [],
@@ -193,6 +124,15 @@ const uploadMedia = async (req, res) => {
             },
         });
     } catch (_error) {
+        if (_error instanceof StorageUploadError) {
+            return sendError(res, {
+                status: _error.status,
+                message: _error.code === 'STORAGE_NOT_CONFIGURED'
+                    ? 'Storage is temporarily unavailable' : _error.message,
+                data: _error.data,
+                requestId: req.requestId,
+            });
+        }
         return sendError(res, {
             status: 500,
             message: 'Error uploading media',
@@ -233,7 +173,7 @@ const getMediaObject = async (req, res) => {
         }
 
         const encodedObjectKey = buildEncodedObjectKey(objectKey);
-        const readUrl = `${R2_WORKER_BASE_URL}/objects/${encodedObjectKey}`;
+        const readUrl = `${getStorageBaseUrl()}/objects/${encodedObjectKey}`;
 
         const r2Response = await fetch(readUrl, {
             method: 'GET',
@@ -241,7 +181,9 @@ const getMediaObject = async (req, res) => {
         });
 
         if (r2Response.status === 404) {
-            try { await cache.set(notFoundKey, true, 60); } catch (e) {}
+            try { await cache.set(notFoundKey, true, 60); } catch (e) {
+                /* ignore cache errors */
+            }
             return res.status(404).json({
                 errors: ['Media object not found'],
                 data: {},

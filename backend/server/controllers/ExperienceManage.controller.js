@@ -3,6 +3,7 @@ import { syncExperienceSchedule, populateScheduleBounded, previewStartDateUpdate
 import { sendError } from '../utils/http-response.js';
 import cache from '../utils/cache.js';
 import { Op } from 'sequelize';
+import { normalizeDetailsMetadata } from '../utils/experience-details-metadata.js';
 import {
     normalizeBaseCreatePayload,
     normalizeBaseUpdatePayload,
@@ -287,6 +288,8 @@ const createExperience = async (req, res) => {
             maxSubtitleLength: MAX_EXPERIENCE_SUBTITLE_LENGTH,
             maxDescriptionLength: MAX_EXPERIENCE_DESCRIPTION_LENGTH,
         });
+        const { metadata: detailsMetadata, errors: metadataErrors } = normalizeDetailsMetadata(req.body.detailsMetadata);
+        errors.push(...metadataErrors);
         if (errors.length > 0) {
             await transaction.rollback();
             return res.status(400).json({ errors, data: {} });
@@ -338,6 +341,7 @@ const createExperience = async (req, res) => {
                 description: normalized.description,
                 thumbnail: normalized.thumbnail,
                 images: normalized.images,
+                detailsMetadata,
                 ratings: normalized.ratings,
                 userQuestionnary: Array.isArray(userQuestionnary) ? userQuestionnary : [],
                 OrganizationId: normalized.organizationId,
@@ -491,6 +495,11 @@ const updateExperience = async (req, res) => {
             maxSubtitleLength: MAX_EXPERIENCE_SUBTITLE_LENGTH,
             maxDescriptionLength: MAX_EXPERIENCE_DESCRIPTION_LENGTH,
         });
+        if (req.body.detailsMetadata !== undefined) {
+            const { metadata, errors } = normalizeDetailsMetadata(req.body.detailsMetadata);
+            updatePayloadErrors.push(...errors);
+            updatePayload.detailsMetadata = metadata;
+        }
 
         if (updatePayloadErrors.length > 0) {
             await transaction.rollback();
@@ -1043,6 +1052,7 @@ const getExperienceForEdit = async (req, res) => {
                     title: experience.title,
                     subtitle: experience.subtitle || '',
                     description: experience.description || '',
+                    detailsMetadata: normalizeDetailsMetadata(experience.detailsMetadata).metadata,
                     thumbnail: experience.thumbnail || '',
                     capacity: experience.capacity,
                     duration: experience.duration,

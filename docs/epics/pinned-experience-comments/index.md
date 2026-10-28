@@ -59,3 +59,4 @@ Backend tests for authorized/unauthorized pin state; frontend tests for pinned-f
 
 - Draft created; not approved for implementation. Open decisions remain; no implementation evidence recorded.
 - 2026-10-26: User decided pin authority: organizers and admins of the owning organization, ACL-compatible later.
+- 2026-10-28: The food-tour experience template supports a metadata-selected showcase of up to three ordered, five-star, top-level experience comments at the bottom of the page. It does not infer pins from ratings, duplicate configured IDs, or expose anonymous reviewer identities. This read-only showcase does **not** complete the pin/unpin/reorder authorization and persistence work above; those acceptance criteria remain open. Dedicated frontend tests cover ordering, the three-comment limit, ineligible comments, and anonymity.

@@ -107,9 +107,9 @@ module.exports = {
       "SELECT id, name FROM Locations WHERE name LIKE 'Test Location %' ORDER BY id ASC"
     );
     const organizationBrands = [
+      { primaryColor: '#7c3aed', accentColor: '#f97316', font: 'inter', layoutTemplate: 'classic', tagline: 'Private venues. Great company. Free entry.', about: 'We bring people together for special bar nights and parties at private venues around Puerto Vallarta. Reserve your free ticket and join us in person.' },
+      { primaryColor: '#9a3412', accentColor: '#f59e0b', font: 'lato', layoutTemplate: 'editorial', tagline: 'Taste the neighborhood with local food lovers', about: 'Meet the cooks, discover neighborhood taquerias and share the flavors of Puerto Vallarta with our small-group food tours.' },
       { primaryColor: '#0f766e', accentColor: '#f59e0b', font: 'inter', layoutTemplate: 'classic', tagline: 'Explore the coast, one adventure at a time', about: 'Join our local guides for relaxed coastal adventures and unforgettable days on the bay.' },
-      { primaryColor: '#7c3aed', accentColor: '#f97316', font: 'lato', layoutTemplate: 'editorial', tagline: 'Local stories and new discoveries', about: 'Discover the culture, flavors and hidden corners of Puerto Vallarta with our welcoming local team.' },
-      { primaryColor: '#1d4ed8', accentColor: '#eab308', font: 'montserrat', layoutTemplate: 'immersive', tagline: 'Make your next great memory here', about: 'Experience the energy of the Pacific with outdoor escapes and shared adventures for curious travelers.' },
     ];
     var testOrganizations = [];
     for (let i = 1; i <= 3; i++) {
@@ -130,6 +130,12 @@ module.exports = {
       });
     }
     await queryInterface.bulkInsert('Organizations', testOrganizations, { ignoreDuplicates: true });
+    for (const organization of testOrganizations) {
+      await queryInterface.bulkUpdate('Organizations', {
+        ...organizationBrands[Number(organization.organizationUsername.slice(-1)) - 1],
+        updatedAt: new Date(),
+      }, { organizationUsername: organization.organizationUsername }, {});
+    }
 
 
     const [orgs] = await queryInterface.sequelize.query(
@@ -200,8 +206,8 @@ module.exports = {
       'Test Location 3': orgs[2]?.id,
       'Test Location 4': orgs[0]?.id,
       'Test Location 5': orgs[0]?.id,
-      'Test Location 6': orgs[1]?.id,
-      'Test Location 7': orgs[2]?.id,
+      'Test Location 6': orgs[2]?.id,
+      'Test Location 7': orgs[1]?.id,
     };
 
     for (const [locationName, ownerOrganizationId] of Object.entries(locationOwnershipByName)) {
@@ -220,20 +226,29 @@ module.exports = {
       }
     }
 
-    // Backward compatibility: seeded demo image files currently live under /images/events/.
+    const { prepareShowcaseMedia } = await import('../seed-factory/showcase-media.js');
+    const showcaseMedia = await prepareShowcaseMedia({
+      ownerId: users[0].id,
+      ownerIds: { party: users[0].id, food: users[1].id, default: users[2].id },
+    });
+    const partyTitles = new Set(['Private Rooftop Party', 'Bar Special Night']);
+    const renamedTitles = {
+      'Sierra Ridge Sunrise Hike': 'Private Rooftop Party',
+      'Rooftop Craft Mixology Session': 'Bar Special Night',
+    };
+    for (const [previousTitle, title] of Object.entries(renamedTitles)) {
+      await queryInterface.bulkUpdate('Experiences', { title }, { title: previousTitle }, {});
+    }
+
     const rawTestExperiences = [
       {
         OrganizationId: orgs[0].id,
         LocationId: testLocationMap['Test Location 4'],
         capacity: 14,
         duration: 150,
-        title: 'Sierra Ridge Sunrise Hike',
-        subtitle: 'Guided morning trail adventure with panoramic bay views',
-        description: `Begin before dawn with a brief safety orientation, hydration check, and route comment, then climb a sequence of moderate switchbacks that open into ridge viewpoints overlooking the bay.
-
-      Along the way, your guide shares practical trail techniques for uneven terrain, local ecology insights about dry-forest plants and seasonal birdlife, and short photo pauses timed for changing light conditions.
-
-      The final segment reaches a high lookout where the group has time for sunrise photos, quiet observation, and a relaxed cool-down before descending at a steady pace.`,
+        title: 'Private Rooftop Party',
+        subtitle: 'One special night, a private rooftop and free registration',
+        description: 'Join our local party hosts for a relaxed night of music and conversation at a private rooftop venue. Reserve a free admission ticket, show it at the door, and meet the people who have already checked in. Drinks are sold separately at the venue.',
         ratings: 4.68,
         commentsCount: 10,
         thumbnail: '/images/events/hiking/1.jpg',
@@ -256,13 +271,9 @@ module.exports = {
         LocationId: testLocationMap['Test Location 5'],
         capacity: 12,
         duration: 120,
-        title: 'Rooftop Craft Mixology Session',
-        subtitle: 'Hands-on cocktail workshop with tropical ingredients',
-        description: `This workshop starts with a guided tasting of key ingredients and flavor families, followed by a step-by-step demonstration of balance, dilution, and aroma layering for tropical cocktails.
-
-      Participants rotate through practical stations to build three different drinks using professional tools, fresh citrus, house infusions, and local spirits, while learning why technique changes texture and finish.
-
-      The final segment is a structured tasting with feedback on garnish choices, glassware pairing, and presentation details so each guest leaves with repeatable recipes and confident fundamentals.`,
+        title: 'Bar Special Night',
+        subtitle: 'Free tickets to a one-night neighborhood celebration',
+        description: 'A special evening for friends old and new at one of our favorite private venues. Registration and admission are free. Bring your ticket for check-in, enjoy the music and order anything you like directly from the bar.',
         ratings: 4.31,
         commentsCount: 10,
         thumbnail: '/images/events/mixology/Adobe_Stock_591027595_46a5f4e8da-3040219346.jpeg',
@@ -281,7 +292,7 @@ module.exports = {
         updatedAt: new Date()
       },
       {
-        OrganizationId: orgs[1].id,
+        OrganizationId: orgs[2].id,
         LocationId: testLocationMap['Test Location 6'],
         capacity: 20,
         duration: 180,
@@ -315,7 +326,7 @@ module.exports = {
         updatedAt: new Date()
       },
       {
-        OrganizationId: orgs[2].id,
+        OrganizationId: orgs[1].id,
         LocationId: testLocationMap['Test Location 7'],
         capacity: 16,
         duration: 120,
@@ -346,9 +357,29 @@ module.exports = {
       }
     ];
 
+    for (const experience of rawTestExperiences) {
+      const isParty = partyTitles.has(experience.title);
+      const isFoodTour = experience.title === 'Old Town Taco Tour';
+      experience.images = isParty ? showcaseMedia.partyImages : isFoodTour ? showcaseMedia.foodImages : showcaseMedia.defaultImages;
+      experience.thumbnail = experience.images[0];
+      experience.autoSyncEnabled = !isParty;
+      experience.detailsMetadata = {
+        version: 1,
+        template: isParty ? 'party' : isFoodTour ? 'food-tour' : 'default',
+        overrides: isFoodTour ? { heroVideoKey: showcaseMedia.heroVideo, heroPosterKey: showcaseMedia.heroPoster } : {},
+      };
+      if (isParty) experience.userQuestionnary = [{
+        questionKey: 'publicAttendance',
+        prompt: 'Show my registered name and profile picture on the public checked-in guest list',
+        required: false,
+        type: 'boolean',
+      }];
+    }
+
     const testExperiences = rawTestExperiences.map((experience) => ({
       ...experience,
       images: JSON.stringify(experience.images),
+      detailsMetadata: JSON.stringify(experience.detailsMetadata),
       userQuestionnary: JSON.stringify(experience.userQuestionnary || [])
     }));
 
@@ -376,6 +407,9 @@ module.exports = {
           ratings: experience.ratings,
           userQuestionnary: experience.userQuestionnary,
           images: experience.images,
+          thumbnail: experience.thumbnail,
+          autoSyncEnabled: experience.autoSyncEnabled,
+          detailsMetadata: experience.detailsMetadata,
           scheduling: null,
           updatedAt: new Date(),
         },
@@ -396,7 +430,6 @@ module.exports = {
 
     // Cron schedules for seeded experiences (formerly stored in Experience.scheduling, now only in ScheduleTemplates)
     const cronByTitle = {
-      'Sierra Ridge Sunrise Hike': '0 6 * * *',
       'Los Arcos Coastal Sightseeing Tour': '0 9,13,17 * * 1,3,5',
       'Old Town Taco Tour': '0 9,13,17 * * 1,3,5',
     };
@@ -421,7 +454,7 @@ module.exports = {
         fallbackStart.setDate(fallbackStart.getDate() + 7);
         fallbackStart.setHours(10, 0, 0, 0);
 
-        [0, 7, 14].forEach((offsetDays) => {
+        (partyTitles.has(experience.title) ? [0] : [0, 7, 14]).forEach((offsetDays) => {
           const dateTime = new Date(fallbackStart);
           dateTime.setDate(fallbackStart.getDate() + offsetDays);
           const endDateTime = new Date(dateTime.getTime() + durationInMinutes * 60000);
@@ -506,11 +539,17 @@ module.exports = {
     });
 
     // Insert templates and picks, then resolve their generated IDs to materialize scheduled rows
+    await queryInterface.bulkDelete('ScheduleTemplates', {
+      ExperienceId: { [Sequelize.Op.in]: seededExperiences.filter((experience) => partyTitles.has(experience.title)).map((experience) => experience.id) },
+    }, {});
     if (scheduleTemplatesToInsert.length > 0) {
       await queryInterface.bulkInsert('ScheduleTemplates', scheduleTemplatesToInsert, {});
     }
 
     if (pickedOccurrencesToInsert.length > 0) {
+      await queryInterface.bulkDelete('PickedOccurrences', {
+        ExperienceId: { [Sequelize.Op.in]: seededExperiences.filter((experience) => partyTitles.has(experience.title)).map((experience) => experience.id) },
+      }, {});
       await queryInterface.bulkInsert('PickedOccurrences', pickedOccurrencesToInsert, {});
     }
 
@@ -567,6 +606,12 @@ module.exports = {
       };
     });
 
+    const demoConfirmationCodes = seededExperiences
+      .filter((experience) => partyTitles.has(experience.title))
+      .flatMap((experience) => users.slice(0, 3).map((user) => `DEMO-PARTY-${experience.id}-${user.id}`));
+    await queryInterface.bulkDelete('ExperienceReservations', {
+      confirmationCode: { [Sequelize.Op.in]: demoConfirmationCodes },
+    }, {});
     await queryInterface.bulkDelete('ScheduledExperiences', {
       ExperienceId: {
         [Sequelize.Op.in]: seededExperiences.map((experience) => experience.id),
@@ -575,6 +620,41 @@ module.exports = {
 
     if (finalScheduled.length > 0) {
       await queryInterface.bulkInsert('ScheduledExperiences', finalScheduled, {});
+    }
+    const [partySessions] = await queryInterface.sequelize.query(
+      'SELECT id, ExperienceId FROM ScheduledExperiences WHERE ExperienceId IN (:experienceIds)',
+      { replacements: { experienceIds: seededExperiences.filter((experience) => partyTitles.has(experience.title)).map((experience) => experience.id) } }
+    );
+    const checkedInReservations = partySessions.flatMap((session) => users.slice(0, 3).map((user) => ({
+      confirmationCode: `DEMO-PARTY-${session.ExperienceId}-${user.id}`,
+      ScheduledExperienceId: session.id,
+      CustomerId: user.id,
+      numberOfAttendees: 1,
+      totalPrice: 0,
+      status: 'attended',
+      billingName: 'Demo guest',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    })));
+    if (checkedInReservations.length) {
+      await queryInterface.bulkInsert('ExperienceReservations', checkedInReservations, {});
+      const [reservations] = await queryInterface.sequelize.query(
+        'SELECT id FROM ExperienceReservations WHERE confirmationCode IN (:codes)',
+        { replacements: { codes: demoConfirmationCodes } }
+      );
+      await queryInterface.bulkInsert('ExperienceReservationAnswers', reservations.map((reservation) => ({
+        ExperienceReservationId: reservation.id,
+        questionKey: 'publicAttendance',
+        answerText: 'true',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      })), {});
+      for (const session of partySessions) {
+        const seeded = finalScheduled.find((row) => row.ExperienceId === session.ExperienceId);
+        await queryInterface.bulkUpdate('ScheduledExperiences', {
+          availableSpots: Math.max(0, seeded.capacity - 3),
+        }, { id: session.id }, {});
+      }
     }
 
     const ticketPricesByExperienceTitle = {
@@ -615,7 +695,14 @@ module.exports = {
         child: 19.99,
       };
 
-      const baseTiers = [
+      const baseTiers = partyTitles.has(experience.title) ? [{
+        title: 'Free admission',
+        description: 'One free ticket for this in-person event. Drinks sold separately.',
+        minAge: 18,
+        maxAge: null,
+        idType: null,
+        price: 0,
+      }] : [
         {
           title: 'Adult',
           description: 'Drinks included',
@@ -895,7 +982,8 @@ module.exports = {
 
     seededExperiences.forEach((experience) => {
       users.forEach((user, userIndex) => {
-        const sentiment = sentimentPool[Math.floor(Math.random() * sentimentPool.length)];
+        const isPinnedFoodReview = experience.title === 'Old Town Taco Tour' && userIndex < 3;
+        const sentiment = isPinnedFoodReview ? 'positive' : sentimentPool[Math.floor(Math.random() * sentimentPool.length)];
         const anonymity = anonymityLevels[Math.floor(Math.random() * anonymityLevels.length)];
 
         let stars;
@@ -906,6 +994,7 @@ module.exports = {
         } else {
           stars = 3;
         }
+        if (isPinnedFoodReview) stars = 5;
 
         const sentimentComment = buildCommentByTitle(experience.title, sentiment);
 
@@ -982,6 +1071,25 @@ module.exports = {
     if (experienceComments.length > 0) {
       await queryInterface.bulkInsert('Comments', experienceComments, {});
     }
+    const foodExperience = seededExperiences.find((experience) => experience.title === 'Old Town Taco Tour');
+    if (foodExperience) {
+      const [pinnedReviews] = await queryInterface.sequelize.query(
+        "SELECT id FROM Comments WHERE CommentableType = 'Experience' AND CommentableId = :experienceId AND UserId IN (:userIds) AND stars = 5 ORDER BY id ASC LIMIT 3",
+        { replacements: { experienceId: foodExperience.id, userIds: users.slice(0, 3).map((user) => user.id) } }
+      );
+      const detailsMetadata = {
+        version: 1,
+        template: 'food-tour',
+        overrides: {
+          heroVideoKey: showcaseMedia.heroVideo,
+          heroPosterKey: showcaseMedia.heroPoster,
+          pinnedCommentIds: pinnedReviews.map((review) => review.id),
+        },
+      };
+      await queryInterface.bulkUpdate('Experiences', {
+        detailsMetadata: JSON.stringify(detailsMetadata),
+      }, { id: foodExperience.id }, {});
+    }
 
     if (organizerComments.length > 0) {
       await queryInterface.bulkInsert('Comments', organizerComments, {});
@@ -1001,6 +1109,8 @@ module.exports = {
       const seededExperienceTitles = [
         'Sierra Ridge Sunrise Hike',
         'Rooftop Craft Mixology Session',
+        'Private Rooftop Party',
+        'Bar Special Night',
         'Los Arcos Coastal Sightseeing Tour',
         'Old Town Taco Tour'
       ];
@@ -1023,6 +1133,14 @@ module.exports = {
       const seededExperienceIds = seededExperiences.map((experience) => experience.id);
       const seededUserIds = seededUsers.map((user) => user.id);
       const seededOrganizationIds = seededOrganizations.map((organization) => organization.id);
+      if (seededExperienceIds.length && seededUserIds.length) {
+        await queryInterface.bulkDelete('ExperienceReservations', {
+          confirmationCode: {
+            [Sequelize.Op.in]: seededExperienceIds.flatMap((experienceId) =>
+              seededUserIds.map((userId) => `DEMO-PARTY-${experienceId}-${userId}`)),
+          },
+        }, { transaction });
+      }
 
       const [seededOrganizers] = await queryInterface.sequelize.query(
         'SELECT id FROM Organizers WHERE UserId IN (:userIds)',

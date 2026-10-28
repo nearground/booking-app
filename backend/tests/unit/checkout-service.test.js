@@ -78,6 +78,14 @@ jest.mock('../../server/models/ExperienceReservationAttendeeAnswer.model.js', ()
     bulkCreate: jest.fn().mockResolvedValue([]),
 }));
 
+jest.mock('../../server/models/TicketTier.model.js', () => ({
+    findAll: jest.fn().mockResolvedValue([{ id: 4, price: '0.00' }]),
+}));
+
+jest.mock('../../server/models/ScheduledExperience.model.js', () => ({
+    findOne: jest.fn().mockResolvedValue({ id: 555 }),
+}));
+
 jest.mock('../../server/models/ServiceReservation.model.js', () => ({
     create: jest.fn().mockResolvedValue({
         id: 20,
@@ -163,6 +171,8 @@ import OrderItem from '../../server/models/OrderItem.model.js';
 import ExperienceReservation from '../../server/models/ExperienceReservation.model.js';
 import ServiceReservation from '../../server/models/ServiceReservation.model.js';
 import HotelReservation from '../../server/models/HotelReservation.model.js';
+import TicketTier from '../../server/models/TicketTier.model.js';
+import ScheduledExperience from '../../server/models/ScheduledExperience.model.js';
 import { sendNotification } from '../../server/services/Notification.service.js';
 
 // ---------------------------------------------------------------------------
@@ -171,6 +181,8 @@ import { sendNotification } from '../../server/services/Notification.service.js'
 
 beforeEach(() => {
     jest.clearAllMocks();
+    TicketTier.findAll.mockResolvedValue([{ id: 4, price: '0.00' }]);
+    ScheduledExperience.findOne.mockResolvedValue({ id: 555 });
     Order.findByPk.mockResolvedValue({
         id: 1,
         orderNumber: 'ORD-TEST-0001',
@@ -214,6 +226,65 @@ describe('checkoutCart – confirmationCode snapshotting into OrderItem.metadata
         expect(OrderItem.create).toHaveBeenCalledTimes(1);
         const savedMetadata = capturedOrderItemCreates[0].metadata;
         expect(savedMetadata.confirmationCode).toBe('EXP-CONF-001');
+    });
+
+    test('confirms free registration atomically without waiting for a payment webhook', async () => {
+        const item = { ...makeCartItem('Experience'), unitPrice: '0.00', totalPrice: '0.00' };
+        Cart.findOne.mockResolvedValue({
+            id: 1,
+            Items: [item],
+            currency: 'USD',
+            totalAmount: '0.00',
+            discountAmount: '0.00',
+            update: jest.fn().mockResolvedValue({}),
+        });
+
+        await checkoutCart(1, 42, makeBillingInfo());
+
+        expect(ExperienceReservation.create).toHaveBeenCalledWith(
+            expect.objectContaining({ status: 'confirmed', totalPrice: 0 }),
+            { transaction: txHolder.tx }
+        );
+        const order = await Order.create.mock.results[0].value;
+        expect(order.update).toHaveBeenCalledWith({ status: 'paid' }, { transaction: txHolder.tx });
+        expect(txHolder.tx.commit).toHaveBeenCalledTimes(1);
+    });
+
+    test('paid-price bookings still await payment confirmation', async () => {
+        setupCart([makeCartItem('Experience')]);
+        await checkoutCart(1, 42, makeBillingInfo());
+        expect(ExperienceReservation.create).toHaveBeenCalledWith(
+            expect.objectContaining({ status: 'pending' }),
+            { transaction: txHolder.tx }
+        );
+        const order = await Order.create.mock.results[0].value;
+        expect(order.update).toHaveBeenCalledWith({ status: 'pending' }, { transaction: txHolder.tx });
+    });
+
+    test.each([{ tiers: [{ id: 4, price: '50.00' }] }, { tiers: [] }])('does not auto-confirm client-supplied zero prices for paid or unrelated tiers', async ({ tiers }) => {
+        const item = { ...makeCartItem('Experience'), unitPrice: '0.00', totalPrice: '0.00' };
+        Cart.findOne.mockResolvedValue({
+            id: 1, Items: [item], currency: 'USD', totalAmount: '0.00', discountAmount: '0.00',
+            update: jest.fn().mockResolvedValue({}),
+        });
+        TicketTier.findAll.mockResolvedValue(tiers);
+        await expect(checkoutCart(1, 42, makeBillingInfo())).rejects.toThrow('Free registration requires free ticket tiers');
+        expect(ExperienceReservation.create).not.toHaveBeenCalled();
+        expect(txHolder.tx.rollback).toHaveBeenCalledTimes(1);
+    });
+
+    test('binds a free ticket to its experience session before confirming', async () => {
+        const item = { ...makeCartItem('Experience'), unitPrice: '0.00', totalPrice: '0.00' };
+        Cart.findOne.mockResolvedValue({
+            id: 1, Items: [item], currency: 'USD', totalAmount: '0.00', discountAmount: '0.00',
+            update: jest.fn().mockResolvedValue({}),
+        });
+        ScheduledExperience.findOne.mockResolvedValue(null);
+        await expect(checkoutCart(1, 42, makeBillingInfo())).rejects.toThrow('Invalid Experience session');
+        expect(ScheduledExperience.findOne).toHaveBeenCalledWith({
+            where: { id: 555, ExperienceId: 101 }, attributes: ['id'], transaction: txHolder.tx,
+        });
+        expect(ExperienceReservation.create).not.toHaveBeenCalled();
     });
 
     test('preserves original CartItem metadata fields alongside confirmationCode for Experience', async () => {

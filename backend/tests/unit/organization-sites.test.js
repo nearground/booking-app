@@ -54,6 +54,28 @@ describe('branding validation', () => {
 });
 
 describe('public site response privacy', () => {
+  test('resolves uploaded experience photos and thumbnails without exposing private gallery fields', () => {
+    jest.useFakeTimers();
+    try {
+      const result = buildPublicOrganizationSitePayload({
+        Experiences: [{
+          id: 42, thumbnail: 'users/1/experience/boat.jpg',
+          images: ['users/1/experience/boat.jpg', 'users/1/experience/coast.jpg', 'users/1/experience/boat.jpg', null, { private: 'hidden' }],
+        }, { id: 43, images: null }],
+      });
+      expect(result.experiences[0].thumbnail).toMatch(/\/users\/1\/experience\/boat\.jpg$/);
+      expect(result.experiences[0].images).toEqual([
+        expect.stringMatching(/\/users\/1\/experience\/boat\.jpg$/),
+        expect.stringMatching(/\/users\/1\/experience\/coast\.jpg$/),
+      ]);
+      expect(result.experiences[1].images).toEqual([]);
+      expect(JSON.stringify(result)).not.toContain('hidden');
+    } finally {
+      jest.clearAllTimers();
+      jest.useRealTimers();
+    }
+  });
+
   test.each([
     ['development', ''],
     ['production', ''],
@@ -98,7 +120,7 @@ describe('public site response privacy', () => {
     expect(query.attributes).not.toContain('email');
     expect(query.include[0].required).toBe(false);
     expect(query.include[0].include[0].required).toBe(true);
-    expect(query.include[0].attributes).toEqual(['id', 'title', 'subtitle', 'description', 'thumbnail', 'duration']);
+    expect(query.include[0].attributes).toEqual(['id', 'title', 'subtitle', 'description', 'thumbnail', 'images', 'duration']);
     expect(query.include[0].include[0].where.status).toBe('scheduled');
     expect(query.include[0].include[0].where.dateTime[Op.gte]).toBeInstanceOf(Date);
   });

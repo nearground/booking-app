@@ -229,7 +229,7 @@ const getExperienceByCode = async (req, res) => {
             include: [
                 {
                     model: Organization,
-                    attributes: ['name', 'slug'],
+                    attributes: ['name', 'slug', 'font', 'primaryColor', 'accentColor'],
                     required: false,
                 },
                 {

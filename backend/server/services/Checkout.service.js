@@ -13,6 +13,8 @@ import ExperienceReservation from '../models/ExperienceReservation.model.js';
 import ExperienceReservationAttendee from '../models/ExperienceReservationAttendee.model.js';
 import ExperienceReservationAnswer from '../models/ExperienceReservationAnswer.model.js';
 import ExperienceReservationAttendeeAnswer from '../models/ExperienceReservationAttendeeAnswer.model.js';
+import TicketTier from '../models/TicketTier.model.js';
+import ScheduledExperience from '../models/ScheduledExperience.model.js';
 import ServiceReservation from '../models/ServiceReservation.model.js';
 import HotelReservation from '../models/HotelReservation.model.js';
 import { sendNotification } from './Notification.service.js';
@@ -67,6 +69,9 @@ export const checkoutCart = async (cartId, customerId, billingInfo, contactInfo 
             throw new Error('Cart is empty');
         }
 
+        const orderTotal = Number(cart.totalAmount) - Number(cart.discountAmount);
+        const isFreeOrder = orderTotal === 0;
+
         // Create draft order
         const order = await Order.create({
             CustomerId: customerId,
@@ -77,7 +82,7 @@ export const checkoutCart = async (cartId, customerId, billingInfo, contactInfo 
             subtotalAmount: cart.totalAmount,
             taxAmount: 0.00,
             discountAmount: cart.discountAmount,
-            totalAmount: Number(cart.totalAmount) - Number(cart.discountAmount),
+            totalAmount: orderTotal,
             mainContactName: contactInfo.fullName || null,
             mainContactPhone: contactInfo.phone || null,
             mainContactEmail: contactInfo.email || null,
@@ -106,12 +111,30 @@ export const checkoutCart = async (cartId, customerId, billingInfo, contactInfo 
                 throw new Error('Invalid Experience ticket selections');
             }
 
+            if (isFreeOrder) {
+                const session = await ScheduledExperience.findOne({
+                    where: { id: metadata.ScheduledExperienceId, ExperienceId: item.ProductId },
+                    attributes: ['id'],
+                    transaction,
+                });
+                if (!session) throw new Error('Invalid Experience session');
+                const tierIds = [...new Set(metadata.ticketSelections.map((selection) => Number(selection.ticketTierId)))];
+                const tiers = await TicketTier.findAll({
+                    where: { ExperienceId: item.ProductId, id: tierIds },
+                    attributes: ['id', 'price'],
+                    transaction,
+                });
+                if (tiers.length !== tierIds.length || tiers.some((tier) => tier.price == null || Number(tier.price) !== 0)) {
+                    throw new Error('Free registration requires free ticket tiers');
+                }
+            }
+
             if (item.ProductType === 'Experience') {
                 const reservation = await ExperienceReservation.create({
                     confirmationCode: generateConfirmationCode(item.ProductId, metadata.ScheduledExperienceId),
                     numberOfAttendees: Number(item.quantity),
                     totalPrice: Number(item.totalPrice),
-                    status: 'pending',
+                    status: isFreeOrder ? 'confirmed' : 'pending',
                     specialRequests: metadata.specialRequests || null,
                     dayOfPhone: metadata.mainContact?.phone ? String(metadata.mainContact.phone).trim() : null,
                     billingEmail: billingInfo.email,
@@ -230,7 +253,7 @@ export const checkoutCart = async (cartId, customerId, billingInfo, contactInfo 
             }, { transaction });
         }
 
-        await order.update({ status: 'pending' }, { transaction });
+        await order.update({ status: isFreeOrder ? 'paid' : 'pending' }, { transaction });
 
         // Finalize the old cart and start a fresh active cart for the same user/session.
         const cartSessionToken = cart.sessionToken;
