@@ -83,7 +83,7 @@ jest.mock('../../server/models/TicketTier.model.js', () => ({
 }));
 
 jest.mock('../../server/models/ScheduledExperience.model.js', () => ({
-    findOne: jest.fn().mockResolvedValue({ id: 555 }),
+    findOne: jest.fn().mockResolvedValue({ id: 555, dateTime: '2099-12-20T21:00:00Z', status: 'scheduled' }),
 }));
 
 jest.mock('../../server/models/ServiceReservation.model.js', () => ({
@@ -182,7 +182,7 @@ import { sendNotification } from '../../server/services/Notification.service.js'
 beforeEach(() => {
     jest.clearAllMocks();
     TicketTier.findAll.mockResolvedValue([{ id: 4, price: '0.00' }]);
-    ScheduledExperience.findOne.mockResolvedValue({ id: 555 });
+    ScheduledExperience.findOne.mockResolvedValue({ id: 555, dateTime: '2099-12-20T21:00:00Z', status: 'scheduled' });
     Order.findByPk.mockResolvedValue({
         id: 1,
         orderNumber: 'ORD-TEST-0001',
@@ -282,9 +282,43 @@ describe('checkoutCart – confirmationCode snapshotting into OrderItem.metadata
         ScheduledExperience.findOne.mockResolvedValue(null);
         await expect(checkoutCart(1, 42, makeBillingInfo())).rejects.toThrow('Invalid Experience session');
         expect(ScheduledExperience.findOne).toHaveBeenCalledWith({
-            where: { id: 555, ExperienceId: 101 }, attributes: ['id'], transaction: txHolder.tx,
+            where: { id: 555, ExperienceId: 101 }, attributes: ['id', 'dateTime', 'endDateTime', 'status'], transaction: txHolder.tx,
         });
         expect(ExperienceReservation.create).not.toHaveBeenCalled();
+    });
+
+    test.each([
+        { status: 'completed', dateTime: '2099-12-20T21:00:00Z' },
+        { status: 'cancelled', dateTime: '2099-12-20T21:00:00Z' },
+        { status: 'scheduled', dateTime: '2020-01-01T21:00:00Z' },
+        { status: 'in-progress', dateTime: '2020-01-01T21:00:00Z', endDateTime: '2020-01-02T00:00:00Z' },
+    ])('rejects closed free registration: %j', async (session) => {
+        Cart.findOne.mockResolvedValue({
+            id: 1, Items: [{ ...makeCartItem('Experience'), unitPrice: '0.00', totalPrice: '0.00' }],
+            currency: 'USD', totalAmount: '0.00', discountAmount: '0.00',
+            update: jest.fn().mockResolvedValue({}),
+        });
+        ScheduledExperience.findOne.mockResolvedValue({ id: 555, ...session });
+        await expect(checkoutCart(1, 42, makeBillingInfo())).rejects.toThrow('Registration is closed');
+        expect(ExperienceReservation.create).not.toHaveBeenCalled();
+    });
+
+    test('allows free registration during an ongoing event until its explicit end', async () => {
+        Cart.findOne.mockResolvedValue({
+            id: 1, Items: [{ ...makeCartItem('Experience'), unitPrice: '0.00', totalPrice: '0.00' }],
+            currency: 'USD', totalAmount: '0.00', discountAmount: '0.00',
+            update: jest.fn().mockResolvedValue({}),
+        });
+        ScheduledExperience.findOne.mockResolvedValue({
+            id: 555, status: 'in-progress',
+            dateTime: new Date(Date.now() - 60000).toISOString(),
+            endDateTime: new Date(Date.now() + 60000).toISOString(),
+        });
+        await checkoutCart(1, 42, makeBillingInfo());
+        expect(ExperienceReservation.create).toHaveBeenCalledWith(
+            expect.objectContaining({ status: 'confirmed', totalPrice: 0 }),
+            { transaction: txHolder.tx }
+        );
     });
 
     test('preserves original CartItem metadata fields alongside confirmationCode for Experience', async () => {

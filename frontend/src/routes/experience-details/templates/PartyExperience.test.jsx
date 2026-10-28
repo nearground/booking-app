@@ -119,12 +119,41 @@ describe('PartyExperience', () => {
     [{ ...session, status: 'cancelled' }, 'Registration closed'],
     [{ ...session, status: 'completed' }, 'Registration closed'],
     [{ ...session, dateTime: '2020-01-01T21:00:00Z' }, 'Registration closed'],
+    [
+      {
+        ...session,
+        dateTime: '2020-01-01T21:00:00Z',
+        endDateTime: '2020-01-02T00:00:00Z',
+        status: 'in-progress',
+      },
+      'Registration closed',
+    ],
   ])('does not register unavailable sessions', async (event, label) => {
     networkAdapter.get.mockResolvedValue({
       data: { session: event, checkedInCount: 0, attendees: [] },
     });
+
     render(<PartyExperience experience={experience} />);
     expect(await screen.findByRole('button', { name: label })).toBeDisabled();
+  });
+
+  test('allows registration while the single event is ongoing, until its explicit end time', async () => {
+    networkAdapter.get.mockResolvedValue({
+      data: {
+        session: {
+          ...session,
+          status: 'in-progress',
+          dateTime: new Date(Date.now() - 60000).toISOString(),
+          endDateTime: new Date(Date.now() + 60000).toISOString(),
+        },
+        checkedInCount: 0,
+        attendees: [],
+      },
+    });
+    render(<PartyExperience experience={experience} />);
+    expect(
+      await screen.findByRole('button', { name: 'Register for free' })
+    ).toBeEnabled();
   });
 
   test('does not advertise a paid ticket as a free registration', async () => {
@@ -136,6 +165,12 @@ describe('PartyExperience', () => {
     expect(
       await screen.findByRole('button', { name: 'Registration unavailable' })
     ).toBeDisabled();
+    expect(
+      screen.queryByText('One night · Free entry')
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('heading', { name: 'Free registration' })
+    ).not.toBeInTheDocument();
   });
 
   test('shows a safe unavailable state rather than a false zero count on failure', async () => {

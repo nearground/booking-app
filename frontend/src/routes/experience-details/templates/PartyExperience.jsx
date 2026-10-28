@@ -37,10 +37,12 @@ const PartyExperience = ({
         setAttendance(response.data);
         setLoadError('');
       } catch {
-        if (active)
+        if (active) {
+          setAttendance(null);
           setLoadError(
             'Event details are temporarily unavailable. Please try again shortly.'
           );
+        }
       } finally {
         if (active) setIsLoading(false);
       }
@@ -85,6 +87,8 @@ const PartyExperience = ({
         String(tier.price).trim() !== '' &&
         Number(tier.price) === 0
     );
+  const verifiedFreeEvent = Boolean(session && freeTickets && !loadError);
+  const registrationDeadline = session?.endDateTime || session?.dateTime;
   const canRegister = Boolean(
     session &&
       freeTickets &&
@@ -92,11 +96,11 @@ const PartyExperience = ({
       session.status !== 'completed' &&
       session.status !== 'waitlisted' &&
       Number(session.availableSpots) > 0 &&
-      new Date(session.dateTime).getTime() > Date.now()
+      new Date(registrationDeadline).getTime() > Date.now()
   );
 
   useEffect(() => {
-    if (!initialCartEdit || !sessionId || isPreview) return;
+    if (!initialCartEdit || !sessionId || isPreview || !canRegister) return;
     if (
       String(initialCartEdit.metadata?.ScheduledExperienceId) !==
       String(sessionId)
@@ -104,7 +108,7 @@ const PartyExperience = ({
       return;
     setPendingCartEdit(initialCartEdit);
     setIsBookingOpen(true);
-  }, [initialCartEdit, sessionId, isPreview]);
+  }, [initialCartEdit, sessionId, isPreview, canRegister]);
 
   const questionnaire = useMemo(
     () => [
@@ -161,7 +165,9 @@ const PartyExperience = ({
             {experience.Organization?.name || 'Private venue party'}
           </p>
           <span className="party-experience__badge">
-            One night · Free entry
+            {verifiedFreeEvent
+              ? 'One night · Free entry'
+              : 'Private venue event'}
           </span>
           <h1>{experience.title}</h1>
           {experience.subtitle ? (
@@ -215,10 +221,13 @@ const PartyExperience = ({
           aria-labelledby="party-registration"
         >
           <p className="party-experience__eyebrow">You are invited</p>
-          <h2 id="party-registration">Free registration</h2>
+          <h2 id="party-registration">
+            {verifiedFreeEvent ? 'Free registration' : 'Event registration'}
+          </h2>
           <p>
-            One event. No date selection. Reserve your place through our regular
-            booking checkout.
+            {verifiedFreeEvent
+              ? 'One event. No date selection. Reserve your place through our regular booking checkout.'
+              : 'Registration is available here only for a single free event.'}
           </p>
           {session ? (
             <p className="party-experience__date">{dateLabel}</p>
@@ -238,8 +247,8 @@ const PartyExperience = ({
             {registrationLabel}
           </button>
           <p className="party-experience__privacy">
-            No payment required. Your contact details are never shown on this
-            page.
+            {verifiedFreeEvent ? 'No payment required. ' : ''}
+            Your contact details are never shown on this page.
           </p>
           {loadError ? <p role="alert">{loadError}</p> : null}
         </aside>
@@ -297,7 +306,7 @@ const PartyExperience = ({
       </div>
 
       <ExperienceSessionBookingModal
-        isOpen={isBookingOpen}
+        isOpen={isBookingOpen && canRegister && !loadError}
         onClose={() => setIsBookingOpen(false)}
         session={session}
         experienceCode={experienceCode}

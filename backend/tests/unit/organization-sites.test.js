@@ -61,7 +61,7 @@ describe('public site response privacy', () => {
         Experiences: [{
           id: 42, thumbnail: 'users/1/experience/boat.jpg',
           images: ['users/1/experience/boat.jpg', 'users/1/experience/coast.jpg', 'users/1/experience/boat.jpg', null, { private: 'hidden' }],
-        }, { id: 43, images: null }],
+        }, { id: 43, images: null }, { id: 44, images: ['users/1/experience/coast.jpg'] }],
       });
       expect(result.experiences[0].thumbnail).toMatch(/\/users\/1\/experience\/boat\.jpg$/);
       expect(result.experiences[0].images).toEqual([
@@ -69,6 +69,7 @@ describe('public site response privacy', () => {
         expect.stringMatching(/\/users\/1\/experience\/coast\.jpg$/),
       ]);
       expect(result.experiences[1].images).toEqual([]);
+      expect(result.experiences[2].thumbnail).toBe(result.experiences[0].images[1]);
       expect(JSON.stringify(result)).not.toContain('hidden');
     } finally {
       jest.clearAllTimers();

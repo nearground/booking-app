@@ -24,6 +24,9 @@ vi.mock('react-leaflet', () => ({
 }));
 
 vi.mock('leaflet/dist/leaflet.css', () => ({}));
+vi.mock('../experience-details/ExperienceDetails', () => ({
+  default: () => <div data-testid="experience-preview" />,
+}));
 
 const userDetailsWithOrg = {
   id: 1,

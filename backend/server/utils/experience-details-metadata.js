@@ -38,3 +38,19 @@ export const normalizeDetailsMetadata = (value) => {
         errors,
     };
 };
+
+export const validatePartyConfiguration = ({ templates = [], picks = [], tiers = [] }) => {
+    const errors = [];
+    if (templates.some((template) => template.ruleType !== 'datetime') || templates.length + picks.length !== 1) {
+        errors.push('Party experiences require exactly one non-recurring event date');
+    }
+    if (!tiers.length || tiers.some((tier) => !Number.isFinite(Number(tier.price)) || Number(tier.price) !== 0)) {
+        errors.push('Party experiences require free ticket tiers');
+    }
+    const occurrence = picks[0] || templates[0] || {};
+    const dateTime = occurrence.dateTime || occurrence.ruleDateTime;
+    if (!dateTime || !Number.isFinite(new Date(dateTime).getTime())) {
+        errors.push('Party experiences require a valid event date');
+    }
+    return { errors, dateTime, endDateTime: occurrence.endDateTime, capacity: occurrence.capacity, durationMinutes: occurrence.durationMinutes };
+};

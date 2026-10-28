@@ -46,4 +46,25 @@ describe('organization site templates', () => {
     expect(screen.getByRole('link', { name: 'View experience' })).toHaveAttribute('href', `${window.location.origin}/experience/7`);
     expect(screen.getByText('Sold out')).toBeInTheDocument();
   });
+
+  test('public profile renders backend media in the default organization showcase', async () => {
+    networkAdapter.get.mockResolvedValue({
+      ok: true,
+      data: {
+        organization: { ...organization, layoutTemplate: undefined, logoUrl: '/api/media/object/users/1/logo.jpg' },
+        experiences: [{
+          id: 7, title: 'Sunset sailing', thumbnail: '/api/media/object/users/1/boat.jpg',
+          images: ['/api/media/object/users/1/boat.jpg', '/api/media/object/users/1/coast.jpg'],
+        }],
+      },
+    });
+    const { container } = render(<OrganizationSite slug="pv-adventures" />);
+    expect(await screen.findByRole('heading', { name: 'PV Adventures' })).toBeInTheDocument();
+    expect(networkAdapter.get).toHaveBeenCalledWith('/api/organization-sites/pv-adventures');
+    expect(container.querySelector('.org-site')).toHaveClass('org-site-classic');
+    expect(container.querySelector('.org-site-cover')).toHaveAttribute('src', '/api/media/object/users/1/boat.jpg');
+    expect(screen.getByRole('img', { name: 'PV Adventures logo' })).toHaveAttribute('src', '/api/media/object/users/1/logo.jpg');
+    expect(screen.getByRole('button', { name: 'Next photo' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'View experience' })).toHaveAttribute('href', `${window.location.origin}/experience/7`);
+  });
 });

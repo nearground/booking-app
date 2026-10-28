@@ -48,13 +48,25 @@ const runSeeder = async () => {
 
 describe('experience showcase demo graph', () => {
   test('seeds three distinct organization preferences with uploaded media', async () => {
-    const { tables, updates } = await runSeeder();
+    const { tables, updates, queryInterface } = await runSeeder();
     const [party, secondParty, coastal, food] = tables.Experiences;
-    expect(tables.Organizations.map((organization) => organization.font)).toEqual(['inter', 'lato', 'inter']);
+    expect(tables.Organizations.map((organization) => organization.font)).toEqual(['inter', 'lato', 'system']);
     expect(party.OrganizationId).toBe(1);
     expect(secondParty.OrganizationId).toBe(1);
     expect(coastal.OrganizationId).toBe(3);
     expect(food.OrganizationId).toBe(2);
+    expect(queryInterface.bulkDelete).toHaveBeenCalledWith(
+      'ExperienceOrganizers', { ExperienceId: { [Sequelize.Op.in]: [1, 2, 3, 4] } }, {},
+    );
+    for (const experience of tables.Experiences) {
+      const hosts = tables.ExperienceOrganizers.filter((host) => host.ExperienceId === experience.id);
+      expect(hosts).toHaveLength(2);
+      for (const host of hosts) {
+        expect(tables.OrganizationMembers).toContainEqual(expect.objectContaining({
+          UserId: host.UserId, OrganizationId: experience.OrganizationId,
+        }));
+      }
+    }
     expect(JSON.parse(party.detailsMetadata).template).toBe('party');
     expect(JSON.parse(coastal.detailsMetadata)).toEqual({ version: 1, template: 'default', overrides: {} });
     expect(JSON.parse(coastal.images)).toHaveLength(2);
@@ -78,6 +90,9 @@ describe('experience showcase demo graph', () => {
       expect(experience.autoSyncEnabled).toBe(false);
       const sessions = tables.ScheduledExperiences.filter((row) => row.ExperienceId === experience.id);
       expect(sessions).toHaveLength(1);
+      expect(new Intl.DateTimeFormat('en-GB', {
+        timeZone: 'America/Mexico_City', hour: '2-digit', hour12: false,
+      }).format(sessions[0].dateTime)).toBe('20');
       expect(tables.ScheduleTemplates.filter((row) => row.ExperienceId === experience.id)).toHaveLength(0);
       expect(tables.TicketTiers.filter((row) => row.ExperienceId === experience.id).map((tier) => tier.price)).toEqual([0]);
       expect(JSON.parse(experience.userQuestionnary)).toContainEqual(expect.objectContaining({ questionKey: 'publicAttendance', type: 'boolean', required: false }));

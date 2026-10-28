@@ -58,6 +58,9 @@ const FoodTourExperience = ({
     presentation.pinnedComments || selectPinnedComments(experience.comments, metadata || experience.detailsMetadata)
   );
   const brandFont = presentation.brandFont || experience.Organization?.font;
+  const primaryColor = experience.Organization?.primaryColor;
+  const brandAccent = typeof primaryColor === 'string' && /^#[0-9a-f]{6}$/i.test(primaryColor)
+    ? primaryColor : null;
   const className = [
     'food-tour-experience',
     FONT_CLASSES[brandFont] || FONT_CLASSES.editorial,
@@ -67,12 +70,16 @@ const FoodTourExperience = ({
   ].filter(Boolean).join(' ');
 
   return (
-    <div className={className} data-testid="food-tour-experience">
+    <div
+      className={className}
+      style={brandAccent ? { '--food-tour-accent': brandAccent } : undefined}
+      data-testid="food-tour-experience"
+    >
       <FoodTourExperienceHero
         title={experience.title}
         subtitle={experience.subtitle}
-        videoUrl={presentation.heroVideoUrl || media.heroVideoUrl}
-        posterUrl={presentation.heroPosterUrl || media.heroPosterUrl || experience.thumbnail}
+        videoUrl={presentation.heroVideoUrl || experience.detailsMedia?.heroVideoUrl || media.heroVideoUrl}
+        posterUrl={presentation.heroPosterUrl || experience.detailsMedia?.heroPosterUrl || media.heroPosterUrl || experience.thumbnail}
         onOpenGallery={onOpenGallery}
       />
       <div className="food-tour-experience__content">

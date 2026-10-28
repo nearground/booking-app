@@ -1,4 +1,4 @@
-import { normalizeDetailsMetadata } from '../../server/utils/experience-details-metadata.js';
+import { normalizeDetailsMetadata, validatePartyConfiguration } from '../../server/utils/experience-details-metadata.js';
 import { transformExperience } from '../../server/services/Experience.service.js';
 const migration = require('../../server/migrations/20261028010000-add-experience-details-metadata.js');
 
@@ -9,6 +9,20 @@ jest.mock('../../server/utils/media-storage.js', () => ({
 }));
 
 describe('experience details metadata contract', () => {
+    test('party configuration accepts exactly one concrete date and free tiers', () => {
+        expect(validatePartyConfiguration({
+            picks: [{ dateTime: '2027-01-01T18:00:00Z' }], tiers: [{ price: '0.00' }],
+        }).errors).toEqual([]);
+    });
+
+    test.each([
+        { templates: [{ ruleType: 'cron', ruleCron: '* * * * *' }], tiers: [{ price: 0 }] },
+        { picks: [{ dateTime: '2027-01-01T18:00:00Z' }, { dateTime: '2027-02-01T18:00:00Z' }], tiers: [{ price: 0 }] },
+        { picks: [{ dateTime: '2027-01-01T18:00:00Z' }], tiers: [{ price: 5 }] },
+        { picks: [{ dateTime: '2027-01-01T18:00:00Z' }], tiers: [] },
+    ])('party configuration rejects recurring/multiple dates or paid/absent tiers %j', (configuration) => {
+        expect(validatePartyConfiguration(configuration).errors.length).toBeGreaterThan(0);
+    });
     test('public projection strips unsupported metadata rather than exposing it', () => {
         const result = transformExperience({ toJSON: () => ({
             id: 1, title: 'Party', detailsMetadata: {

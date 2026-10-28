@@ -23,8 +23,8 @@ import LightboxOverlay from '../../components/image-gallery-modal/LightboxOverla
 import ReviewSidebar from './components/ReviewSidebar';
 import GuestCommentPrompt from '../../components/comments/GuestCommentPrompt';
 import { resolveDetailsMetadata } from './experienceDetailsTemplate';
-import PartyExperienceTemplate from './components/templates/PartyExperienceTemplate';
-import FoodTourExperienceTemplate from './components/templates/FoodTourExperienceTemplate';
+import PartyExperienceTemplate from './templates/PartyExperience';
+import FoodTourExperienceTemplate from './templates/FoodTourExperience';
 import {
   buildExperienceGalleryImages,
   getOrganizerGalleryImages,

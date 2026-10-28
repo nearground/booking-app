@@ -60,6 +60,21 @@ and set `SHOWCASE_MEDIA_ASSETS_DIR` to its absolute path, plus an accessible
 abort seeding rather than persisting broken media keys. Repeated uploads of unchanged
 fixtures use deterministic, owner-scoped keys and safely overwrite the same objects.
 
+For a disposable development database, apply migrations and populate the demo graph:
+
+```bash
+docker compose exec backend npx sequelize-cli db:migrate
+docker compose exec backend npx sequelize-cli db:seed:all
+```
+
+Reseeding replaces demo sessions, ticket tiers, reviews and host assignments; do not
+run it against live bookings. Visit `/o/testcompany1` for free private-venue parties,
+`/o/testcompany2` for the branded video-led taco tour, and `/o/testcompany3` for the
+default coastal experience and uploaded-photo hero carousel. Follow each site's
+experience links to compare the layouts. The party fixtures include three checked-in
+registered demo guests who have opted into the public guest list; real guests remain
+private unless they explicitly opt in.
+
 ### Start services
 
 ```bash

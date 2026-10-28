@@ -2,6 +2,7 @@ import React from 'react';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { vi } from 'vitest';
 import FoodTourExperience, { selectFoodTourPinnedComments } from './FoodTourExperience';
+import documentHtml from '../../../../index.html?raw';
 
 const review = (id, extra = {}) => ({
   id,
@@ -15,6 +16,16 @@ const review = (id, extra = {}) => ({
 const experience = { title: 'Market to table', subtitle: 'A local food adventure' };
 
 describe('FoodTourExperience', () => {
+  test('loads the seeded Lato brand font alongside the existing Jost font', () => {
+    const document = new DOMParser().parseFromString(documentHtml, 'text/html');
+    const stylesheet = document.querySelector('link[href^="https://fonts.googleapis.com/css2"]');
+    expect(new URL(stylesheet.href).searchParams.getAll('family')).toEqual([
+      'Jost:wght@400;500;700', 'Lato:wght@400;700',
+    ]);
+    render(<FoodTourExperience experience={{ ...experience, Organization: { font: 'lato' } }} />);
+    expect(screen.getByTestId('food-tour-experience')).toHaveClass('food-tour-experience--lato');
+  });
+
   test('shows exactly three ordered five-star pinned experience comments at the bottom', () => {
     const pinnedComments = [review(3), review(1), review(2)];
     const { container } = render(
@@ -94,6 +105,21 @@ describe('FoodTourExperience', () => {
     expect(selectFoodTourPinnedComments(null)).toEqual([]);
   });
 
+  test('prefers public backend media resolution over preview key URLs', () => {
+    const { container } = render(<FoodTourExperience experience={{
+      ...experience,
+      detailsMedia: { heroPosterUrl: 'https://media.example.test/uploaded-tacos.jpg' },
+      detailsMetadata: {
+        version: 1,
+        template: 'food-tour',
+        overrides: { heroPosterKey: 'users/1/experience-hero/preview.jpg' },
+      },
+    }} />);
+    expect(container.querySelector('.food-tour-hero img')).toHaveAttribute(
+      'src', 'https://media.example.test/uploaded-tacos.jpg'
+    );
+  });
+
   test('respects full and partial anonymity in pinned testimonials', () => {
     render(<FoodTourExperience experience={experience} presentation={{
       pinnedComments: [
@@ -122,5 +148,18 @@ describe('FoodTourExperience', () => {
     expect(root).toHaveClass('food-tour-experience--editorial', 'food-tour-experience--terracotta');
     expect(root).not.toHaveAttribute('style');
     expect(root.querySelector('script, style')).toBeNull();
+  });
+
+  test('uses the organization primary color only when it is a valid hex value', () => {
+    const { rerender } = render(<FoodTourExperience experience={{
+      ...experience, Organization: { primaryColor: '#9B2E20' },
+    }} />);
+    const root = screen.getByTestId('food-tour-experience');
+    expect(root.style.getPropertyValue('--food-tour-accent')).toBe('#9B2E20');
+    rerender(<FoodTourExperience experience={{
+      ...experience, Organization: { primaryColor: 'red; display: none' },
+    }} />);
+    expect(root.style.getPropertyValue('--food-tour-accent')).toBe('');
+    expect(root.style.display).toBe('');
   });
 });

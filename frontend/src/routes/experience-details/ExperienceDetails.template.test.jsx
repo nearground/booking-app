@@ -5,10 +5,10 @@ import { MemoryRouter } from 'react-router-dom';
 import { AuthContext } from 'contexts/AuthContext';
 import ExperienceDetails from './ExperienceDetails';
 
-vi.mock('./components/templates/PartyExperienceTemplate', () => ({
+vi.mock('./templates/PartyExperience', () => ({
   default: ({ experience }) => <div data-testid="party-template">{experience.title}</div>,
 }));
-vi.mock('./components/templates/FoodTourExperienceTemplate', () => ({
+vi.mock('./templates/FoodTourExperience', () => ({
   default: ({ experience, booking }) => <div data-testid="food-tour-template">{experience.title}{booking}</div>,
 }));
 vi.mock('../../components/scheduled-experiences-list/ScheduledExperiencesList', () => ({

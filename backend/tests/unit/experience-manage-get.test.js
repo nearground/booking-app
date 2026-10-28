@@ -6,26 +6,38 @@
 
 const mockFindByPk = jest.fn();
 const mockFindOne = jest.fn();
+const mockTemplateFindAll = jest.fn();
+const mockPickFindAll = jest.fn();
+const mockTierFindAll = jest.fn();
+const mockSessionFindAll = jest.fn();
+const mockSessionCreate = jest.fn();
+const mockPickCreate = jest.fn();
+const mockPickDestroy = jest.fn();
+const mockTemplateDestroy = jest.fn();
+const mockExperienceCreate = jest.fn();
+const mockLocationFindOne = jest.fn();
+const mockOrganizationFindByPk = jest.fn();
+const mockTierBulkCreate = jest.fn();
 
 jest.mock('../../server/models/index.js', () => {
-  const mockExperience = { findByPk: (...args) => mockFindByPk(...args) };
+  const mockExperience = { findByPk: (...args) => mockFindByPk(...args), create: (...args) => mockExperienceCreate(...args) };
   const mockOrganizationMembers = { findOne: (...args) => mockFindOne(...args) };
 
   return {
     __esModule: true,
     Experience: mockExperience,
-    Location: {},
-    Organization: {},
-    TicketTier: {},
+    Location: { findOne: (...args) => mockLocationFindOne(...args) },
+    Organization: { findByPk: (...args) => mockOrganizationFindByPk(...args) },
+    TicketTier: { findAll: (...args) => mockTierFindAll(...args), bulkCreate: (...args) => mockTierBulkCreate(...args) },
     User: {},
-    ScheduledExperience: {},
+    ScheduledExperience: { findAll: (...args) => mockSessionFindAll(...args), create: (...args) => mockSessionCreate(...args) },
     ExperienceReservation: {},
     Comment: {},
     sequelize: {
       models: {
         OrganizationMembers: mockOrganizationMembers,
-        ScheduleTemplate: {},
-        PickedOccurrence: {},
+        ScheduleTemplate: { findAll: (...args) => mockTemplateFindAll(...args), destroy: (...args) => mockTemplateDestroy(...args) },
+        PickedOccurrence: { findAll: (...args) => mockPickFindAll(...args), destroy: (...args) => mockPickDestroy(...args), create: (...args) => mockPickCreate(...args) },
       },
       transaction: jest.fn(async () => ({
         rollback: jest.fn(),
@@ -34,18 +46,18 @@ jest.mock('../../server/models/index.js', () => {
     },
     default: {
       Experience: mockExperience,
-      Location: {},
-      Organization: {},
-      TicketTier: {},
+      Location: { findOne: (...args) => mockLocationFindOne(...args) },
+      Organization: { findByPk: (...args) => mockOrganizationFindByPk(...args) },
+      TicketTier: { findAll: (...args) => mockTierFindAll(...args), bulkCreate: (...args) => mockTierBulkCreate(...args) },
       User: {},
-      ScheduledExperience: {},
+      ScheduledExperience: { findAll: (...args) => mockSessionFindAll(...args), create: (...args) => mockSessionCreate(...args) },
       ExperienceReservation: {},
       Comment: {},
       sequelize: {
         models: {
           OrganizationMembers: mockOrganizationMembers,
-          ScheduleTemplate: {},
-          PickedOccurrence: {},
+          ScheduleTemplate: { findAll: (...args) => mockTemplateFindAll(...args), destroy: (...args) => mockTemplateDestroy(...args) },
+          PickedOccurrence: { findAll: (...args) => mockPickFindAll(...args), destroy: (...args) => mockPickDestroy(...args), create: (...args) => mockPickCreate(...args) },
         },
         transaction: jest.fn(async () => ({
           rollback: jest.fn(),
@@ -105,6 +117,122 @@ describe('getExperienceForEdit', () => {
   describe('details metadata management writes', () => {
     beforeEach(() => jest.clearAllMocks());
 
+    test('party creation materializes exactly one free session inside the transaction', async () => {
+      const { createExperience } = await import('../../server/controllers/ExperienceManage.controller.js');
+      const { normalizeBaseCreatePayload, normalizeSchedules } = await import('../../server/controllers/offering-manage.shared.js');
+      const dateTime = '2027-01-01T18:00:00Z';
+      normalizeBaseCreatePayload.mockReturnValueOnce({ errors: [], normalized: {
+        organizationId: 3, locationId: 5, title: 'Party', capacity: 20, duration: 60,
+      } });
+      normalizeSchedules.mockReturnValue({ templates: [], picks: [{ dateTime }], errors: [] });
+      mockLocationFindOne.mockResolvedValue({ id: 5 });
+      mockOrganizationFindByPk.mockResolvedValue({ id: 3 });
+      const metadata = { version: 1, template: 'party', overrides: {} };
+      const record = { id: 10, detailsMetadata: metadata, addOrganizer: jest.fn() };
+      mockExperienceCreate.mockResolvedValue(record);
+      mockFindByPk.mockResolvedValue(record);
+      const res = mockRes();
+      await createExperience({ user: { id: 1 }, organizationId: 3, body: {
+        detailsMetadata: metadata, schedules: [{ kind: 'picked', dateTime }],
+        ticketTiers: [{ title: 'Free', price: 0, minAge: 0 }],
+      } }, res);
+      expect(res.status).toHaveBeenCalledWith(201);
+      expect(mockExperienceCreate).toHaveBeenCalledWith(expect.objectContaining({ autoSyncEnabled: false }), expect.any(Object));
+      expect(mockSessionCreate).toHaveBeenCalledTimes(1);
+      expect(mockSessionCreate).toHaveBeenCalledWith(expect.objectContaining({
+        ExperienceId: 10, dateTime, availableSpots: 20, capacity: 20, status: 'scheduled',
+      }), expect.objectContaining({ transaction: expect.any(Object) }));
+      normalizeSchedules.mockReturnValue({ templates: [], picks: [], errors: [] });
+    });
+
+    test('party schedule editing keeps its materialized session and disables asynchronous sync', async () => {
+      const { updateExperience } = await import('../../server/controllers/ExperienceManage.controller.js');
+      const { normalizeSchedules } = await import('../../server/controllers/offering-manage.shared.js');
+      const dateTime = '2027-01-01T18:00:00Z';
+      normalizeSchedules.mockReturnValue({ templates: [], picks: [{ dateTime }], errors: [] });
+      const record = {
+        id: 10, OrganizationId: 3, capacity: 20, duration: 60,
+        detailsMetadata: { version: 1, template: 'party', overrides: {} },
+      };
+      record.update = jest.fn(async (payload) => Object.assign(record, payload));
+      mockFindByPk.mockResolvedValue(record);
+      mockFindOne.mockResolvedValue({ isAdmin: true });
+      mockTierFindAll.mockResolvedValue([{ price: 0 }]);
+      mockSessionFindAll.mockResolvedValue([{ id: 123, dateTime }]);
+      const res = mockRes();
+      await updateExperience({ params: { experienceId: '10' }, user: { id: 1 }, body: {
+        schedules: [{ kind: 'picked', dateTime }],
+      } }, res);
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(mockPickCreate).toHaveBeenCalledWith({ ExperienceId: 10, dateTime }, expect.any(Object));
+      expect(record.autoSyncEnabled).toBe(false);
+      expect(mockSessionCreate).not.toHaveBeenCalled();
+      normalizeSchedules.mockReturnValue({ templates: [], picks: [], errors: [] });
+    });
+
+    test('party cannot re-enable background schedule generation', async () => {
+      const { toggleAutoSync } = await import('../../server/controllers/ExperienceManage.controller.js');
+      const record = {
+        id: 10, OrganizationId: 3,
+        detailsMetadata: { version: 1, template: 'party', overrides: {} },
+        update: jest.fn(),
+      };
+      mockFindByPk.mockResolvedValue(record);
+      mockFindOne.mockResolvedValue({ isAdmin: true });
+      const res = mockRes();
+      await toggleAutoSync({ params: { experienceId: '10' }, user: { id: 1 }, body: { enabled: true } }, res);
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(record.update).not.toHaveBeenCalled();
+    });
+
+    test.each([
+      { dates: ['2027-01-01T18:00:00Z', '2027-01-02T18:00:00Z'], price: 0, sessions: [] },
+      { dates: ['2027-01-01T18:00:00Z'], price: 12, sessions: [] },
+      { dates: ['2027-01-01T18:00:00Z'], price: 0, sessions: [{ dateTime: '2027-01-01T18:00:00Z' }, { dateTime: '2027-01-02T18:00:00Z' }] },
+      { dates: ['2027-01-02T18:00:00Z'], price: 0, sessions: [{ dateTime: '2027-01-01T18:00:00Z' }] },
+    ])('rejects invalid party writes transactionally %j', async ({ dates, price, sessions }) => {
+      const { updateExperience } = await import('../../server/controllers/ExperienceManage.controller.js');
+      const record = {
+        id: 10, OrganizationId: 3, detailsMetadata: { version: 1, template: 'party', overrides: {} },
+        update: jest.fn(),
+      };
+      mockFindByPk.mockResolvedValue(record);
+      mockFindOne.mockResolvedValue({ isAdmin: true });
+      mockTemplateFindAll.mockResolvedValue([]);
+      mockPickFindAll.mockResolvedValue(dates.map((dateTime) => ({ dateTime })));
+      mockTierFindAll.mockResolvedValue([{ price }]);
+      mockSessionFindAll.mockResolvedValue(sessions);
+      const res = mockRes();
+      await updateExperience({ params: { experienceId: '10' }, user: { id: 1 }, body: {} }, res);
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(record.update).not.toHaveBeenCalled();
+      expect(mockSessionCreate).not.toHaveBeenCalled();
+    });
+
+    test.each([true, false])('party update preserves or transactionally creates its sole session (existing=%s)', async (existing) => {
+      const { updateExperience } = await import('../../server/controllers/ExperienceManage.controller.js');
+      const dateTime = '2027-01-01T18:00:00Z';
+      const record = {
+        id: 10, OrganizationId: 3, capacity: 20, duration: 60,
+        detailsMetadata: { version: 1, template: 'party', overrides: {} },
+      };
+      record.update = jest.fn(async (payload) => Object.assign(record, payload));
+      mockFindByPk.mockResolvedValue(record);
+      mockFindOne.mockResolvedValue({ isAdmin: true });
+      mockTemplateFindAll.mockResolvedValue([]);
+      mockPickFindAll.mockResolvedValue([{ dateTime }]);
+      mockTierFindAll.mockResolvedValue([{ price: 0 }]);
+      mockSessionFindAll.mockResolvedValue(existing ? [{ dateTime }] : []);
+      const res = mockRes();
+      await updateExperience({ params: { experienceId: '10' }, user: { id: 1 }, body: {} }, res);
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(record.autoSyncEnabled).toBe(false);
+      expect(mockSessionCreate).toHaveBeenCalledTimes(existing ? 0 : 1);
+      if (!existing) expect(mockSessionCreate).toHaveBeenCalledWith(expect.objectContaining({
+        ExperienceId: 10, dateTime, availableSpots: 20, status: 'scheduled',
+      }), expect.objectContaining({ transaction: expect.any(Object) }));
+    });
+
     test('rejects unsafe metadata on create before writing', async () => {
       const { createExperience } = await import('../../server/controllers/ExperienceManage.controller.js');
       const res = mockRes();
@@ -141,7 +269,7 @@ describe('getExperienceForEdit', () => {
 
     test('omitted metadata leaves the existing template untouched', async () => {
       const { updateExperience } = await import('../../server/controllers/ExperienceManage.controller.js');
-      const metadata = { version: 1, template: 'party', overrides: {} };
+      const metadata = { version: 1, template: 'food-tour', overrides: {} };
       const record = { id: 10, OrganizationId: 3, detailsMetadata: metadata };
       record.update = jest.fn(async (payload) => Object.assign(record, payload));
       mockFindByPk.mockResolvedValue(record);

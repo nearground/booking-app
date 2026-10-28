@@ -114,10 +114,14 @@ export const checkoutCart = async (cartId, customerId, billingInfo, contactInfo 
             if (isFreeOrder) {
                 const session = await ScheduledExperience.findOne({
                     where: { id: metadata.ScheduledExperienceId, ExperienceId: item.ProductId },
-                    attributes: ['id'],
+                    attributes: ['id', 'dateTime', 'endDateTime', 'status'],
                     transaction,
                 });
                 if (!session) throw new Error('Invalid Experience session');
+                const registrationDeadline = new Date(session.endDateTime || session.dateTime).getTime();
+                if (!['scheduled', 'in-progress'].includes(session.status) || !(registrationDeadline > Date.now())) {
+                    throw new Error('Registration is closed for this Experience session');
+                }
                 const tierIds = [...new Set(metadata.ticketSelections.map((selection) => Number(selection.ticketTierId)))];
                 const tiers = await TicketTier.findAll({
                     where: { ExperienceId: item.ProductId, id: tierIds },

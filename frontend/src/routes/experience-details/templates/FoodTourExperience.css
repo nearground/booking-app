@@ -59,9 +59,7 @@
   position: relative;
   isolation: isolate;
   width: 100%;
-  min-height: 28rem;
   aspect-ratio: 16 / 9;
-  max-height: 85vh;
   overflow: hidden;
   background: #292524;
   color: #fff;
@@ -236,7 +234,6 @@
 @media (max-width: 767px) {
   .food-tour-hero {
     min-height: 32rem;
-    max-height: none;
   }
 
   .food-tour-pins__grid {

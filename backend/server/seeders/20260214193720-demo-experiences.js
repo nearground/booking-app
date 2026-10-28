@@ -109,7 +109,7 @@ module.exports = {
     const organizationBrands = [
       { primaryColor: '#7c3aed', accentColor: '#f97316', font: 'inter', layoutTemplate: 'classic', tagline: 'Private venues. Great company. Free entry.', about: 'We bring people together for special bar nights and parties at private venues around Puerto Vallarta. Reserve your free ticket and join us in person.' },
       { primaryColor: '#9a3412', accentColor: '#f59e0b', font: 'lato', layoutTemplate: 'editorial', tagline: 'Taste the neighborhood with local food lovers', about: 'Meet the cooks, discover neighborhood taquerias and share the flavors of Puerto Vallarta with our small-group food tours.' },
-      { primaryColor: '#0f766e', accentColor: '#f59e0b', font: 'inter', layoutTemplate: 'classic', tagline: 'Explore the coast, one adventure at a time', about: 'Join our local guides for relaxed coastal adventures and unforgettable days on the bay.' },
+      { primaryColor: '#0f766e', accentColor: '#f59e0b', font: 'system', layoutTemplate: 'classic', tagline: 'Explore the coast, one adventure at a time', about: 'Join our local guides for relaxed coastal adventures and unforgettable days on the bay.' },
     ];
     var testOrganizations = [];
     for (let i = 1; i <= 3; i++) {
@@ -142,7 +142,7 @@ module.exports = {
       "SELECT id FROM Organizations WHERE name LIKE 'Test Company %' ORDER BY id ASC"
     );
     const [users] = await queryInterface.sequelize.query(
-      "SELECT id FROM Users WHERE email LIKE 'user%@test.com'"
+      "SELECT id FROM Users WHERE email LIKE 'user%@test.com' ORDER BY id ASC"
     );
 
     var orgMembers = [];
@@ -450,9 +450,13 @@ module.exports = {
       const cronExpression = cronByTitle[experience.title] || null;
 
       if (!cronExpression) {
-        const fallbackStart = new Date(now);
-        fallbackStart.setDate(fallbackStart.getDate() + 7);
-        fallbackStart.setHours(10, 0, 0, 0);
+        const nextWeek = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+        const fallbackStart = partyTitles.has(experience.title)
+          ? CronExpressionParser.parse('0 20 * * *', {
+            currentDate: nextWeek,
+            tz: 'America/Mexico_City',
+          }).next().toDate()
+          : nextWeek;
 
         (partyTitles.has(experience.title) ? [0] : [0, 7, 14]).forEach((offsetDays) => {
           const dateTime = new Date(fallbackStart);
@@ -658,18 +662,6 @@ module.exports = {
     }
 
     const ticketPricesByExperienceTitle = {
-      'Sierra Ridge Sunrise Hike': {
-        adultDrinksIncluded: 69.99,
-        adult: 54.99,
-        student: 39.99,
-        child: 24.99,
-      },
-      'Rooftop Craft Mixology Session': {
-        adultDrinksIncluded: 74.99,
-        adult: 59.99,
-        student: 44.99,
-        child: 29.99,
-      },
       'Los Arcos Coastal Sightseeing Tour': {
         adultDrinksIncluded: 64.99,
         adult: 49.99,
@@ -797,6 +789,9 @@ module.exports = {
       });
     });
 
+    await queryInterface.bulkDelete('ExperienceOrganizers', {
+      ExperienceId: { [Sequelize.Op.in]: seededExperiences.map((experience) => experience.id) },
+    }, {});
     if (experienceOrganizers.length > 0) {
       await queryInterface.bulkInsert('ExperienceOrganizers', experienceOrganizers, { ignoreDuplicates: true });
     }

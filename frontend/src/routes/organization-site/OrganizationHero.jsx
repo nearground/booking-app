@@ -90,7 +90,7 @@ const OrganizationHero = ({ organization, experiences }) => {
             {activeIndex + 1} / {slides.length}<span className="org-site-carousel-title"> · {active.label}</span>
           </span>
           <button type="button" onClick={() => navigate(1)} aria-label="Next photo">→</button>
-          {!reducedMotion ? <button type="button" onClick={() => setPaused((current) => !current)} aria-label={paused ? 'Play slideshow' : 'Pause slideshow'}>{paused ? 'Play' : 'Pause'}</button> : null}
+          {!reducedMotion && active?.type !== 'video' ? <button type="button" onClick={() => setPaused((current) => !current)} aria-label={paused ? 'Play slideshow' : 'Pause slideshow'}>{paused ? 'Play' : 'Pause'}</button> : null}
         </div>
       ) : null}
     </header>
